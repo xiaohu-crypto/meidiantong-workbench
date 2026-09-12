@@ -51,11 +51,16 @@ function createWindow() {
   win.on("closed", () => { win = null; });
 }
 
-/** 16x16 品牌红方块托盘图标(占位,非美术资源) */
+/** 品牌托盘图标(开发版用 build/icon.png,打包后用 resources/icon.png) */
 function trayIcon() {
-  return nativeImage.createFromDataURL(
-    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAKUlEQVQ4y2Nk+M/wn4EIwESMolGFGJgwUa0QI1u0WRgnmmhSCMY6U2pqAABbFQYEmf3FkAAAAABJRU5ErkJggg=="
-  );
+  const p = app.isPackaged
+    ? path.join(process.resourcesPath, "icon.png")
+    : path.join(__dirname, "..", "build", "icon.png");
+  const img = nativeImage.createFromPath(p);
+  if (img.isEmpty()) {
+    console.error("[tray] 图标加载失败:", p);
+  }
+  return img;
 }
 
 app.whenReady().then(() => {
@@ -73,8 +78,12 @@ app.whenReady().then(() => {
   autoUpdater.on("error", () => { /* 静默:不打扰用户 */ });
   setTimeout(() => { void autoUpdater.checkForUpdates(); }, 3000);
 
-  tray = new Tray(trayIcon());
+  const icon = trayIcon();
+  console.log("[tray] 图标路径:", app.isPackaged ? path.join(process.resourcesPath, "icon.png") : path.join(__dirname, "..", "build", "icon.png"));
+  console.log("[tray] 图标为空:", icon.isEmpty(), "尺寸:", icon.getSize());
+  tray = new Tray(icon);
   tray.setToolTip("媒电通工作台");
+  console.log("[tray] 托盘创建成功");
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: "显示主窗口", click: () => win?.show() },
     { label: "快速采集 (Ctrl+K)", click: () => win?.webContents.send("open-quick-capture") },
