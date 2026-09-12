@@ -60,8 +60,8 @@
 
 | 版本 | 下载 | 说明 |
 |------|------|------|
-| **安装包** | [媒电通工作台 Setup 0.1.0.exe](https://github.com/xiaohu-crypto/meidiantong-workbench/releases/download/v0.1.0/Setup.0.1.0.exe) | 推荐，支持自动更新 |
-| **便携版** | [媒电通工作台 0.1.0.exe](https://github.com/xiaohu-crypto/meidiantong-workbench/releases/download/v0.1.0/0.1.0.exe) | 免安装，直接运行 |
+| **安装包** | [MediaDesk-Workbench-Setup-0.1.0.exe](https://github.com/xiaohu-crypto/meidiantong-workbench/releases/download/v0.1.0/MediaDesk-Workbench-Setup-0.1.0.exe) | 推荐，支持自动更新 |
+| **便携版** | [MediaDesk-Workbench-0.1.0.exe](https://github.com/xiaohu-crypto/meidiantong-workbench/releases/download/v0.1.0/MediaDesk-Workbench-0.1.0.exe) | 免安装，直接运行 |
 
 > 所有版本请前往 [Releases 页面](https://github.com/xiaohu-crypto/meidiantong-workbench/releases) 下载。
 
