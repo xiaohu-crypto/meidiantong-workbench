@@ -1,11 +1,57 @@
+# Dependencies
 node_modules/
+
+# Build outputs
 dist/
 dist-electron/
+build/
+out/
+
+# Release packages
+release/
+*.exe
+*.msi
+*.dmg
+*.AppImage
+*.deb
+*.rpm
+
+# Logs
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor directories and files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# Test outputs
 test-results/
 playwright-report/
+coverage/
+
+# Temporary / debug files
 debug-*.mjs
-bench-xlsx.mjs
-release/
+bench-*.mjs
+*.tmp
+*.bak
+asar-extract/
+release-check/
+.workbuddy/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Electron
+electron-builder/
