@@ -67,14 +67,14 @@ interface DataSet {
 type View = "today" | "crm" | "work" | "dev" | "media" | "kb" | "data" | "growth" | "settings" | "help" | "notifications";
 
 const NAV: { key: View; label: string; icon: (p: { size?: number }) => JSX.Element; group: string }[] = [
-  { key: "today", label: "今日驾驶舱", icon: IconToday, group: "工作区" },
-  { key: "crm", label: "客户管理", icon: IconUsers, group: "业务模块" },
-  { key: "work", label: "任务看板", icon: IconTask, group: "业务模块" },
-  { key: "dev", label: "商机管理", icon: IconFunnel, group: "业务模块" },
-  { key: "media", label: "媒介资源", icon: IconMedia, group: "业务模块" },
-  { key: "kb", label: "知识库", icon: IconKb, group: "业务模块" },
-  { key: "data", label: "数据报表", icon: IconChart, group: "业务模块" },
-  { key: "growth", label: "成长规划", icon: IconGrowth, group: "业务模块" },
+  { key: "today", label: "今日驾驶舱", icon: IconToday, group: "常用" },
+  { key: "crm", label: "客户管理", icon: IconUsers, group: "业务" },
+  { key: "work", label: "任务看板", icon: IconTask, group: "业务" },
+  { key: "dev", label: "商机管理", icon: IconFunnel, group: "业务" },
+  { key: "media", label: "媒介资源", icon: IconMedia, group: "业务" },
+  { key: "kb", label: "知识库", icon: IconKb, group: "业务" },
+  { key: "data", label: "数据报表", icon: IconChart, group: "业务" },
+  { key: "growth", label: "成长规划", icon: IconGrowth, group: "业务" },
 ];
 
 async function loadAll(): Promise<DataSet> {
@@ -233,7 +233,7 @@ export default function App() {
           </div>
         </div>
         <nav className="nav">
-          {["工作区", "业务模块"].map((group) => (
+          {["常用", "业务"].map((group) => (
             <div key={group} className="nav-group">
               <div className="nav-label">{group}</div>
               {NAV.filter((n) => n.group === group).map((n) => (

@@ -171,7 +171,7 @@ export default function Today(props: Props) {
                   </div>
                 );
               })}
-              {nba.length === 0 ? <p className="muted" style={{ padding: "16px 0" }}>暂无在途商机 — 点击右上角快速采集开始。</p> : null}
+              {nba.length === 0 ? <p className="muted" style={{ padding: "16px 0" }}>暂无在途商机 — 按 Ctrl+K 快速采集，或前往商机管理新建。</p> : null}
             </div>
           </div>
           <div className="side-stack">

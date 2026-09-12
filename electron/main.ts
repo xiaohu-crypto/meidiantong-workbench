@@ -51,7 +51,7 @@ function createWindow() {
   win.on("closed", () => { win = null; });
 }
 
-/** 品牌托盘图标(开发版用 build/icon.png,打包后用 resources/icon.png) */
+/** 品牌托盘图标(开发版用 build/icon.png,打包后用 resources/icon.png;缩放至32x32适配系统托盘) */
 function trayIcon() {
   const p = app.isPackaged
     ? path.join(process.resourcesPath, "icon.png")
@@ -59,8 +59,12 @@ function trayIcon() {
   const img = nativeImage.createFromPath(p);
   if (img.isEmpty()) {
     console.error("[tray] 图标加载失败:", p);
+    return img;
   }
-  return img;
+  // 系统托盘图标标准尺寸 16x16/32x32,512x512 原图缩放后更清晰
+  const resized = img.resize({ width: 32, height: 32, quality: "best" });
+  console.log("[tray] 图标路径:", p, "原尺寸:", img.getSize(), "缩放后:", resized.getSize());
+  return resized;
 }
 
 app.whenReady().then(() => {
