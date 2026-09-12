@@ -309,3 +309,35 @@ html[data-titlebar="integrated"] .topbar .filter-input { -webkit-app-region: no-
 /* P4 字段可见性编辑区 */
 .field-visibility{padding:8px 12px;border-top:1px solid var(--border-soft);margin-top:8px}
 .field-visibility label{display:flex;align-items:center;gap:6px;font-size:var(--text-xs);color:var(--ink-2);padding:2px 0;cursor:pointer}
+
+/* === 侧边栏底部用户菜单(WorkBuddy风格) === */
+.sidebar-user-menu{position:relative;padding:8px 10px;border-top:1px solid var(--border-soft)}
+.user-menu-trigger{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:var(--r-md);background:transparent;border:none;cursor:pointer;transition:background var(--t-fast)}
+.user-menu-trigger:hover{background:var(--surface-2)}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex:none}
+.user-avatar.lg{width:40px;height:40px;font-size:16px}
+.user-meta{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start}
+.user-name{font-size:var(--text-sm);font-weight:600;color:var(--ink-1);line-height:1.2}
+.user-status{font-size:var(--text-xs);color:var(--ink-4);margin-top:1px}
+.icon-btn.sm{width:28px;height:28px;min-width:28px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:var(--r-sm);background:transparent;border:none;color:var(--ink-3);cursor:pointer;transition:all var(--t-fast)}
+.icon-btn.sm:hover{background:var(--surface-2);color:var(--ink-1)}
+.badge-dot{position:absolute;top:-2px;right:-2px;background:var(--danger);color:#fff;font-size:9px;min-width:14px;height:14px;border-radius:7px;display:flex;align-items:center;justify-content:center;padding:0 3px;font-weight:700}
+.user-menu-dropdown{position:absolute;bottom:calc(100% + 6px);left:10px;right:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:0 8px 32px rgba(0,0,0,.28);z-index:1000;overflow:hidden}
+.user-menu-header{display:flex;align-items:center;gap:10px;padding:14px 14px 12px}
+.user-menu-name{font-size:var(--text-sm);font-weight:700;color:var(--ink-1)}
+.user-menu-sub{font-size:var(--text-xs);color:var(--ink-4);margin-top:2px}
+.user-menu-divider{height:1px;background:var(--border-soft);margin:4px 0}
+.user-menu-item{display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:var(--text-sm);color:var(--ink-2);cursor:pointer;transition:background var(--t-fast)}
+.user-menu-item:hover{background:var(--surface-2);color:var(--ink-1)}
+
+/* === 排版密度优化 === */
+.content{padding:20px 24px}
+.card{margin-bottom:14px}
+.card-pad{padding:16px 18px}
+.h-row{margin-bottom:12px}
+.nav-item{padding:9px 10px;margin:1px 0;border-radius:var(--r-md)}
+.nav-label{padding:14px 10px 6px;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.nbx-item{padding:12px 0;border-bottom:1px solid var(--border-soft)}
+.nbx-item:last-child{border-bottom:none}
+.featured-tabs{gap:20px;margin-bottom:16px}
+.feat-tab{padding:6px 0;font-size:var(--text-sm)}

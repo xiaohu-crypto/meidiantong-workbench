@@ -23,8 +23,8 @@ import TopSearch from "./components/TopSearch";
 import Onboarding from "./components/Onboarding";
 import { Btn, Modal } from "./ui/common";
 import {
-  IconHome, IconPlus, IconUsers, IconTask, IconKb, IconFunnel, IconToday, IconFlag,
-  IconMedia, IconChart, IconGrowth, IconSettings, IconMoon, IconSun,
+  IconHome, IconUsers, IconTask, IconKb, IconFunnel, IconToday,
+  IconMedia, IconChart, IconGrowth, IconSettings, IconMoon, IconSun, IconBell,
 } from "./components/icons";
 
 declare global {
@@ -68,15 +68,13 @@ type View = "today" | "crm" | "work" | "dev" | "media" | "kb" | "data" | "growth
 
 const NAV: { key: View; label: string; icon: (p: { size?: number }) => JSX.Element; group: string }[] = [
   { key: "today", label: "今日驾驶舱", icon: IconToday, group: "工作区" },
-  { key: "crm", label: "CRM 客户管理", icon: IconUsers, group: "八大模块" },
-  { key: "work", label: "工作管理系统", icon: IconTask, group: "八大模块" },
-  { key: "dev", label: "客户开发系统", icon: IconFunnel, group: "八大模块" },
-  { key: "media", label: "媒介策略中心", icon: IconMedia, group: "八大模块" },
-  { key: "kb", label: "知识学习系统", icon: IconKb, group: "八大模块" },
-  { key: "data", label: "数据分析报表", icon: IconChart, group: "八大模块" },
-  { key: "growth", label: "个人成长规划", icon: IconGrowth, group: "八大模块" },
-  { key: "help", label: "使用手册", icon: IconFlag, group: "系统" },
-  { key: "settings", label: "系统管理", icon: IconSettings, group: "系统" },
+  { key: "crm", label: "客户管理", icon: IconUsers, group: "业务模块" },
+  { key: "work", label: "任务看板", icon: IconTask, group: "业务模块" },
+  { key: "dev", label: "商机管理", icon: IconFunnel, group: "业务模块" },
+  { key: "media", label: "媒介资源", icon: IconMedia, group: "业务模块" },
+  { key: "kb", label: "知识库", icon: IconKb, group: "业务模块" },
+  { key: "data", label: "数据报表", icon: IconChart, group: "业务模块" },
+  { key: "growth", label: "成长规划", icon: IconGrowth, group: "业务模块" },
 ];
 
 async function loadAll(): Promise<DataSet> {
@@ -117,6 +115,7 @@ export default function App() {
   const [focusCid, setFocusCid] = useState<string | null>(null);
   const [kbFocus, setKbFocus] = useState<string | null>(null);
   const [updateVer, setUpdateVer] = useState<string | null>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const reload = useCallback(async () => { setData(await loadAll()); }, []);
 
@@ -137,7 +136,6 @@ export default function App() {
       if (!onboarded && cs.length === 0) { setShowOnboard(true); }
       else { await seedIfEmpty(); await seedExtraIfEmpty(); }
       await reload();
-      // 启动错过补发:逾期回款汇总通知(免打扰时段内不弹)
       const pays = (await db.getAll<Payment>("payments")).filter((p) => !p.deletedAt && p.status === "逾期");
       void startupCatchUp(pays.length);
       const t = await db.getSetting<"dark" | "light">("theme", "dark");
@@ -166,7 +164,6 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [reload]);
 
-  /* 数据变化 → 重建搜索索引 */
   useEffect(() => {
     if (!data) return;
     const docs: SearchDoc[] = [
@@ -179,7 +176,6 @@ export default function App() {
     rebuildIndex(docs);
   }, [data]);
 
-  /* 自动备份轮转:每 60s 检查一次,到期自动写盘并保留最近 N 份;错过补跑 */
   useEffect(() => {
     if (!data) return;
     const tick = async () => {
@@ -197,7 +193,6 @@ export default function App() {
     return () => window.clearInterval(id);
   }, [data]);
 
-  /* snooze 到期检查:每 60s */
   useEffect(() => {
     const id = window.setInterval(() => void (async () => {
       const list = await db.getSetting<{ id: string; at: number; title: string; body: string }[]>("snoozed", []);
@@ -225,7 +220,7 @@ export default function App() {
     else if (doc.type === "笔记") { setKbFocus(doc.id); setView("kb"); }
   }
 
-  const crumb = NAV.find((n) => n.key === view)?.label ?? "媒电通工作台";
+  const crumb = NAV.find((n) => n.key === view)?.label ?? (view === "settings" ? "设置" : view === "help" ? "帮助中心" : view === "notifications" ? "通知中心" : "媒电通工作台");
 
   return (
     <div className="app">
@@ -237,16 +232,13 @@ export default function App() {
             <div className="brand-sub">本地优先工作台</div>
           </div>
         </div>
-        <button className="quick-cta" onClick={() => setShowQuick(true)}>
-          <IconPlus size={16} /><span className="ni-label">快速采集</span><span className="kbd">Ctrl K</span>
-        </button>
         <nav className="nav">
-          {["工作区", "八大模块", "系统"].map((group) => (
-            <div key={group} className={"nav-group" + (group === "系统" ? " nav-sys" : "")}>
+          {["工作区", "业务模块"].map((group) => (
+            <div key={group} className="nav-group">
               <div className="nav-label">{group}</div>
               {NAV.filter((n) => n.group === group).map((n) => (
                 <div key={n.key} className={"nav-item" + (view === n.key ? " active" : "")}
-                  onClick={() => { setView(n.key); if (n.key === "crm") setFocusCid(null); if (n.key === "kb") setKbFocus(null); }}>
+                  onClick={() => { setView(n.key); setUserMenuOpen(false); if (n.key === "crm") setFocusCid(null); if (n.key === "kb") setKbFocus(null); }}>
                   <n.icon size={16} />
                   <span className="ni-label">{n.label}</span>
                 </div>
@@ -254,6 +246,44 @@ export default function App() {
             </div>
           ))}
         </nav>
+        <div className="sidebar-user-menu">
+          <button className="user-menu-trigger" onClick={() => setUserMenuOpen(!userMenuOpen)}>
+            <div className="user-avatar">媒</div>
+            <div className="user-meta">
+              <span className="user-name">工作台</span>
+              <span className="user-status">v0.1.0</span>
+            </div>
+            <button className="icon-btn sm" title="通知中心" onClick={(e) => { e.stopPropagation(); setView("notifications"); setUserMenuOpen(false); }} style={{ position: "relative" }}>
+              <IconBell size={16} />
+              {unreadCount > 0 ? <span className="badge-dot">{unreadCount > 99 ? "99+" : unreadCount}</span> : null}
+            </button>
+            <button className="icon-btn sm" title="切换主题" onClick={(e) => { e.stopPropagation(); switchTheme(theme === "dark" ? "light" : "dark"); }}>
+              {theme === "dark" ? <IconSun size={16} /> : <IconMoon size={16} />}
+            </button>
+          </button>
+          {userMenuOpen ? (
+            <div className="user-menu-dropdown" onClick={(e) => e.stopPropagation()}>
+              <div className="user-menu-header">
+                <div className="user-avatar lg">媒</div>
+                <div>
+                  <div className="user-menu-name">媒电通工作台</div>
+                  <div className="user-menu-sub">本地优先 · 数据不上传</div>
+                </div>
+              </div>
+              <div className="user-menu-divider" />
+              <div className="user-menu-item" onClick={() => { setView("settings"); setUserMenuOpen(false); }}>
+                <IconSettings size={16} /><span>系统设置</span>
+              </div>
+              <div className="user-menu-item" onClick={() => { setView("help"); setUserMenuOpen(false); }}>
+                <span style={{ fontSize: 16 }}>?</span><span>帮助中心</span>
+              </div>
+              <div className="user-menu-divider" />
+              <div className="user-menu-item" onClick={() => { setUserMenuOpen(false); window.mta?.installUpdate(); }}>
+                <span style={{ fontSize: 16 }}>↻</span><span>检查更新</span>
+              </div>
+            </div>
+          ) : null}
+        </div>
         <div className="nav-foot"><span className="dot" /><span>本地优先 · 数据不上传</span></div>
       </aside>
 
@@ -261,67 +291,57 @@ export default function App() {
         <header className="topbar">
           <div className="crumb">媒电通工作台 › <b>{crumb}</b></div>
           <TopSearch onSelect={onSearchSelect} />
-          <div className="tb-right">
-            <button className="icon-btn" title="通知中心" onClick={() => setView("notifications")} style={{ position: "relative" }}>
-              🔔
-              {unreadCount > 0 ? <span style={{ position: "absolute", top: 2, right: 2, background: "var(--danger)", color: "#fff", fontSize: 9, minWidth: 14, height: 14, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}>{unreadCount > 99 ? "99+" : unreadCount}</span> : null}
-            </button>
-            <button className="btn primary" onClick={() => setShowQuick(true)}><IconPlus size={14} /> 快速采集</button>
-            <button className="icon-btn" title="切换主题" onClick={() => switchTheme(theme === "dark" ? "light" : "dark")}>
-              {theme === "dark" ? <IconSun size={17} /> : <IconMoon size={17} />}
-            </button>
-          </div>
         </header>
 
         <main className="content">
           <Suspense fallback={
-        <div style={{ padding: 24 }}>
-          <div style={{ height: 32, width: 200, background: "var(--surface-2)", borderRadius: 6, marginBottom: 16, animation: "pulse 1.2s infinite" }} />
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 16 }}>
-            {[0,1,2,3].map((i) => <div key={i} style={{ height: 80, background: "var(--surface-2)", borderRadius: 8, animation: "pulse 1.2s infinite" }} />)}
-          </div>
-          <div style={{ height: 200, background: "var(--surface-2)", borderRadius: 8, animation: "pulse 1.2s infinite" }} />
-        </div>
-      }>
-      {view === "today" && data ? (
-            <Today customers={data.customers} deals={data.deals} payments={data.payments} cps={data.cps}
-              objectives={data.objectives} tasks={data.tasks} milestones={data.milestones}
-              reload={reload} openQuick={() => setShowQuick(true)} goCrm={goCrm} onNavigate={(v) => setView(v as View)} />
-          ) : null}
-          {view === "crm" && data ? (
-            <CRM customers={data.customers} contacts={data.contacts} rels={data.rels} deals={data.deals}
-              contracts={data.contracts} payments={data.payments} cps={data.cps} tasks={data.tasks}
-                            reload={reload} focusCustomerId={focusCid} customFields={data.customFields} />
-          ) : null}
-          {view === "work" && data ? (
-            <Work tasks={data.tasks} objectives={data.objectives} customers={data.customers} reload={reload} goCrm={goCrm} />
-          ) : null}
-          {view === "dev" && data ? (
-            <Dev deals={data.deals} customers={data.customers} pitches={data.pitches} reload={reload} />
-          ) : null}
-          {view === "media" && data ? (
-            <Media suppliers={data.suppliers} resources={data.resources} ratecards={data.ratecards}
-              items={data.items} postbuys={data.postbuys} customers={data.customers} influencers={data.influencers} reload={reload} />
-          ) : null}
-          {view === "kb" && data ? (
-            <Kb notes={data.notes} reload={reload} focusId={kbFocus} />
-          ) : null}
-          {view === "data" && data ? (
-            <Data contracts={data.contracts} payments={data.payments} deals={data.deals} items={data.items} baselines={data.baselines} postbuys={data.postbuys} resources={data.resources} tasks={data.tasks} reload={reload} />
-          ) : null}
-          {view === "growth" && data ? (
-            <Growth tasks={data.tasks} payments={data.payments} pitches={data.pitches} cps={data.cps} contracts={data.contracts} reload={reload} />
-          ) : null}
-          {view === "notifications" && data ? (
-            <Notifications customers={data.customers} payments={data.payments} cps={data.cps} goCrm={goCrm} reload={reload} notificationsReadAt={data.notificationsReadAt} />
-          ) : null}
+            <div style={{ padding: 24 }}>
+              <div style={{ height: 32, width: 200, background: "var(--surface-2)", borderRadius: 6, marginBottom: 16, animation: "pulse 1.2s infinite" }} />
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 16 }}>
+                {[0,1,2,3].map((i) => <div key={i} style={{ height: 80, background: "var(--surface-2)", borderRadius: 8, animation: "pulse 1.2s infinite" }} />)}
+              </div>
+              <div style={{ height: 200, background: "var(--surface-2)", borderRadius: 8, animation: "pulse 1.2s infinite" }} />
+            </div>
+          }>
+            {view === "today" && data ? (
+              <Today customers={data.customers} deals={data.deals} payments={data.payments} cps={data.cps}
+                objectives={data.objectives} tasks={data.tasks} milestones={data.milestones}
+                reload={reload} openQuick={() => setShowQuick(true)} goCrm={goCrm} onNavigate={(v) => setView(v as View)} />
+            ) : null}
+            {view === "crm" && data ? (
+              <CRM customers={data.customers} contacts={data.contacts} rels={data.rels} deals={data.deals}
+                contracts={data.contracts} payments={data.payments} cps={data.cps} tasks={data.tasks}
+                              reload={reload} focusCustomerId={focusCid} customFields={data.customFields} />
+            ) : null}
+            {view === "work" && data ? (
+              <Work tasks={data.tasks} objectives={data.objectives} customers={data.customers} reload={reload} goCrm={goCrm} />
+            ) : null}
+            {view === "dev" && data ? (
+              <Dev deals={data.deals} customers={data.customers} pitches={data.pitches} reload={reload} />
+            ) : null}
+            {view === "media" && data ? (
+              <Media suppliers={data.suppliers} resources={data.resources} ratecards={data.ratecards}
+                items={data.items} postbuys={data.postbuys} customers={data.customers} influencers={data.influencers} reload={reload} />
+            ) : null}
+            {view === "kb" && data ? (
+              <Kb notes={data.notes} reload={reload} focusId={kbFocus} />
+            ) : null}
+            {view === "data" && data ? (
+              <Data contracts={data.contracts} payments={data.payments} deals={data.deals} items={data.items} baselines={data.baselines} postbuys={data.postbuys} resources={data.resources} tasks={data.tasks} reload={reload} />
+            ) : null}
+            {view === "growth" && data ? (
+              <Growth tasks={data.tasks} payments={data.payments} pitches={data.pitches} cps={data.cps} contracts={data.contracts} reload={reload} />
+            ) : null}
+            {view === "notifications" && data ? (
+              <Notifications customers={data.customers} payments={data.payments} cps={data.cps} goCrm={goCrm} reload={reload} notificationsReadAt={data.notificationsReadAt} />
+            ) : null}
+            {view === "help" ? <Help /> : null}
+            {view === "settings" ? (
+              <SettingsPage theme={theme} setTheme={switchTheme} reload={reload}
+                customers={data?.customers ?? []} notes={data?.notes ?? []} customFields={data?.customFields ?? []} />
+            ) : null}
           </Suspense>
-      {view === "help" ? <Help /> : null}
-          {view === "settings" ? (
-            <SettingsPage theme={theme} setTheme={switchTheme} reload={reload}
-              customers={data?.customers ?? []} notes={data?.notes ?? []} customFields={data?.customFields ?? []} />
-          ) : null}
-          {!data ? <p className="muted" style={{ padding: 24 }}>正在加载数据…</p> : null}
+          {!data && view !== "help" && view !== "settings" ? <p className="muted" style={{ padding: 24 }}>正在加载数据…</p> : null}
         </main>
       </div>
 

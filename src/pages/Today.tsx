@@ -8,7 +8,7 @@ import { uid } from "../ui/common";
 import { db } from "../db/db";
 import {
   IconWallet, IconUsers, IconTask, IconFunnel, IconChart, IconMedia, IconKb,
-  IconGrowth, IconFlag, IconSettings, IconToday,
+  IconGrowth, IconToday,
 } from "../components/icons";
 
 interface Props {
@@ -21,26 +21,23 @@ interface Props {
 
 type ToolIcon = (p: { size?: number }) => JSX.Element;
 
-interface ToolItem { key: string; name: string; desc: string; icon: ToolIcon; group: "工作区" | "业务模块" | "系统" }
+interface ToolItem { key: string; name: string; desc: string; icon: ToolIcon; group: "工作区" | "业务模块" }
 
 const ALL_TOOLS: ToolItem[] = [
   { key: "today", name: "今日驾驶舱", desc: "每日行动总览", icon: IconToday, group: "工作区" },
-  { key: "crm", name: "CRM 客户", desc: "客户档案与 360° 视图", icon: IconUsers, group: "业务模块" },
-  { key: "work", name: "任务", desc: "看板任务管理", icon: IconTask, group: "业务模块" },
-  { key: "dev", name: "商机", desc: "销售漏斗推进", icon: IconFunnel, group: "业务模块" },
-  { key: "media", name: "媒介", desc: "媒介资源与策略", icon: IconMedia, group: "业务模块" },
-  { key: "kb", name: "知识", desc: "笔记与学习库", icon: IconKb, group: "业务模块" },
-  { key: "data", name: "数据", desc: "经营分析报表", icon: IconChart, group: "业务模块" },
-  { key: "growth", name: "成长", desc: "个人成长规划", icon: IconGrowth, group: "业务模块" },
-  { key: "help", name: "使用手册", desc: "帮助文档", icon: IconFlag, group: "系统" },
-  { key: "settings", name: "系统管理", desc: "设置与备份", icon: IconSettings, group: "系统" },
+  { key: "crm", name: "客户管理", desc: "客户档案与 360° 视图", icon: IconUsers, group: "业务模块" },
+  { key: "work", name: "任务看板", desc: "看板任务管理", icon: IconTask, group: "业务模块" },
+  { key: "dev", name: "商机管理", desc: "销售漏斗推进", icon: IconFunnel, group: "业务模块" },
+  { key: "media", name: "媒介资源", desc: "媒介资源与策略", icon: IconMedia, group: "业务模块" },
+  { key: "kb", name: "知识库", desc: "笔记与学习库", icon: IconKb, group: "业务模块" },
+  { key: "data", name: "数据报表", desc: "经营分析报表", icon: IconChart, group: "业务模块" },
+  { key: "growth", name: "成长规划", desc: "个人成长规划", icon: IconGrowth, group: "业务模块" },
 ];
 
 const DEFAULT_PINNED = ["crm", "dev", "work", "data"];
-const PINNABLE = ALL_TOOLS.filter((t) => t.group !== "工作区" && t.group !== "系统");
+const PINNABLE = ALL_TOOLS.filter((t) => t.group !== "工作区");
 
 type FeaturedTab = "今日待办" | "经营数据" | "快捷操作";
-type AllTab = "工作区" | "业务模块" | "系统";
 
 export default function Today(props: Props) {
   const { show, node } = useToast();
@@ -49,7 +46,6 @@ export default function Today(props: Props) {
   const [pinned, setPinned] = useState<string[]>(DEFAULT_PINNED);
   const [pinnedEdit, setPinnedEdit] = useState(false);
   const [featuredTab, setFeaturedTab] = useState<FeaturedTab>("今日待办");
-  const [allTab, setAllTab] = useState<AllTab>("工作区");
 
   useEffect(() => {
     void (async () => {
@@ -109,9 +105,6 @@ export default function Today(props: Props) {
           <div className="hb-title">媒电通工作台 · 今日驾驶舱</div>
           <div className="hb-date">{today.getFullYear()} 年 {today.getMonth() + 1} 月 {today.getDate()} 日 {week}</div>
           <div className="hb-greet">在途商机 {active.length} 个 · 逾期回款 {overdue.length} 笔 — 行动清单已按规则引擎排好。</div>
-        </div>
-        <div className="hb-actions">
-          <Btn kind="primary" onClick={props.openQuick}>+ 快速采集</Btn>
         </div>
       </div>
 
@@ -282,7 +275,6 @@ export default function Today(props: Props) {
             <div className="card card-pad">
               <div className="h-row"><span className="h-title sm">快速入口</span></div>
               <div className="nbx-actions">
-                <Btn kind="primary" onClick={props.openQuick}>+ 快速采集</Btn>
                 <Btn kind="data" onClick={() => props.onNavigate("crm")}>打开 CRM</Btn>
                 <Btn kind="ghost" onClick={() => props.onNavigate("dev")}>查看商机漏斗</Btn>
               </div>
@@ -290,23 +282,6 @@ export default function Today(props: Props) {
           </div>
         </div>
       ) : null}
-
-      <div className="featured-tabs" style={{ marginTop: 24 }}>
-        {(["工作区", "业务模块", "系统"] as const).map((t) => (
-          <span key={t} className={"feat-tab" + (allTab === t ? " active" : "")} onClick={() => setAllTab(t)}>{t}</span>
-        ))}
-      </div>
-      <div className="all-tools-grid">
-        {ALL_TOOLS.filter((t) => t.group === allTab).map((t) => (
-          <div className="tool-card" key={t.key} onClick={() => props.onNavigate(t.key)}>
-            <span className="tc-icon"><t.icon size={18} /></span>
-            <div>
-              <div className="tc-name">{t.name}</div>
-              <div className="tc-desc">{t.desc}</div>
-            </div>
-          </div>
-        ))}
-      </div>
 
       {pinnedEdit ? (
         <Modal title="编辑常用工具" onClose={() => setPinnedEdit(false)} footer={
