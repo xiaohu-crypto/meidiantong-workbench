@@ -4,6 +4,10 @@
     "version": "0.1.0",
     "description": "Media Advertising Workbench (Electron + React 18 + TS)",
     "main": "dist-electron/main.js",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/xiaohu-crypto/meidiantong-workbench.git"
+    },
     "scripts": {
         "dev": "vite",
         "build": "tsc --noEmit && vite build",
@@ -35,10 +39,15 @@
         "vitest": "^2.1.1"
     },
     "build": {
-        "appId": "com.xiaohucrypto.mediantong",
+        "appId": "com.xiaohucrypto.meidiantongworkbench",
         "productName": "媒电通工作台",
         "directories": {
             "output": "release"
+        },
+        "publish": {
+            "provider": "github",
+            "owner": "xiaohu-crypto",
+            "repo": "meidiantong-workbench"
         },
         "files": [
             "dist/**",
