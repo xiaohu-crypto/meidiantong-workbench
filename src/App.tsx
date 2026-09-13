@@ -68,7 +68,7 @@ interface DataSet {
 type View = "today" | "crm" | "work" | "dev" | "media" | "kb" | "data" | "growth" | "settings" | "help" | "notifications";
 
 const NAV: { key: View; label: string; icon: (p: { size?: number }) => JSX.Element; group: string }[] = [
-  { key: "today", label: "今日驾驶舱", icon: IconToday, group: "常用" },
+  { key: "today", label: "首页", icon: IconToday, group: "常用" },
   { key: "crm", label: "客户管理", icon: IconUsers, group: "业务" },
   { key: "work", label: "任务看板", icon: IconTask, group: "业务" },
   { key: "dev", label: "商机管理", icon: IconFunnel, group: "业务" },
@@ -253,10 +253,6 @@ export default function App() {
         <div className="sidebar-user-menu">
           <button className="user-menu-trigger" onClick={() => setUserMenuOpen(!userMenuOpen)}>
             <div className="user-avatar">媒</div>
-            <div className="user-meta">
-              <span className="user-name">工作台</span>
-              <span className="user-status">v0.1.0</span>
-            </div>
             <div style={{ position: "relative", display: "inline-flex" }}>
               <button data-notification-trigger className="icon-btn sm" title="通知中心" onClick={(e) => { e.stopPropagation(); setUserMenuOpen(false); setNotifyOpen((v) => !v); }}>
                 <IconBell size={16} />
@@ -306,7 +302,7 @@ export default function App() {
 
       <div className="main">
         <header className="topbar">
-          <div className="crumb">媒电通工作台 › <b>{crumb}</b></div>
+          <div className="crumb"><b>{crumb}</b></div>
           <TopSearch onSelect={onSearchSelect} />
         </header>
 

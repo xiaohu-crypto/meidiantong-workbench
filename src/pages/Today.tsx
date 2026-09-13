@@ -1,15 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { nextBestActions } from "../core/metrics";
 import { daysSince, healthOf } from "../core/derive";
 import type { Customer, Deal, Milestone, Objective, Payment, ContactPoint, Task } from "../types";
-import { Btn, Chip, money, Modal, Progress, useToast } from "../ui/common";
+import { Btn, Chip, money, Progress, useToast } from "../ui/common";
 import { genScript } from "../core/ai/script";
 import { uid } from "../ui/common";
 import { db } from "../db/db";
-import {
-  IconWallet, IconUsers, IconTask, IconFunnel, IconChart, IconMedia, IconKb,
-  IconGrowth, IconToday,
-} from "../components/icons";
+import { IconWallet } from "../components/icons";
 
 interface Props {
   customers: Customer[]; deals: Deal[]; payments: Payment[]; cps: ContactPoint[];
@@ -19,40 +16,13 @@ interface Props {
   onNavigate: (view: string) => void;
 }
 
-type ToolIcon = (p: { size?: number }) => JSX.Element;
-
-interface ToolItem { key: string; name: string; desc: string; icon: ToolIcon; group: "工作区" | "业务模块" }
-
-const ALL_TOOLS: ToolItem[] = [
-  { key: "today", name: "今日驾驶舱", desc: "每日行动总览", icon: IconToday, group: "工作区" },
-  { key: "crm", name: "客户管理", desc: "客户档案与 360° 视图", icon: IconUsers, group: "业务模块" },
-  { key: "work", name: "任务看板", desc: "看板任务管理", icon: IconTask, group: "业务模块" },
-  { key: "dev", name: "商机管理", desc: "销售漏斗推进", icon: IconFunnel, group: "业务模块" },
-  { key: "media", name: "媒介资源", desc: "媒介资源与策略", icon: IconMedia, group: "业务模块" },
-  { key: "kb", name: "知识库", desc: "笔记与学习库", icon: IconKb, group: "业务模块" },
-  { key: "data", name: "数据报表", desc: "经营分析报表", icon: IconChart, group: "业务模块" },
-  { key: "growth", name: "成长规划", desc: "个人成长规划", icon: IconGrowth, group: "业务模块" },
-];
-
-const DEFAULT_PINNED = ["crm", "dev", "work", "data"];
-const PINNABLE = ALL_TOOLS.filter((t) => t.group !== "工作区");
-
 type FeaturedTab = "今日待办" | "经营数据" | "快捷操作";
 
 export default function Today(props: Props) {
   const { show, node } = useToast();
   const [done, setDone] = useState<Record<string, boolean>>({});
   const [gen, setGen] = useState<Record<string, { busy?: boolean; text?: string; badge?: "云" | "本地"; reason?: string; error?: string }>>({});
-  const [pinned, setPinned] = useState<string[]>(DEFAULT_PINNED);
-  const [pinnedEdit, setPinnedEdit] = useState(false);
   const [featuredTab, setFeaturedTab] = useState<FeaturedTab>("今日待办");
-
-  useEffect(() => {
-    void (async () => {
-      const p = await db.getSetting<string[]>("homePinned", DEFAULT_PINNED);
-      setPinned(Array.isArray(p) ? p : DEFAULT_PINNED);
-    })();
-  }, []);
 
   const active = props.deals.filter((d) => !["签约", "输单", "流失"].includes(d.stage) && !d.deletedAt);
   const nameOf = (id: string) => props.customers.find((c) => c.id === id)?.name ?? "未知客户";
@@ -88,13 +58,6 @@ export default function Today(props: Props) {
     return diff <= 7;
   });
 
-  async function savePinned(next: string[]) {
-    setPinned(next);
-    await db.setSetting("homePinned", next);
-    show("常用工具已保存");
-  }
-
-  const pinnedTools = pinned.map((k) => ALL_TOOLS.find((t) => t.key === k)).filter(Boolean) as ToolItem[];
   const shownTasks = props.tasks.filter((t) => !t.deletedAt && t.due && t.kanbanCol !== "完成").slice(0, 4);
   const dueTotal = overdue.reduce((s, p) => s + p.amount, 0) + dueSoon.reduce((s, p) => s + p.amount, 0);
 
@@ -102,22 +65,9 @@ export default function Today(props: Props) {
     <div>
       <div className="home-banner" style={{ borderRadius: "var(--r-xl)" }}>
         <div>
-          <div className="hb-title">今日驾驶舱</div>
+          <div className="hb-title">首页</div>
           <div className="hb-date">{today.getFullYear()} 年 {today.getMonth() + 1} 月 {today.getDate()} 日 {week}</div>
           <div className="hb-greet">在途商机 {active.length} 个 · 逾期回款 {overdue.length} 笔 — 行动清单已按规则引擎排好。</div>
-        </div>
-      </div>
-
-      <div className="pinned-tools">
-        {pinnedTools.map((t) => (
-          <div className="pinned-item" key={t.key} onClick={() => props.onNavigate(t.key)}>
-            <span className="pi-icon"><t.icon size={20} /></span>
-            <span className="pi-name">{t.name}</span>
-          </div>
-        ))}
-        <div className="pinned-item" onClick={() => setPinnedEdit(true)} title="编辑常用工具">
-          <span className="pi-icon">✎</span>
-          <span className="pi-name">编辑</span>
         </div>
       </div>
 
@@ -299,31 +249,6 @@ export default function Today(props: Props) {
         </div>
       ) : null}
 
-      {pinnedEdit ? (
-        <Modal title="编辑常用工具" onClose={() => setPinnedEdit(false)} footer={
-          <div className="grow">
-            <Btn kind="ghost" onClick={() => setPinnedEdit(false)}>取消</Btn>
-            <Btn kind="primary" onClick={() => setPinnedEdit(false)}>完成</Btn>
-          </div>
-        }>
-          <p className="muted" style={{ marginBottom: 10, fontSize: "var(--text-sm)" }}>勾选要固定到首页顶部的工具(最多 6 个)。</p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            {PINNABLE.map((t) => {
-              const on = pinned.includes(t.key);
-              return (
-                <label key={t.key} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", border: "1px solid var(--border-soft)", borderRadius: "var(--r-md)", cursor: "pointer", fontSize: "var(--text-sm)" }}>
-                  <input type="checkbox" checked={on} onChange={() => {
-                    let next = on ? pinned.filter((k) => k !== t.key) : [...pinned, t.key];
-                    if (next.length > 6) { show("最多固定 6 个工具"); next = pinned; }
-                    void savePinned(next);
-                  }} />
-                  <t.icon size={14} /> {t.name}
-                </label>
-              );
-            })}
-          </div>
-        </Modal>
-      ) : null}
       {node}
     </div>
   );
