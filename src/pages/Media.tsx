@@ -211,7 +211,7 @@ export default function Media(props: Props) {
     const blob = new Blob([html], { type: "text/html" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
     a.download = `排期报价单_${new Date().toISOString().slice(0, 10)}.html`; a.click();
-    URL.revokeObjectURL(a.href); show("已导出");
+    URL.revokeObjectURL(a.href); show("已导出CSV到下载目录");
   }
   async function importCsv() {
     const rows = parseCsv(csv);
@@ -308,9 +308,11 @@ export default function Media(props: Props) {
             <div className="month-lbls" style={{ display: "grid", gridTemplateColumns: `180px repeat(4,1fr)`, marginBottom: 4 }}>
               <span /><span>9 月</span><span>10 月</span><span>11 月</span><span>12 月</span>
             </div>
-            {items.map((i) => (
+            {items.map((i, idx) => {
+              const prevSameRes = idx > 0 && items[idx - 1].resourceId === i.resourceId;
+              return (
               <div key={i.id} style={{ display: "grid", gridTemplateColumns: "180px 1fr", alignItems: "center", borderTop: "1px solid var(--border-soft)", minHeight: 44 }}>
-                <div style={{ padding: "8px 12px", fontWeight: 600, fontSize: "var(--text-sm)" }}>{i.name}<div className="cell-sub">{resName(i.resourceId)}</div></div>
+                <div style={{ padding: "8px 12px", fontWeight: 600, fontSize: "var(--text-sm)" }}>{i.name}{prevSameRes ? null : <div className="cell-sub">{resName(i.resourceId)}</div>}</div>
                 <div style={{ position: "relative", height: 44 }}>
                   {[0, 1, 2, 3].map((k) => <div key={k} style={{ position: "absolute", top: 0, bottom: 0, left: `${k * 25}%`, borderLeft: "1px dashed var(--border-soft)" }} />)}
                   <div style={{
@@ -322,7 +324,7 @@ export default function Media(props: Props) {
                   }}>{money(i.cost)}</div>
                 </div>
               </div>
-            ))}
+            );})}
             {items.length === 0 ? <p className="muted" style={{ padding: 16 }}>暂无排期</p> : null}
           </div>
         </>
@@ -338,6 +340,14 @@ export default function Media(props: Props) {
               <Btn kind="primary" sm onClick={openNewResource}><IconPlus size={12} /> 新增</Btn>
             </div>
           </div>
+          {resources.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "48px 16px" }}>
+              <div style={{ fontSize: 36, marginBottom: 12 }}>📊</div>
+              <div style={{ fontWeight: 600, color: "var(--ink)", marginBottom: 6 }}>暂无媒介资源</div>
+              <div style={{ fontSize: "var(--text-sm)", color: "var(--ink-3)", marginBottom: 16 }}>添加媒介资源，管理你的广告位库存</div>
+              <Btn kind="primary" onClick={openNewResource}><IconPlus size={14} /> 新增资源</Btn>
+            </div>
+          ) : (
           <table className="tgrid">
             <thead><tr><th>资源</th><th>供应商</th><th>档案</th><th>点位</th><th>刊例价</th><th>操作</th></tr></thead>
             <tbody>
@@ -373,6 +383,7 @@ export default function Media(props: Props) {
               })}
             </tbody>
           </table>
+          )}
         </div>
       )}
 

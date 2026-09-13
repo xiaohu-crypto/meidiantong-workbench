@@ -21,6 +21,7 @@ const Notifications = lazy(() => import("./pages/Notifications"));
 import QuickCapture from "./components/QuickCapture";
 import TopSearch from "./components/TopSearch";
 import Onboarding from "./components/Onboarding";
+import NotificationPanel from "./components/NotificationPanel";
 import { Btn, Modal } from "./ui/common";
 import {
   IconHome, IconUsers, IconTask, IconKb, IconFunnel, IconToday,
@@ -116,8 +117,11 @@ export default function App() {
   const [kbFocus, setKbFocus] = useState<string | null>(null);
   const [updateVer, setUpdateVer] = useState<string | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [notifyOpen, setNotifyOpen] = useState(false);
 
   const reload = useCallback(async () => { setData(await loadAll()); }, []);
+  const closeNotify = useCallback(() => setNotifyOpen(false), []);
+  const goAllNotifications = useCallback(() => { setNotifyOpen(false); setView("notifications"); }, []);
 
   // 未读通知数:逾期回款 + 14天无接触客户
   const unreadCount = data ? (
@@ -253,10 +257,23 @@ export default function App() {
               <span className="user-name">工作台</span>
               <span className="user-status">v0.1.0</span>
             </div>
-            <button className="icon-btn sm" title="通知中心" onClick={(e) => { e.stopPropagation(); setView("notifications"); setUserMenuOpen(false); }} style={{ position: "relative" }}>
-              <IconBell size={16} />
-              {unreadCount > 0 ? <span className="badge-dot">{unreadCount > 99 ? "99+" : unreadCount}</span> : null}
-            </button>
+            <div style={{ position: "relative", display: "inline-flex" }}>
+              <button data-notification-trigger className="icon-btn sm" title="通知中心" onClick={(e) => { e.stopPropagation(); setUserMenuOpen(false); setNotifyOpen((v) => !v); }}>
+                <IconBell size={16} />
+                {unreadCount > 0 ? <span className="badge-dot">{unreadCount > 99 ? "99+" : unreadCount}</span> : null}
+              </button>
+              {notifyOpen && data ? (
+                <NotificationPanel
+                  customers={data.customers}
+                  payments={data.payments}
+                  cps={data.cps}
+                  notificationsReadAt={data.notificationsReadAt}
+                  reload={reload}
+                  onClose={closeNotify}
+                  onViewAll={goAllNotifications}
+                />
+              ) : null}
+            </div>
             <button className="icon-btn sm" title="切换主题" onClick={(e) => { e.stopPropagation(); switchTheme(theme === "dark" ? "light" : "dark"); }}>
               {theme === "dark" ? <IconSun size={16} /> : <IconMoon size={16} />}
             </button>

@@ -222,15 +222,26 @@ export default function Data(props: Props) {
 
   return (
     <div>
+      <div className="page-head">
+        <div><h1>数据报表</h1><div className="date">经营分析仪表盘 · 自动汇总客户与商机数据</div></div>
+      </div>
       <div className="tabs">
         <span className={"tab" + (dashTab === "dashboard" ? " active" : "")} onClick={() => setDashTab("dashboard")}>仪表盘</span>
         <span className={"tab" + (dashTab === "detail" ? " active" : "")} onClick={() => setDashTab("detail")}>详细报表</span>
       </div>
+      {contracts.length === 0 && activeDeals.length === 0 && payments.length === 0 ? (
+        <div className="empty-state">
+          <div className="es-icon">&#128202;</div>
+          <div className="es-title">暂无数据</div>
+          <div className="es-desc">添加客户和商机后，这里会自动生成经营分析</div>
+        </div>
+      ) : (
 
+        <>
       {dashTab === "dashboard" ? (
         <div>
           <div style={{ display: "flex", justifyContent: "flex-end", padding: "8px 0 0" }}>
-            <Btn kind={editingDash ? "data" : "ghost"} onClick={() => { if (editingDash) void finishDashEdit(); else setEditingDash(true); }}>{editingDash ? "完成" : "编辑布局"}</Btn>
+            <Btn kind={editingDash ? "data" : "ghost"} title="自定义可见字段" onClick={() => { if (editingDash) void finishDashEdit(); else setEditingDash(true); }}>{editingDash ? "完成" : "编辑布局"}</Btn>
           </div>
           <Dashboard
             dashboard={dashboard}
@@ -244,7 +255,7 @@ export default function Data(props: Props) {
       ) : (
         <>
           <div className="page-head">
-            <div><h1>数据报表</h1><div className="date">口径可切换(签约额/回款/毛利)· 基准值表让数据可解读 · 演示口径:合同签约额</div></div>
+            <div className="date">口径可切换(签约额/回款/毛利)· 基准值表让数据可解读 · 演示口径:合同签约额</div>
             <div className="actions">
               <select className="sel" value={metric} onChange={(e) => setMetric(e.target.value as Metric)}>
                 {["签约额", "回款", "毛利"].map((m) => <option key={m}>{m}</option>)}
@@ -347,6 +358,8 @@ export default function Data(props: Props) {
             <Field label="基准值(如 ¥45-70 / ≥1:2.5)"><input className="inp num" style={{ width: "100%" }} value={bl.value} onChange={(e) => setBl({ ...bl, value: e.target.value })} /></Field>
             <Btn kind="data" onClick={() => { void addBaseline(); }}>保存基准值</Btn>
           </div>
+        </>
+      )}
         </>
       )}
       {node}

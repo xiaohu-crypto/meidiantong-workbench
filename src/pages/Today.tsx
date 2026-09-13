@@ -100,7 +100,7 @@ export default function Today(props: Props) {
 
   return (
     <div>
-      <div className="home-banner">
+      <div className="home-banner" style={{ borderRadius: "var(--r-xl)" }}>
         <div>
           <div className="hb-title">今日驾驶舱</div>
           <div className="hb-date">{today.getFullYear()} 年 {today.getMonth() + 1} 月 {today.getDate()} 日 {week}</div>
@@ -175,7 +175,13 @@ export default function Today(props: Props) {
                   </div>
                 );
               })}
-              {nba.length === 0 ? <p className="muted" style={{ padding: "16px 0" }}>暂无在途商机 — 按 Ctrl+K 快速采集，或前往商机管理新建。</p> : null}
+              {nba.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "24px 12px" }}>
+                  <div style={{ fontSize: 28, marginBottom: 8 }}>📋</div>
+                  <div style={{ fontWeight: 600, color: "var(--ink)", marginBottom: 4 }}>今日无待办建议</div>
+                  <div style={{ fontSize: "var(--text-sm)", color: "var(--ink-3)" }}>完成客户跟进后，规则引擎会自动生成建议</div>
+                </div>
+              ) : null}
             </div>
           </div>
           <div className="side-stack">
@@ -184,7 +190,13 @@ export default function Today(props: Props) {
               {shownTasks.map((t) => (
                 <div className="mini-row" key={t.id}><time>{t.priority === "高" ? "!!" : "·"}</time><span className="ev">{t.title}</span></div>
               ))}
-              {shownTasks.length === 0 ? <p className="muted">今日无截止任务</p> : null}
+              {shownTasks.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "16px 4px" }}>
+                  <div style={{ fontSize: 20, marginBottom: 4 }}>📅</div>
+                  <div style={{ color: "var(--ink-2)", fontSize: "var(--text-sm)", marginBottom: 2 }}>今日无日程</div>
+                  <div style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>添加任务后自动同步</div>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>

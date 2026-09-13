@@ -177,7 +177,7 @@ export default function Work(props: Props) {
               onDragLeave={() => setOver((c) => (c === col ? null : c))}
               onDrop={() => { void drop(col); }}
               style={over === col ? { borderColor: "var(--data)" } : undefined}>
-              <div className="kcol-head">
+              <div className="kcol-head" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                 {col}
                 <span className={"chip " + (isOverLimit ? "danger" : "gray")} style={{ marginLeft: "auto" }} title={isOverLimit ? "超过 WIP 上限,先完成再领取新任务" : undefined}>{colTasks.length}</span>
               </div>
@@ -193,7 +193,14 @@ export default function Work(props: Props) {
                     </div>
                   </div>
                 ))}
-                {colTasks.length === 0 ? <p className="muted" style={{ fontSize: "var(--text-xs)", textAlign: "center", padding: 12 }}>拖拽卡片到这里</p> : null}
+                {colTasks.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "20px 8px" }}>
+                    <div style={{ fontSize: 24, marginBottom: 6 }}>📋</div>
+                    <div style={{ fontWeight: 600, color: "var(--ink)", marginBottom: 2, fontSize: "var(--text-sm)" }}>暂无任务</div>
+                    <div style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)", marginBottom: 10 }}>拖拽卡片到这里，或新建任务</div>
+                    <Btn kind="primary" sm onClick={() => setAddOpen(true)}>新建任务</Btn>
+                  </div>
+                ) : null}
               </div>
             </div>
           );

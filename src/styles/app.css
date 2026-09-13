@@ -343,3 +343,37 @@ html[data-titlebar="integrated"] .topbar .filter-input { -webkit-app-region: no-
 .nbx-item:last-child{border-bottom:none}
 .featured-tabs{gap:20px;margin-bottom:16px}
 .feat-tab{padding:6px 0;font-size:var(--text-sm)}
+
+/* === 任务1: Drawer flex 布局确认(已有结构正确,补充微小修正) === */
+.drawer{flex-direction:column}
+.drawer-body{flex:1 1 auto;min-height:0;overflow-y:auto}
+.drawer-foot{flex:none}
+
+/* === 任务2: Kanban 健康度角标 === */
+.health-badge{display:inline-flex;align-items:center;gap:3px;background:var(--danger-bg);color:var(--danger);font-size:10px;font-weight:700;padding:1px 7px;border-radius:var(--r-full);margin-left:4px;line-height:1.5}
+.health-badge::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--danger)}
+
+/* === 任务3: 商机 Path 进度条 === */
+.deal-path{display:flex;align-items:flex-start;padding:14px 18px 12px;border-bottom:1px solid var(--border-soft);background:var(--surface)}
+.deal-path-step{display:flex;flex-direction:column;align-items:center;gap:4px;flex:none;min-width:44px}
+.deal-path-dot{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2px solid var(--border);background:var(--surface-2);color:var(--ink-4);transition:all var(--t-fast)}
+.deal-path-step.done .deal-path-dot{background:var(--success);border-color:var(--success);color:#fff}
+.deal-path-step.current .deal-path-dot{background:var(--brand);border-color:var(--brand);color:#fff;box-shadow:0 0 0 3px var(--brand-soft)}
+.deal-path-line{flex:1;height:2px;background:var(--border-soft);margin:11px 2px 0;border-radius:1px;min-width:12px}
+.deal-path-line.done{background:var(--success)}
+.deal-path-label{font-size:10px;color:var(--ink-4);white-space:nowrap;font-weight:500}
+.deal-path-step.current .deal-path-label{color:var(--brand);font-weight:650}
+.deal-path-step.done .deal-path-label{color:var(--ink-3)}
+
+/* === 任务4a: CRM 列表分组折叠 === */
+.crm-group-head{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface-2);font-weight:600;font-size:var(--text-sm);cursor:pointer;border-bottom:1px solid var(--border-soft);user-select:none}
+.crm-group-head:hover{background:var(--border-soft)}
+.crm-group-arrow{display:inline-block;transition:transform var(--t-fast);font-size:10px;color:var(--ink-4);width:14px}
+.crm-group-arrow.collapsed{transform:rotate(-90deg)}
+.crm-group-count{color:var(--ink-4);font-weight:500;font-size:var(--text-xs)}
+
+/* === 任务6: 统一空状态 === */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:56px 24px;text-align:center}
+.empty-state .es-icon{font-size:44px;margin-bottom:14px;line-height:1}
+.empty-state .es-title{font-size:var(--text-lg);font-weight:650;color:var(--ink-2);margin-bottom:6px}
+.empty-state .es-desc{font-size:var(--text-sm);color:var(--ink-3);max-width:380px;margin-bottom:18px;line-height:1.6}

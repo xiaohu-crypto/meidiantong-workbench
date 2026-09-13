@@ -21,6 +21,10 @@ export default function TopSearch(props: { onSelect: (doc: SearchDoc) => void })
     setActive(0);
   }, [q]);
 
+  /* 任务4b: 计算每组数量 */
+  const typeCounts = new Map<string, number>();
+  for (const r of results) { typeCounts.set(r.type, (typeCounts.get(r.type) ?? 0) + 1); }
+
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
@@ -63,7 +67,7 @@ export default function TopSearch(props: { onSelect: (doc: SearchDoc) => void })
             return (
               <div key={r.type + r.id}>
                 {showGroup ? (
-                  <div style={{ padding: "6px 12px 2px", fontSize: 10, fontWeight: 700, color: "var(--ink-3)", letterSpacing: ".06em" }}>{typeLabel[r.type] ?? r.type}</div>
+                  <div style={{ padding: "6px 12px 2px", fontSize: 10, fontWeight: 700, color: "var(--ink-3)", letterSpacing: ".06em" }}>{typeLabel[r.type] ?? r.type} · {typeCounts.get(r.type) ?? 0}条</div>
                 ) : null}
                 <div
                   data-active={idx === active ? "1" : "0"}

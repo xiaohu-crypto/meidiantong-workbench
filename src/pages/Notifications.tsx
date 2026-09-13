@@ -29,6 +29,13 @@ export default function Notifications(props: Props) {
         <div><h1>通知中心</h1><div className="date">逾期回款 · 跟进超期 · 待办汇总</div></div>
       </div>
 
+      {overduePays.length === 0 && staleCustomers.length === 0 ? (
+        <div className="card card-pad" style={{ textAlign: "center", padding: "48px 16px" }}>
+          <div style={{ fontSize: 36, marginBottom: 12 }}>🔔</div>
+          <div style={{ fontWeight: 600, color: "var(--ink)", marginBottom: 6 }}>所有通知已处理</div>
+          <div style={{ fontSize: "var(--text-sm)", color: "var(--ink-3)" }}>有新通知时会在这里提醒你</div>
+        </div>
+      ) : (
       <div className="grid-c" style={{ gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         <div className="card card-pad">
           <div className="h-row" style={{ marginBottom: 8 }}>
@@ -61,6 +68,7 @@ export default function Notifications(props: Props) {
           {staleCustomers.length === 0 ? <p className="muted">暂无超期客户</p> : null}
         </div>
       </div>
+      )}
 
       <div className="card card-pad" style={{ marginTop: 16 }}>
         <div className="h-row" style={{ marginBottom: 8 }}>

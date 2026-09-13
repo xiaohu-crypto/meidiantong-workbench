@@ -13,12 +13,15 @@ export default function Growth(props: Props) {
   const [lessons, setLessons] = useState("");
   const [skills, setSkills] = useState<Record<string, number>>({});
   const [targets, setTargets] = useState<{ weeklyVisits: number; monthlySign: number; monthlyAar: number }>({ weeklyVisits: 2, monthlySign: 500000, monthlyAar: 1 });
+  const [hasTargets, setHasTargets] = useState(false);
 
   useEffect(() => {
     void (async () => {
       setAars((await db.getAll<Aar>("aars")).filter((a) => !a.deletedAt).sort((a, b) => b.createdAt - a.createdAt));
       setSkills(await db.getSetting<Record<string, number>>("skills", { 媒介策划: 2, 客户沟通: 2, 数据分析: 1, 创意提案: 2 }));
-      setTargets(await db.getSetting("growthTargets", { weeklyVisits: 2, monthlySign: 500000, monthlyAar: 1 }));
+      const savedT = await db.getSetting<typeof targets | null>("growthTargets", null);
+      setHasTargets(savedT !== null);
+      setTargets(savedT ?? { weeklyVisits: 2, monthlySign: 500000, monthlyAar: 1 });
     })();
   }, []);
 
@@ -62,30 +65,41 @@ export default function Growth(props: Props) {
 
       <div className="card card-pad" style={{ marginBottom: 16 }}>
         <div className="h-row"><span className="h-title sm">我的目标 · 本周 / 本月(目标可改,实际自动统计)</span><Chip kind="data" style={{ marginLeft: "auto" }}>规划 = 目标 vs 实际</Chip></div>
-        <div className="alert-line" title="数据来源:接触点记录(contactPoints)中本周新增的条目,含微信/拜访/电话/邮件">
-          <span className="txt">周拜访数<small style={{ display: "block", color: "var(--ink-4)", fontSize: 11 }}>来源:本周新增接触点记录</small></span>
-          <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-            <input className="inp num" style={{ width: 64, minHeight: 28 }} value={String(targets.weeklyVisits)} onChange={(e) => { const v = { ...targets, weeklyVisits: Math.max(0, Number(e.target.value) || 0) }; setTargets(v); void db.setSetting("growthTargets", v); }} />
-            <b className="num">{actVisits}</b>
-            <div className="progress" style={{ width: 120 }}><div className="bar-track"><div className="bar-fill" style={{ width: Math.min(100, Math.round(actVisits * 100 / Math.max(1, targets.weeklyVisits))) + "%" }} /></div></div>
-          </span>
-        </div>
-        <div className="alert-line" title="数据来源:合同表(contracts)中 signDate 在本月的合同金额合计">
-          <span className="txt">月签约额<small style={{ display: "block", color: "var(--ink-4)", fontSize: 11 }}>来源:本月新签合同金额</small></span>
-          <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-            <input className="inp num" style={{ width: 90, minHeight: 28 }} value={String(targets.monthlySign)} onChange={(e) => { const v = { ...targets, monthlySign: Math.max(0, Number(e.target.value) || 0) }; setTargets(v); void db.setSetting("growthTargets", v); }} />
-            <b className="num">{money(actSign)}</b>
-            <div className="progress" style={{ width: 120 }}><div className="bar-track"><div className="bar-fill" style={{ width: Math.min(100, Math.round(actSign * 100 / Math.max(1, targets.monthlySign))) + "%" }} /></div></div>
-          </span>
-        </div>
-        <div className="alert-line" title="数据来源:AAR 周复盘中 createdAt 在本月的复盘条数">
-          <span className="txt">月复盘次数<small style={{ display: "block", color: "var(--ink-4)", fontSize: 11 }}>来源:本月已保存的 AAR 周复盘</small></span>
-          <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-            <input className="inp num" style={{ width: 64, minHeight: 28 }} value={String(targets.monthlyAar)} onChange={(e) => { const v = { ...targets, monthlyAar: Math.max(0, Number(e.target.value) || 0) }; setTargets(v); void db.setSetting("growthTargets", v); }} />
-            <b className="num">{actAar}</b>
-            <div className="progress" style={{ width: 120 }}><div className="bar-track"><div className="bar-fill" style={{ width: Math.min(100, Math.round(actAar * 100 / Math.max(1, targets.monthlyAar))) + "%" }} /></div></div>
-          </span>
-        </div>
+        {!hasTargets ? (
+          <div style={{ textAlign: "center", padding: "24px 12px" }}>
+            <div style={{ fontSize: 32, marginBottom: 8 }}>🎯</div>
+            <div style={{ fontWeight: 600, color: "var(--ink)", marginBottom: 4 }}>暂无成长目标</div>
+            <div style={{ fontSize: "var(--text-sm)", color: "var(--ink-3)", marginBottom: 12 }}>设定目标，规划你的职业成长路径</div>
+            <Btn kind="primary" sm onClick={() => { const v = { weeklyVisits: 2, monthlySign: 500000, monthlyAar: 1 }; setTargets(v); setHasTargets(true); void db.setSetting("growthTargets", v); }}>设定默认目标</Btn>
+          </div>
+        ) : (
+          <>
+            <div className="alert-line" title="数据来源:接触点记录(contactPoints)中本周新增的条目,含微信/拜访/电话/邮件">
+              <span className="txt">周拜访数<small style={{ display: "block", color: "var(--ink-4)", fontSize: 11 }}>来源:本周新增接触点记录</small></span>
+              <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+                <input className="inp num" style={{ width: 64, minHeight: 28 }} value={String(targets.weeklyVisits)} onChange={(e) => { const v = { ...targets, weeklyVisits: Math.max(0, Number(e.target.value) || 0) }; setTargets(v); void db.setSetting("growthTargets", v); }} />
+                <b className="num">{actVisits}</b>
+                <div className="progress" style={{ width: 120 }}><div className="bar-track"><div className="bar-fill" style={{ width: Math.min(100, Math.round(actVisits * 100 / Math.max(1, targets.weeklyVisits))) + "%" }} /></div></div>
+              </span>
+            </div>
+            <div className="alert-line" title="数据来源:合同表(contracts)中 signDate 在本月的合同金额合计">
+              <span className="txt">月签约额<small style={{ display: "block", color: "var(--ink-4)", fontSize: 11 }}>来源:本月新签合同金额</small></span>
+              <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+                <input className="inp num" style={{ width: 90, minHeight: 28 }} value={String(targets.monthlySign)} onChange={(e) => { const v = { ...targets, monthlySign: Math.max(0, Number(e.target.value) || 0) }; setTargets(v); void db.setSetting("growthTargets", v); }} />
+                <b className="num">{money(actSign)}</b>
+                <div className="progress" style={{ width: 120 }}><div className="bar-track"><div className="bar-fill" style={{ width: Math.min(100, Math.round(actSign * 100 / Math.max(1, targets.monthlySign))) + "%" }} /></div></div>
+              </span>
+            </div>
+            <div className="alert-line" title="数据来源:AAR 周复盘中 createdAt 在本月的复盘条数">
+              <span className="txt">月复盘次数<small style={{ display: "block", color: "var(--ink-4)", fontSize: 11 }}>来源:本月已保存的 AAR 周复盘</small></span>
+              <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+                <input className="inp num" style={{ width: 64, minHeight: 28 }} value={String(targets.monthlyAar)} onChange={(e) => { const v = { ...targets, monthlyAar: Math.max(0, Number(e.target.value) || 0) }; setTargets(v); void db.setSetting("growthTargets", v); }} />
+                <b className="num">{actAar}</b>
+                <div className="progress" style={{ width: 120 }}><div className="bar-track"><div className="bar-fill" style={{ width: Math.min(100, Math.round(actAar * 100 / Math.max(1, targets.monthlyAar))) + "%" }} /></div></div>
+              </span>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="grid-c">
@@ -107,7 +121,7 @@ export default function Growth(props: Props) {
               <div style={{ fontSize: "var(--text-sm)", marginTop: 4 }}>{a.lessons}</div>
             </div>
           ))}
-          {aars.length === 0 ? <p className="muted">暂无复盘记录</p> : null}
+          {aars.length === 0 ? <p className="muted">暂无复盘记录</p> : <p className="muted" style={{ fontSize: "var(--text-xs)", textAlign: "center", padding: "8px 0 4px" }}>暂无更多历史复盘</p>}
         </div>
 
         <div className="side-stack">
@@ -117,10 +131,14 @@ export default function Growth(props: Props) {
               <div className="alert-line" key={s}>
                 <span className="txt">{s}</span>
                 <span style={{ display: "inline-flex", gap: 4 }}>
-                  {[1, 2, 3, 4].map((lv) => (
-                    <button key={lv} className={"btn " + ((skills[s] ?? 0) >= lv ? "data" : "done")} style={{ minWidth: 30, minHeight: 30 }}
-                      onClick={() => { void setSkill(s, lv); }}>{lv}</button>
-                  ))}
+                  {[1, 2, 3, 4].map((lv) => {
+                    const selLv = (skills[s] ?? 0) >= lv;
+                    return (
+                      <button key={lv} className={"btn " + (selLv ? "data" : "done")}
+                        style={{ minWidth: 30, minHeight: 30, border: selLv ? "2px solid var(--brand)" : "1px solid var(--border)", fontWeight: selLv ? 700 : 400 }}
+                        onClick={() => { void setSkill(s, lv); }}>{selLv ? "✓" + lv : lv}</button>
+                    );
+                  })}
                 </span>
               </div>
             ))}

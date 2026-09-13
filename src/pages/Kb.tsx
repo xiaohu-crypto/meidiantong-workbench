@@ -171,10 +171,10 @@ async function askAi() {
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="搜索标题/内容/标签…" />
             </div>
           </div>
-          <div style={{ padding: "6px 12px 0", display: "flex", gap: 4, flexWrap: "wrap" }}>
+          <div style={{ padding: "6px 10px 0", display: "flex", gap: 3, flexWrap: "nowrap" }}>
             {(["", "Projects", "Areas", "Resources", "Archives"] as const).map((p) => (
               <button key={p || "all"} onClick={() => setParaFilter(p)}
-                style={{ padding: "3px 10px", fontSize: 11, borderRadius: 999, border: "1px solid var(--border)",
+                style={{ padding: "2px 8px", fontSize: 11, borderRadius: 999, border: "1px solid var(--border)",
                   background: paraFilter === p ? "var(--brand)" : "transparent", color: paraFilter === p ? "#fff" : "var(--ink-2)", cursor: "pointer" }}>
                 {p || "全部"}
               </button>
@@ -188,7 +188,14 @@ async function askAi() {
                 <div className="cell-sub">{n.para} · {n.tags.map((t) => "#" + t).join(" ")}</div>
               </div>
             ))}
-            {filtered.length === 0 ? <p className="muted" style={{ padding: 16 }}>无匹配笔记</p> : null}
+            {notes.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "32px 16px" }}>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>📚</div>
+                <div style={{ fontWeight: 600, color: "var(--ink)", marginBottom: 4 }}>暂无笔记</div>
+                <div style={{ fontSize: "var(--text-sm)", color: "var(--ink-3)", marginBottom: 12 }}>创建第一篇笔记，构建你的知识库</div>
+                <Btn kind="primary" sm onClick={openNew}><IconPlus size={12} /> 新建笔记</Btn>
+              </div>
+            ) : filtered.length === 0 ? <p className="muted" style={{ padding: 16 }}>无匹配笔记</p> : null}
           </div>
         </div>
 
@@ -222,7 +229,7 @@ async function askAi() {
                   })}
                 </div>
                 <div>
-                  <div className="dsec" style={{ padding: 0 }}>版本历史({sel.versions.length})</div>
+                  <div className="dsec" style={{ padding: 0 }}>版本历史</div>
                   <div style={{ maxHeight: 180, overflowY: "auto" }}>
                     {sel.versions.slice().reverse().map((v) => (
                       <div className="mini-row" key={v.ts}>

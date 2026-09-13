@@ -214,6 +214,10 @@ export default function CRM(props: Props) {
   const [form, setForm] = useState<Record<string, string>>({ name: "", industry: "", grade: "C", billingTitle: "", billingTaxNo: "" });
   const [errs, setErrs] = useState<Record<string, string>>({});
 
+  /* 任务4a: 列表分组折叠 */
+  const [groupBy, setGroupBy] = useState<"" | "industry" | "grade">("");
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
   const custFields = (props.customFields ?? []).filter((x) => x.entity === "customers");
 
   useEffect(() => {
@@ -426,6 +430,18 @@ export default function CRM(props: Props) {
 
   const colCount = 1 + 1 + (vc.industry ? 1 : 0) + (vc.grade ? 1 : 0) + (vc.health ? 1 : 0) + (vc.stage ? 1 : 0) + (vc.deal ? 1 : 0) + (vc.touch ? 1 : 0);
 
+  /* 任务4a: 分组渲染 */
+  const groupedRows = useMemo(() => {
+    if (!groupBy) return null;
+    const map = new Map<string, Customer[]>();
+    for (const c of rows) {
+      const key = groupBy === "grade" ? c.grade : c.industry;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(c);
+    }
+    return Array.from(map.entries());
+  }, [rows, groupBy]);
+
   return (
     <div>
       <div className="page-head">
@@ -471,6 +487,11 @@ export default function CRM(props: Props) {
             <option value="health">按健康度</option>
             <option value="deal">按商机额</option>
           </select>
+          <select className="sel" value={groupBy} onChange={(e) => setGroupBy(e.target.value as typeof groupBy)} title="分组方式">
+            <option value="">不分组</option>
+            <option value="industry">按行业分组</option>
+            <option value="grade">按等级分组</option>
+          </select>
           <Btn kind="draft" sm onClick={() => setSavingView(true)} style={{ marginLeft: "auto" }}>保存为视图</Btn>
         </div>
         {savingView ? (
@@ -514,26 +535,70 @@ export default function CRM(props: Props) {
           <table className="tgrid">
             <thead><tr><th style={{ width: 32 }}><input type="checkbox" checked={selected.size === rows.length && rows.length > 0} onChange={(e) => { if (e.target.checked) setSelected(new Set(rows.map((r) => r.id))); else setSelected(new Set()); }} /></th><th style={{ width: "20%" }}>客户</th>{vc.industry ? <th>行业</th> : null}{vc.grade ? <th>等级</th> : null}{vc.health ? <th>健康度</th> : null}{vc.stage ? <th>客户阶段</th> : null}{vc.deal ? <th style={{ textAlign: "right" }}>在途商机</th> : null}{vc.touch ? <th>最近跟进</th> : null}</tr></thead>
             <tbody>
-              {rows.map((c) => {
-                const h = healthOf(c.id, props.cps, payments);
-                const activeDeals = deals.filter((d) => d.customerId === c.id && !["签约", "输单", "流失"].includes(d.stage));
-                const lt = latestTouch(c.id, props.cps);
-                const stg = customerStage(c.id, deals, props.contracts);
-                const cls = h >= 80 ? "good" : h >= 60 ? "mid" : "low";
-                return (
-                  <tr key={c.id} onClick={() => { setOpenId(c.id); setTab("概览"); }}>
-                  <td onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={selected.has(c.id)} onChange={() => { const n = new Set(selected); if (n.has(c.id)) n.delete(c.id); else n.add(c.id); setSelected(n); }} /></td>
-                    <td><div className="cname"><span className="dot" style={{ background: h >= 80 ? "var(--success)" : h >= 60 ? "var(--warning)" : "var(--danger)" }} />{c.name}</div><div className="cell-sub">{c.industry}</div></td>
-                    {vc.industry ? <td>{c.industry}</td> : null}
-                    {vc.grade ? <td><Chip kind={c.grade === "A" || c.grade === "S" ? "brand" : "gray"}>{c.grade}</Chip></td> : null}
-                    {vc.health ? <td><div className="mini-hp"><div className="hp-dot"><i className={cls} style={{ width: h + "%" }} /></div><span className="hp-val num" style={{ color: h >= 80 ? "var(--success)" : h >= 60 ? "var(--warning)" : "var(--danger)" }}>{h}</span></div></td> : null}
-                    {vc.stage ? <td><Chip kind={stg === "潜在" ? "gray" : stg === "有效" ? "data" : stg === "合作" ? "green" : "danger"}>{stg}</Chip></td> : null}
-                    {vc.deal ? <td className="num" style={{ textAlign: "right" }}>{activeDeals.length ? `${activeDeals.length} 个 · ${money(activeDeals.reduce((s, d) => s + d.value, 0))}` : "—"}</td> : null}
-                    {vc.touch ? <td>{lt ? new Date(lt).toLocaleDateString("zh-CN") : "—"}</td> : null}
-                  </tr>
-                );
-              })}
-              {rows.length === 0 ? <tr><td colSpan={colCount} style={{ textAlign: "center", color: "var(--ink-3)", padding: 24 }}>没有匹配的客户</td></tr> : null}
+              {groupedRows ? (
+                groupedRows.flatMap(([groupKey, groupCustomers]) => {
+                  const isCollapsed = !!collapsed[groupKey];
+                  const headerRow = (
+                    <tr key={"g-" + groupKey} style={{ cursor: "pointer" }} onClick={() => setCollapsed((prev) => ({ ...prev, [groupKey]: !isCollapsed }))}>
+                      <td colSpan={colCount} className="crm-group-head">
+                        <span className={"crm-group-arrow" + (isCollapsed ? " collapsed" : "")}>&#9660;</span>
+                        {groupKey} <span className="crm-group-count">· {groupCustomers.length}家</span>
+                      </td>
+                    </tr>
+                  );
+                  if (isCollapsed) return [headerRow];
+                  const groupRows = groupCustomers.map((c) => {
+                    const h = healthOf(c.id, props.cps, payments);
+                    const activeDeals = deals.filter((d) => d.customerId === c.id && !["签约", "输单", "流失"].includes(d.stage));
+                    const lt = latestTouch(c.id, props.cps);
+                    const stg = customerStage(c.id, deals, props.contracts);
+                    const cls = h >= 80 ? "good" : h >= 60 ? "mid" : "low";
+                    return (
+                      <tr key={c.id} onClick={() => { setOpenId(c.id); setTab("概览"); }}>
+                        <td onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={selected.has(c.id)} onChange={() => { const n = new Set(selected); if (n.has(c.id)) n.delete(c.id); else n.add(c.id); setSelected(n); }} /></td>
+                        <td><div className="cname"><span className="dot" style={{ background: h >= 80 ? "var(--success)" : h >= 60 ? "var(--warning)" : "var(--danger)" }} />{c.name}</div></td>
+                        {vc.industry ? <td>{c.industry}</td> : null}
+                        {vc.grade ? <td><Chip kind={c.grade === "A" || c.grade === "S" ? "brand" : "gray"}>{c.grade}</Chip></td> : null}
+                        {vc.health ? <td><div className="mini-hp"><div className="hp-dot"><i className={cls} style={{ width: h + "%" }} /></div><span className="hp-val num" style={{ color: h >= 80 ? "var(--success)" : h >= 60 ? "var(--warning)" : "var(--danger)" }}>{h}</span></div></td> : null}
+                        {vc.stage ? <td><Chip kind={stg === "潜在" ? "gray" : stg === "有效" ? "data" : stg === "合作" ? "green" : "danger"}>{stg}</Chip></td> : null}
+                        {vc.deal ? <td className="num" style={{ textAlign: "right" }}>{activeDeals.length ? `${activeDeals.length} 个 · ${money(activeDeals.reduce((s, d) => s + d.value, 0))}` : "—"}</td> : null}
+                        {vc.touch ? <td>{lt ? new Date(lt).toLocaleDateString("zh-CN") : "—"}</td> : null}
+                      </tr>
+                    );
+                  });
+                  return [headerRow, ...groupRows];
+                })
+              ) : (
+                rows.map((c) => {
+                  const h = healthOf(c.id, props.cps, payments);
+                  const activeDeals = deals.filter((d) => d.customerId === c.id && !["签约", "输单", "流失"].includes(d.stage));
+                  const lt = latestTouch(c.id, props.cps);
+                  const stg = customerStage(c.id, deals, props.contracts);
+                  const cls = h >= 80 ? "good" : h >= 60 ? "mid" : "low";
+                  return (
+                    <tr key={c.id} onClick={() => { setOpenId(c.id); setTab("概览"); }}>
+                      <td onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={selected.has(c.id)} onChange={() => { const n = new Set(selected); if (n.has(c.id)) n.delete(c.id); else n.add(c.id); setSelected(n); }} /></td>
+                      <td><div className="cname"><span className="dot" style={{ background: h >= 80 ? "var(--success)" : h >= 60 ? "var(--warning)" : "var(--danger)" }} />{c.name}</div></td>
+                      {vc.industry ? <td>{c.industry}</td> : null}
+                      {vc.grade ? <td><Chip kind={c.grade === "A" || c.grade === "S" ? "brand" : "gray"}>{c.grade}</Chip></td> : null}
+                      {vc.health ? <td><div className="mini-hp"><div className="hp-dot"><i className={cls} style={{ width: h + "%" }} /></div><span className="hp-val num" style={{ color: h >= 80 ? "var(--success)" : h >= 60 ? "var(--warning)" : "var(--danger)" }}>{h}</span></div></td> : null}
+                      {vc.stage ? <td><Chip kind={stg === "潜在" ? "gray" : stg === "有效" ? "data" : stg === "合作" ? "green" : "danger"}>{stg}</Chip></td> : null}
+                      {vc.deal ? <td className="num" style={{ textAlign: "right" }}>{activeDeals.length ? `${activeDeals.length} 个 · ${money(activeDeals.reduce((s, d) => s + d.value, 0))}` : "—"}</td> : null}
+                      {vc.touch ? <td>{lt ? new Date(lt).toLocaleDateString("zh-CN") : "—"}</td> : null}
+                    </tr>
+                  );
+                })
+              )}
+              {rows.length === 0 ? (
+                <tr><td colSpan={colCount} style={{ padding: 0 }}>
+                  <div className="empty-state">
+                    <div className="es-icon">&#128101;</div>
+                    <div className="es-title">暂无客户</div>
+                    <div className="es-desc">点击右上角新增客户，开始管理你的客户关系</div>
+                    <Btn kind="primary" onClick={() => setAddOpen(true)}><IconPlus size={14} /> 新增客户</Btn>
+                  </div>
+                </td></tr>
+              ) : null}
             </tbody>
           </table>
         </div>

@@ -202,13 +202,24 @@ export default function Dev(props: Props) {
         <div className="actions"><Btn kind="primary" onClick={() => setPitchOpen(true)}><IconPlus size={14} /> 登记比稿</Btn></div>
       </div>
 
+      {deals.length === 0 ? (
+        <div className="empty-state">
+          <div className="es-icon">&#128200;</div>
+          <div className="es-title">暂无商机</div>
+          <div className="es-desc">新增第一个商机，追踪从线索到签约的全过程</div>
+          <Btn kind="primary" onClick={() => show("请先在客户管理中添加客户")}><IconPlus size={14} /> 新增商机</Btn>
+        </div>
+      ) : (
+      <>
       <div className="h-row"><span className="h-title">Pipeline(按阶段)</span><Chip kind="data">点击卡片查看详情</Chip></div>
       <div className="kanban" style={{ gridTemplateColumns: "repeat(" + colStages.length + ",1fr)", marginBottom: 16 }}>
         {colStages.map((stage) => {
           const col = deals.filter((d) => d.stage === stage);
+          const STALE_MS = 14 * 24 * 60 * 60 * 1000;
+          const staleCount = col.filter((d) => Date.now() - (d.lastTouchAt || 0) > STALE_MS).length;
           return (
             <div className="kcol" key={stage} style={{ minHeight: 200 }}>
-              <div className="kcol-head">{stage}<span className="chip gray" style={{ marginLeft: "auto" }}>{col.length}</span></div>
+              <div className="kcol-head">{stage}{staleCount > 0 ? <span className="health-badge">{staleCount}</span> : null}<span className="chip gray" style={{ marginLeft: "auto" }}>{col.length}</span></div>
               <div className="kcol-body">
                 {col.map((d) => (
                   <div className="kcard" key={d.id} onClick={() => setSelected(d.id)}
@@ -225,6 +236,8 @@ export default function Dev(props: Props) {
           );
         })}
       </div>
+      </>
+      )}
 
       <div className={"drawer-mask" + (sel ? " open" : "")} onClick={() => setSelected(null)} />
       <aside className={"drawer" + (sel ? " open" : "")}>
@@ -249,6 +262,35 @@ export default function Dev(props: Props) {
               <Btn kind={editingLayout ? "data" : "ghost"} sm style={{ marginLeft: "auto" }} onClick={() => { if (editingLayout) void finishEditLayout(); else setEditingLayout(true); }}>{editingLayout ? "完成" : "编辑布局"}</Btn>
               <button className="icon-btn" onClick={() => setSelected(null)} aria-label="关闭"><IconClose size={16} /></button>
             </div>
+            {/* Task3: deal path progress */}
+            {(() => {
+              const ci = (st: string): number => {
+                if (["线索", "MQL", "SQL"].includes(st)) return 0;
+                if (st === "商机") return 1;
+                if (st === "报价") return 2;
+                if (st === "谈判") return 3;
+                if (st === "签约") return 4;
+                return 1;
+              };
+              const cur = ci(sel.stage);
+              const P = ["线索", "商机", "报价", "谈判", "签约"];
+              return (
+                <div className="deal-path">
+                  {P.map((label, i) => {
+                    const stepCls = i < cur ? "done" : i === cur ? "current" : "";
+                    return (
+                      <span key={label} style={{ display: "contents" }}>
+                        <div className={"deal-path-step " + stepCls}>
+                          <div className="deal-path-dot">{i < cur ? "\u2713" : i + 1}</div>
+                          <span className="deal-path-label">{label}</span>
+                        </div>
+                        {i < P.length - 1 ? <div className={"deal-path-line" + (i < cur ? " done" : "")} /> : null}
+                      </span>
+                    );
+                  })}
+                </div>
+              );
+            })()}
             <div className="drawer-body">
               <RecordPage
                 layout={dealLayout}

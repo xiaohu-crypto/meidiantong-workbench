@@ -54,6 +54,7 @@ export default function SettingsPage(props: { theme: "dark" | "light"; setTheme:
   function applyTheme(t: "dark" | "light") {
     props.setTheme(t);
     void db.setSetting("theme", t);
+    show("主题已切换，重启应用后生效");
   }
 
   async function backupNow() {
