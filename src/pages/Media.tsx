@@ -280,7 +280,7 @@ export default function Media(props: Props) {
   return (
     <div>
       <div className="page-head">
-        <div><h1>媒介策略中心</h1><div className="date">资源档案 / 达人库 / 自助报价 / PostBuy</div></div>
+        <div><h1>媒介资源</h1><div className="date">资源档案 / 达人库 / 自助报价 / PostBuy</div></div>
         <div className="actions">
           <Btn kind="ghost" onClick={exportScheduleQuote}>导出排期报价单</Btn>
           <Btn kind="primary" onClick={() => setBuyOpen(true)}><IconPlus size={14} /> 新建排期</Btn>

@@ -61,7 +61,7 @@ export async function seedIfEmpty(): Promise<boolean> {
   const d = (id: string, customerId: string, title: string, stage: Deal["stage"], value: number, probability: number, touchDaysAgo: number): Deal =>
     ({ id, customerId, title, stage, value, probability, lastTouchAt: ago(touchDaysAgo) });
   const deals: Deal[] = [
-    d("d-1", "c-1", "盛达集团 双11 整合投放", "报价", 380000, 0.6, 23),
+    d("d-1", "c-1", "盛达集团 双11 整合投放", "签约", 950000, 1, 23),
     d("d-2", "c-2", "云裳服饰 双11 Campaign", "签约", 1200000, 0.95, 1),
     d("d-3", "c-4", "悦己美妆 新品种草", "商机", 560000, 0.5, 2),
     d("d-4", "c-3", "星海互动 Q4 效果投放", "商机", 180000, 0.4, 5),

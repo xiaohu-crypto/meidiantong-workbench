@@ -85,7 +85,7 @@ export default function SettingsPage(props: { theme: "dark" | "light"; setTheme:
   return (
     <div>
       <div className="page-head">
-        <div><h1>系统管理</h1><div className="date">设置 / 回收站(30 天) / 操作日志(可撤销)</div></div>
+        <div><h1>设置</h1><div className="date">设置 / 回收站(30 天) / 操作日志(可撤销)</div></div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "180px 1fr", gap: 16, alignItems: "start" }}>
@@ -138,10 +138,9 @@ export default function SettingsPage(props: { theme: "dark" | "light"; setTheme:
 
           <div className="h-row" style={{ marginTop: 20 }}><span className="h-title sm">快捷键</span></div>
           <div className="alert-line">
-            <span className="txt">快速采集(可自定义)</span>
-            <span className="chip data">Ctrl + <input style={{ width: 28, border: "1px solid var(--border)", borderRadius: 4, textAlign: "center", background: "transparent", color: "var(--ink)" }} defaultValue="K" onChange={(e) => { const v = e.target.value.toLowerCase(); if (v.length === 1) void db.setSetting("quickKey", { key: v }); }} /></span>
+            <span className="txt">全局搜索 / 快速采集(可自定义)</span>
+            <span className="chip data">Ctrl + <input style={{ width: 28, border: "1px solid var(--border)", borderRadius: 4, textAlign: "center", background: "transparent", color: "var(--ink)" }} defaultValue="K" onChange={(e) => { const v = e.target.value.toLowerCase(); if (v.length === 1) void db.setSetting("quickKey", { key: v }); }} /> — ↑↓ 选择 · Enter 打开 · Esc 关闭</span>
           </div>
-          <div className="alert-line"><span className="txt">全局搜索(顶栏)</span><span className="chip data">↑↓ 选择 · Enter 打开 · Esc 关闭</span></div>
           <div className="alert-line"><span className="txt">搜索框内清空</span><span className="chip data">Esc</span></div>
           <p className="muted" style={{ fontSize: "var(--text-xs)", marginTop: 6 }}>更多快捷键自定义(如切换视图)将在后续版本支持;当前为系统内置。</p>
 

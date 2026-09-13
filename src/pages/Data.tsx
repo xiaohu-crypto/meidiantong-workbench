@@ -19,7 +19,7 @@ type Metric = "签约额" | "回款" | "毛利";
 
 const DEFAULT_DASHBOARD: DashboardDef = {
   id: "overview",
-  name: "经营概览",
+  name: "数据报表",
   tabs: [{
     id: "main",
     title: "概览",
@@ -169,7 +169,7 @@ export default function Data(props: Props) {
       case "kpi-paid":
         return <KpiWidget title="已收回款" value={money(kpiPaid)} sub={`回款率(到期口径) ${collectRate}%`} />;
       case "kpi-margin":
-        return <KpiWidget title="综合毛利率" value={`${marginRate}%`} sub="合同 − 媒体成本(扣返点前)" />;
+        return <KpiWidget title="综合毛利率" value={`${marginRate}%`} sub="含所有签约商机的(签约额-媒体成本)/签约额" />;
       case "kpi-weighted":
         return <KpiWidget title="在途加权商机" value={money(weighted)} sub={`${activeDeals.length} 个商机`} />;
       case "bar-sign-trend":
@@ -244,7 +244,7 @@ export default function Data(props: Props) {
       ) : (
         <>
           <div className="page-head">
-            <div><h1>数据分析报表</h1><div className="date">口径可切换(签约额/回款/毛利)· 基准值表让数据可解读 · 演示口径:合同签约额</div></div>
+            <div><h1>数据报表</h1><div className="date">口径可切换(签约额/回款/毛利)· 基准值表让数据可解读 · 演示口径:合同签约额</div></div>
             <div className="actions">
               <select className="sel" value={metric} onChange={(e) => setMetric(e.target.value as Metric)}>
                 {["签约额", "回款", "毛利"].map((m) => <option key={m}>{m}</option>)}
@@ -256,7 +256,7 @@ export default function Data(props: Props) {
           <div className="kpis" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 16 }}>
             <div className="kpi card-pad card"><div className="muted" style={{ fontSize: "var(--text-xs)" }}>累计签约额</div><div style={{ fontSize: 22, fontWeight: 750 }} className="num">{money(kpiSign)}</div><div className="cell-sub">合同口径<span dangerouslySetInnerHTML={{ __html: momArrow(vals[5], vals[4]) }} /></div></div>
             <div className="kpi card-pad card"><div className="muted" style={{ fontSize: "var(--text-xs)" }}>已收回款</div><div style={{ fontSize: 22, fontWeight: 750 }} className="num">{money(kpiPaid)}</div><div className="cell-sub">回款率(到期口径)<span className="num"> {collectRate}%</span></div></div>
-            <div className="kpi card-pad card"><div className="muted" style={{ fontSize: "var(--text-xs)" }}>综合毛利率</div><div style={{ fontSize: 22, fontWeight: 750 }} className="num">{marginRate}%</div><div className="cell-sub">合同 − 媒体成本(扣返点前)</div></div>
+            <div className="kpi card-pad card"><div className="muted" style={{ fontSize: "var(--text-xs)" }}>综合毛利率</div><div style={{ fontSize: 22, fontWeight: 750 }} className="num">{marginRate}%</div><div className="cell-sub">含所有签约商机的(签约额-媒体成本)/签约额</div></div>
             <div className="kpi card-pad card"><div className="muted" style={{ fontSize: "var(--text-xs)" }}>在途加权商机</div><div style={{ fontSize: 22, fontWeight: 750 }} className="num">{money(weighted)}</div><div className="cell-sub">{activeDeals.length} 个商机</div></div>
           </div>
 

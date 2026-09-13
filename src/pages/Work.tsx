@@ -75,8 +75,9 @@ export default function Work(props: Props) {
   const monday = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate() - dow);
   const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
   const iso = (d: Date) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  const highTodoIds = new Set(highTodos.map((t) => t.id));
   const weekTasks = tasks
-    .filter((t) => t.kanbanCol !== "完成" && t.due && t.due >= iso(monday) && t.due <= iso(sunday))
+    .filter((t) => t.kanbanCol !== "完成" && t.due && t.due >= iso(monday) && t.due <= iso(sunday) && !highTodoIds.has(t.id))
     .sort((a, b) => (a.due ?? "").localeCompare(b.due ?? "")).slice(0, 5);
 
   async function drop(col: KanbanCol) {
@@ -101,7 +102,7 @@ export default function Work(props: Props) {
   return (
     <div>
       <div className="page-head">
-        <div><h1>工作管理系统</h1><div className="date">看板四列 · 拖拽流转 · 进行中 WIP 上限 {WIP_LIMIT}(当前 {wip})</div></div>
+        <div><h1>任务看板</h1><div className="date">看板四列 · 拖拽流转 · 进行中 WIP 上限 {WIP_LIMIT}(当前 {wip})</div></div>
         <div className="actions">
           <div style={{ display: "inline-flex", gap: 4, marginRight: 8 }}>
             {([["board", "看板"], ["table", "表格"], ["calendar", "日历"]] as const).map(([k, l]) => (
@@ -120,7 +121,7 @@ export default function Work(props: Props) {
           {obj.keyResults.map((kr) => (
             <div key={kr.name} className="progress">
               <div className="pl"><span>{kr.name}</span><b className="num">{kr.progress}%</b></div>
-              <div className="bar-track"><div className="bar-fill" style={{ width: kr.progress + "%" }} /></div>
+              <div className="bar-track"><div className="bar-fill" style={{ width: kr.progress + "%", background: kr.name.includes("回款") && kr.progress < 90 ? "var(--warning)" : "var(--success)" }} /></div>
             </div>
           ))}
         </div>

@@ -3,6 +3,8 @@ import type { ContactPoint, Customer, Payment } from "../types";
 import { payNotifyAt, staleNotifyAt } from "../core/derive";
 import { Btn, Chip, money, useToast } from "../ui/common";
 
+// TODO(P1-17): 顶栏铃铛当前为路由跳转本页,后续改为下拉弹层预览(需改 App.tsx 布局,本批次不做)
+
 interface Props {
   customers: Customer[]; payments: Payment[]; cps: ContactPoint[];
   goCrm: (id: string) => void; reload: () => Promise<void>; notificationsReadAt: number;
@@ -31,7 +33,7 @@ export default function Notifications(props: Props) {
         <div className="card card-pad">
           <div className="h-row" style={{ marginBottom: 8 }}>
             <span className="h-title sm">逾期回款({overduePays.length})</span>
-            <Chip kind="danger">需处理</Chip>
+            {overduePays.length > 0 ? <Chip kind="danger">需处理</Chip> : null}
           </div>
           {overduePays.map((p) => (
             <div className="alert-line" key={p.id}>
@@ -48,7 +50,7 @@ export default function Notifications(props: Props) {
         <div className="card card-pad">
           <div className="h-row" style={{ marginBottom: 8 }}>
             <span className="h-title sm">跟进超期({staleCustomers.length})</span>
-            <Chip kind="warn">14天无接触</Chip>
+            {staleCustomers.length > 0 ? <Chip kind="warn">14天无接触</Chip> : null}
           </div>
           {staleCustomers.map((c) => (
             <div className="alert-line" key={c.id}>

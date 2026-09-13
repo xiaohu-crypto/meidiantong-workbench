@@ -102,7 +102,7 @@ export default function Today(props: Props) {
     <div>
       <div className="home-banner">
         <div>
-          <div className="hb-title">媒电通工作台 · 今日驾驶舱</div>
+          <div className="hb-title">今日驾驶舱</div>
           <div className="hb-date">{today.getFullYear()} 年 {today.getMonth() + 1} 月 {today.getDate()} 日 {week}</div>
           <div className="hb-greet">在途商机 {active.length} 个 · 逾期回款 {overdue.length} 笔 — 行动清单已按规则引擎排好。</div>
         </div>
@@ -115,7 +115,10 @@ export default function Today(props: Props) {
             <span className="pi-name">{t.name}</span>
           </div>
         ))}
-        <Btn kind="ghost" sm onClick={() => setPinnedEdit(true)}>编辑</Btn>
+        <div className="pinned-item" onClick={() => setPinnedEdit(true)} title="编辑常用工具">
+          <span className="pi-icon">✎</span>
+          <span className="pi-name">编辑</span>
+        </div>
       </div>
 
       <div className="featured-tabs">
@@ -128,7 +131,7 @@ export default function Today(props: Props) {
         <div className="grid-c">
           <div className="card card-pad">
             <div className="h-row">
-              <span className="h-title">AI 建议 · 今天最该做的</span>
+              <span className="h-title">今日建议 · Next-Best-Action</span>
               <Chip kind="brand">Next-Best-Action</Chip>
               <span className="muted" style={{ marginLeft: "auto", fontSize: "var(--text-xs)" }}>规则引擎:沉默天数 × 价值 × 阶段(非 AI)</span>
             </div>
@@ -136,18 +139,21 @@ export default function Today(props: Props) {
               {nba.map((n, i) => {
                 const d = dealById(n.dealId);
                 if (!d) return null;
+                const cName = nameOf(d.customerId);
+                const displayTitle = d.title.startsWith(cName) ? d.title.slice(cName.length).trim() : d.title;
                 return (
                   <div className="nbx-item" key={n.dealId}>
                     <div className={"prio " + (i === 0 ? "hot" : i < 3 ? "warm" : "cool")}>{i + 1}</div>
                     <div className="nbx-body">
-                      <div className="nbx-title">{nameOf(d.customerId)} · {d.title} <span className="tag num">· 商机 {money(d.value)}</span></div>
+                      <div className="nbx-title">{cName} · {displayTitle} <span className="tag num">· 商机 {money(d.value)}</span></div>
                       <div className="nbx-meta">
                         <span className="dot-flag" style={{ background: overdueCids.has(d.customerId) ? "var(--danger)" : n.daysSilent > 14 ? "var(--warning)" : "var(--data)" }} />
                         已沉默 {n.daysSilent} 天 · 阶段:{d.stage} · 等级:{gradeOf(d.customerId)}
                         {overdueCids.has(d.customerId) ? <Chip kind="danger">有逾期回款</Chip> : null}
                       </div>
                       <div className="nbx-actions">
-                        <Btn kind="draft" sm disabled={!!gen[d.id]?.busy}
+                        <Btn kind="done" sm onClick={() => { setDone((s) => ({ ...s, [n.dealId]: true })); show("已记录:今日已跟进"); }}>记录为已跟进</Btn>
+                        <Btn kind="ghost" sm disabled={!!gen[d.id]?.busy}
                           onClick={() => {
                             const c = props.customers.find((x) => x.id === d.customerId);
                             if (!c) return;
@@ -156,8 +162,6 @@ export default function Today(props: Props) {
                               setGen((s) => ({ ...s, [d.id]: { busy: false, text: r.ok ? r.content : undefined, badge: r.badge, reason: r.reason, error: r.error } }));
                             });
                           }}>{gen[d.id]?.busy ? "生成中…" : "生成跟进话术草稿"}</Btn>
-                        <Btn kind="done" sm onClick={() => { setDone((s) => ({ ...s, [n.dealId]: true })); show("已记录:今日已跟进"); }}>记录为已跟进</Btn>
-                        <Btn kind="done" sm onClick={() => props.goCrm(d.customerId)}>打开客户</Btn>
                       </div>
                       {gen[d.id]?.text ? (
                         <div style={{ marginTop: 8, background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "var(--r-md)", padding: "8px 12px", whiteSpace: "pre-wrap", fontSize: "var(--text-sm)" }}>

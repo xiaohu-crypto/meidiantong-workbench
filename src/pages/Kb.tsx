@@ -121,7 +121,7 @@ async function askAi() {
   return (
     <div>
       <div className="page-head">
-        <div><h1>知识学习系统</h1><div className="date">PARA 归档 · 双链 [[]] · 版本历史 · 标签检索</div></div>
+        <div><h1>知识库</h1><div className="date">PARA 归档 · 双链 [[]] · 版本历史 · 标签检索</div></div>
         <div className="actions">
           <Btn kind={mode === "graph" ? "data" : "ghost"} onClick={() => setMode(mode === "graph" ? "list" : "graph")}>{mode === "graph" ? "列表视图" : "知识图谱"}</Btn>
           <Btn kind="ghost" onClick={() => { const url = prompt("粘贴网页 URL 或标题:"); if (url) { void (async () => { const n: Note = { id: uid("n"), title: url.slice(0, 40), content: "来源:" + url + "\n\n", tags: ["外链"], para: "Resources", versions: [] }; await db.put("notes", n, "导入网页笔记"); await props.reload(); setSelId(n.id); })(); } }}>网页剪藏</Btn>
@@ -199,7 +199,7 @@ async function askAi() {
                 <input className="inp" style={{ flex: 1, fontWeight: 650, fontSize: "var(--text-lg)" }} value={draft.title}
                   onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
                 <span className="cell-sub" style={{ marginRight: 4 }}>{draftDirty ? "编辑中…" : "已自动保存"}</span>
-                <Btn kind="primary" onClick={() => { void save(); }}>保存</Btn>
+                {draftDirty ? <Btn kind="primary" onClick={() => { void save(); }}>保存</Btn> : null}
                 <Btn kind="done" onClick={() => { void remove(); }}>删除</Btn>
               </div>
               <div className="h-row" style={{ marginBottom: 8 }}>
@@ -214,7 +214,7 @@ async function askAi() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 12 }}>
                 <div>
                   <div className="dsec" style={{ padding: 0 }}>双链引用此笔记({backlinks.length})</div>
-                  {backlinks.map((n) => <div className="mini-row" key={n.id}><span className="ev" style={{ cursor: "pointer" }} onClick={() => setSelId(n.id)}>{n.title}</span></div>)}
+                  {backlinks.length === 0 ? <p className="muted" style={{ fontSize: "var(--text-xs)", padding: "4px 0" }}>暂无双链引用</p> : backlinks.map((n) => <div className="mini-row" key={n.id}><span className="ev" style={{ cursor: "pointer" }} onClick={() => setSelId(n.id)}>{n.title}</span></div>)}
                   <div className="dsec" style={{ padding: "10px 0 0" }}>此笔记引用({outbound.length})</div>
                   {outbound.map((t) => {
                     const target = notes.find((n) => n.title === t);

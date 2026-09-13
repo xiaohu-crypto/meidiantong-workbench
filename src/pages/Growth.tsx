@@ -57,7 +57,7 @@ export default function Growth(props: Props) {
   return (
     <div>
       <div className="page-head">
-        <div><h1>个人成长规划</h1><div className="date">{week} · AAR 自动预填真实数据,你只写原因与经验 · IDP/职业锚属 P2 扩展</div></div>
+        <div><h1>成长规划</h1><div className="date">{week} · AAR 自动预填真实数据,你只写原因与经验 · IDP/职业锚属 P2 扩展</div></div>
       </div>
 
       <div className="card card-pad" style={{ marginBottom: 16 }}>

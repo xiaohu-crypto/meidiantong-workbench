@@ -65,7 +65,7 @@ export default function Dev(props: Props) {
 
   const deals = props.deals.filter((d) => !d.deletedAt);
   const nameOf = (id: string) => props.customers.find((c) => c.id === id)?.name ?? "未知客户";
-  const active = deals.filter((d) => !["输单", "流失"].includes(d.stage));
+  const active = deals.filter((d) => !["签约", "输单", "流失"].includes(d.stage));
   const weightedTotal = active.reduce((s, d) => s + weightedValue(d), 0);
 
   /* Pipeline 列:默认在途 7 阶段 + 设置(customStages)/数据中实际存在的自定义阶段(去重保序,追加在后;输单/流失为终态不进列) */
@@ -156,7 +156,7 @@ export default function Dev(props: Props) {
         <FieldsWidget title="商机信息" fields={[
           { label: "商机金额", value: money(sel.value) },
           { label: "阶段", value: sel.stage },
-          { label: "概率", value: Math.round((sel.probability ?? probOf(sel.stage)) * 100) + "%" },
+          { label: "概率", value: Math.round(probOf(sel.stage) * 100) + "%" },
           { label: "预计成交日", value: sel.closeDate ?? "未设定" },
           { label: "加权金额", value: money(weightedValue(sel)) },
         ]} editing={editingLayout} visibleFields={w.config?.visibleFields as string[] | undefined} onVisibleFieldsChange={setInfoVisibleFields} />
@@ -170,7 +170,7 @@ export default function Dev(props: Props) {
             {MEDDIC.map((m) => (
               <div className="mini-row" key={m}>
                 <span className="ev">{m}</span>
-                <Btn kind={(sel.meddic ?? []).includes(m) ? "data" : "done"} sm onClick={() => { void toggleTag(sel, "meddic", m); }}>{(sel.meddic ?? []).includes(m) ? "已确认" : "标记"}</Btn>
+                <Btn kind={(sel.meddic ?? []).includes(m) ? "primary" : "ghost"} sm onClick={() => { void toggleTag(sel, "meddic", m); }}>{(sel.meddic ?? []).includes(m) ? "已确认" : "标记"}</Btn>
               </div>
             ))}
           </div>
@@ -185,7 +185,7 @@ export default function Dev(props: Props) {
             {BANT.map((b) => (
               <div className="mini-row" key={b}>
                 <span className="ev">{b}</span>
-                <Btn kind={(sel.bant ?? []).includes(b) ? "data" : "done"} sm onClick={() => { void toggleTag(sel, "bant", b); }}>{(sel.bant ?? []).includes(b) ? "已确认" : "标记"}</Btn>
+                <Btn kind={(sel.bant ?? []).includes(b) ? "primary" : "ghost"} sm onClick={() => { void toggleTag(sel, "bant", b); }}>{(sel.bant ?? []).includes(b) ? "已确认" : "标记"}</Btn>
               </div>
             ))}
           </div>
@@ -198,7 +198,7 @@ export default function Dev(props: Props) {
   return (
     <div>
       <div className="page-head">
-        <div><h1>客户开发系统</h1><div className="date">Deal 唯一漏斗 · 加权在途 {money(weightedTotal)} · 比稿胜率 {winRate === null ? "—" : winRate + "%"}({decided.length} 场)</div></div>
+        <div><h1>商机管理</h1><div className="date">Deal 唯一漏斗 · 加权在途 {money(weightedTotal)} · 比稿胜率 {winRate === null ? "—" : winRate + "%"}({decided.length} 场)</div></div>
         <div className="actions"><Btn kind="primary" onClick={() => setPitchOpen(true)}><IconPlus size={14} /> 登记比稿</Btn></div>
       </div>
 
@@ -214,9 +214,9 @@ export default function Dev(props: Props) {
                   <div className="kcard" key={d.id} onClick={() => setSelected(d.id)}
                     style={selected === d.id ? { borderColor: "var(--brand)" } : undefined}>
                     <div className="t" style={{ fontSize: "var(--text-xs)" }}>{nameOf(d.customerId)}</div>
-                    <div className="cell-sub">{d.title}</div>
+                    <div className="cell-sub">{d.title.startsWith(nameOf(d.customerId)) ? d.title.slice(nameOf(d.customerId).length).trim() : d.title}</div>
                     <div className="m"><span className="num" style={{ fontWeight: 650 }}>{money(d.value)}</span>
-                      <span className="chip data" style={{ fontSize: 10, padding: "0 6px" }}>{Math.round((d.probability ?? probOf(d.stage)) * 100)}%</span></div>
+                      <span className="chip data" style={{ fontSize: 10, padding: "0 6px" }}>{Math.round(probOf(d.stage) * 100)}%</span></div>
                   </div>
                 ))}
                 {col.length === 0 ? <p className="muted" style={{ fontSize: "var(--text-xs)", textAlign: "center" }}>—</p> : null}
@@ -246,7 +246,8 @@ export default function Dev(props: Props) {
                   </select>
                 </div>
               </div>
-              <button className="icon-btn" style={{ marginLeft: "auto" }} onClick={() => setSelected(null)} aria-label="关闭"><IconClose size={16} /></button>
+              <Btn kind={editingLayout ? "data" : "ghost"} sm style={{ marginLeft: "auto" }} onClick={() => { if (editingLayout) void finishEditLayout(); else setEditingLayout(true); }}>{editingLayout ? "完成" : "编辑布局"}</Btn>
+              <button className="icon-btn" onClick={() => setSelected(null)} aria-label="关闭"><IconClose size={16} /></button>
             </div>
             <div className="drawer-body">
               <RecordPage
@@ -259,7 +260,6 @@ export default function Dev(props: Props) {
               />
             </div>
             <div className="drawer-foot">
-              <Btn kind={editingLayout ? "data" : "ghost"} onClick={() => { if (editingLayout) void finishEditLayout(); else setEditingLayout(true); }}>{editingLayout ? "完成" : "编辑布局"}</Btn>
               <Btn kind="primary" onClick={() => openDealEdit(sel)}>编辑商机</Btn>
             </div>
           </>

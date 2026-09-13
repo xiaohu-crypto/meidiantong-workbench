@@ -300,6 +300,12 @@ export default function CRM(props: Props) {
   const drawerCps = drawerC ? props.cps.filter((p) => p.customerId === drawerC.id && !p.deletedAt).sort((a, b) => b.time - a.time) : [];
   const drawerContacts = drawerRels.map((r) => ({ rel: r, contact: props.contacts.find((x) => x.id === r.contactId) }));
 
+  /* P0-02: 财务数据一致性守卫——回款超过商机额时警示 */
+  const totalDealVal = drawerDeals.reduce((s, d) => s + d.value, 0);
+  const totalReceived = drawerPays.filter((p) => p.status === "已收").reduce((s, p) => s + p.amount, 0);
+  const totalUnpaid = drawerPays.filter((p) => p.status !== "已收").reduce((s, p) => s + p.amount, 0);
+  const financeWarning = totalDealVal > 0 && (totalReceived + totalUnpaid) > totalDealVal;
+
   function exportCustomerPack() {
     if (!drawerC) return;
     const bundle = {
@@ -423,7 +429,7 @@ export default function CRM(props: Props) {
   return (
     <div>
       <div className="page-head">
-        <div><h1>CRM 客户管理</h1><div className="date">客户 {customers.length} · 在途商机 {deals.filter((d) => !["签约", "输单", "流失"].includes(d.stage)).length} 个 · 点击行打开 360° 抽屉</div></div>
+        <div><h1>客户管理</h1><div className="date">客户 {customers.length} · 在途商机 {deals.filter((d) => !["签约", "输单", "流失"].includes(d.stage)).length} 个 · 点击行打开 360° 抽屉</div></div>
         <div className="actions">
           <Btn kind="ghost" onClick={() => setImportOpen(true)}>批量导入</Btn>
           <Btn kind="primary" onClick={() => setAddOpen(true)}><IconPlus size={14} /> 新增客户</Btn>
@@ -431,7 +437,7 @@ export default function CRM(props: Props) {
       </div>
 
       <div className="funnel">
-        {(["线索", "MQL", "SQL", "商机", "签约"] as const).map((s, i) => (
+        {(["线索", "MQL", "SQL", "商机", "报价", "谈判", "签约"] as const).map((s, i) => (
           <div className={"fseg" + (i === 0 ? " hot" : "")} key={s}>
             <span className="n num">{f[s]?.count ?? 0}</span>
             <span className="l">{s}{f[s] ? ` · ${money(f[s].value)}` : ""}</span>
@@ -547,7 +553,8 @@ export default function CRM(props: Props) {
                   {drawerC.parentId ? <Chip>属集团 {nameOf(drawerC.parentId)}</Chip> : null}
                 </div>
               </div>
-              <button className="icon-btn" style={{ marginLeft: "auto" }} onClick={() => setOpenId(null)} aria-label="关闭"><IconClose size={16} /></button>
+              <Btn kind={editingLayout ? "data" : "ghost"} sm style={{ marginLeft: "auto" }} onClick={() => { if (editingLayout) void finishEditLayout(); else setEditingLayout(true); }}>{editingLayout ? "完成" : "编辑布局"}</Btn>
+              <button className="icon-btn" onClick={() => setOpenId(null)} aria-label="关闭"><IconClose size={16} /></button>
             </div>
             <div className="drawer-body">
               <RecordPage
@@ -558,6 +565,11 @@ export default function CRM(props: Props) {
                 editing={editingLayout}
                 onLayoutChange={handleLayoutChange}
               />
+              {financeWarning && (
+                <div style={{ margin: "8px 18px", padding: "10px 14px", border: "1px solid var(--warning)", borderRadius: 8, background: "rgba(245,185,62,.10)", color: "var(--warning)", fontSize: 13 }}>
+                  数据异常：回款 {money(totalReceived + totalUnpaid)} 超过累计商机额 {money(totalDealVal)}，请核对商机阶段与合同金额。
+                </div>
+              )}
               {tab === "决策链" && (
                 <div style={{ paddingTop: 6 }}>
                   <div className="dsec">角色徽章制(不画图谱)</div>
@@ -629,7 +641,6 @@ export default function CRM(props: Props) {
               )}
             </div>
             <div className="drawer-foot">
-              <Btn kind={editingLayout ? "data" : "ghost"} onClick={() => { if (editingLayout) void finishEditLayout(); else setEditingLayout(true); }}>{editingLayout ? "完成" : "编辑布局"}</Btn>
               <Btn kind="primary" onClick={() => setCpOpen(true)}>记录跟进</Btn>
               <Btn kind="ghost" onClick={() => { void (async () => { await tryDelete(drawerC); })(); }}>删除</Btn>
               <Btn kind="ghost" onClick={exportCustomerPack}>导出客户包</Btn>

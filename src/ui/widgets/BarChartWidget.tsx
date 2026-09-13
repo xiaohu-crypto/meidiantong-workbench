@@ -87,11 +87,11 @@ export function BarChartWidget({
           const x = barGap + i * (barW + barGap);
           const barH = Math.max(2, (d.value / maxV) * chartH);
           const y = height - padBottom - barH;
-          const barColor = highlightLast && i === data.length - 1 ? "var(--brand)" : color;
+          const barColor = highlightLast && i === data.length - 1 ? "var(--ink-4)" : color;
           return (
             <g key={i}>
               <text x={x + barW / 2} y={y - 6} textAnchor="middle" fontSize="10" fill="var(--ink-3)" className="num">
-                {d.value ? fmt(d.value) : ""}
+                {d.value ? fmt(d.value) : (highlightLast && i === data.length - 1 ? fmt(0) : "")}
               </text>
               <rect
                 x={x}
@@ -100,7 +100,7 @@ export function BarChartWidget({
                 height={barH}
                 rx={4}
                 fill={barColor}
-                opacity={highlightLast && i === data.length - 1 ? 1 : 0.85}
+                opacity={highlightLast && i === data.length - 1 ? 0.45 : 0.85}
               />
               <text x={x + barW / 2} y={height - padBottom + 14} textAnchor="middle" fontSize="10" fill="var(--ink-4)">
                 {d.label}
