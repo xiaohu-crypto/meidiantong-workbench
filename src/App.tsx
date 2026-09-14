@@ -22,7 +22,6 @@ const BuilderPage = lazy(() => import("./pages/Builder"));
 const WorkflowsPage = lazy(() => import("./pages/Workflows"));
 const CollectionsPage = lazy(() => import("./pages/Collections"));
 const AuditPage = lazy(() => import("./pages/Audit"));
-const RolesPage = lazy(() => import("./pages/Roles"));
 const AIStaffPage = lazy(() => import("./pages/AIStaff"));
 import QuickCapture from "./components/QuickCapture";
 import TopSearch from "./components/TopSearch";
@@ -79,7 +78,7 @@ interface DataSet {
   notificationsReadAt: number;
 }
 
-type View = "today" | "crm" | "work" | "dev" | "media" | "kb" | "data" | "growth" | "settings" | "help" | "notifications" | "builder" | "workflows" | "collections" | "audit" | "roles" | "aistaff";
+type View = "today" | "crm" | "work" | "dev" | "media" | "kb" | "data" | "growth" | "settings" | "help" | "notifications" | "builder" | "workflows" | "collections" | "audit" | "aistaff";
 
 const NAV: { key: View; label: string; icon: (p: { size?: number }) => JSX.Element; group: string }[] = [
   { key: "today", label: "首页", icon: IconToday, group: "常用" },
@@ -94,7 +93,6 @@ const NAV: { key: View; label: string; icon: (p: { size?: number }) => JSX.Eleme
   { key: "workflows", label: "工作流", icon: IconFunnel, group: "系统" },
   { key: "collections", label: "数据表", icon: IconGrid, group: "系统" },
   { key: "audit", label: "操作记录", icon: IconClock, group: "系统" },
-  { key: "roles", label: "权限管理", icon: IconUsers, group: "系统" },
   { key: "aistaff", label: "AI员工", icon: IconAI, group: "系统" },
   { key: "settings", label: "系统设置", icon: IconSettings, group: "系统" },
   { key: "help", label: "帮助中心", icon: IconHelp, group: "系统" },
@@ -400,7 +398,6 @@ export default function App() {
             {view === "workflows" ? <WorkflowsPage /> : null}
             {view === "collections" ? <CollectionsPage /> : null}
             {view === "audit" ? <AuditPage /> : null}
-            {view === "roles" ? <RolesPage /> : null}
             {view === "aistaff" ? <AIStaffPage /> : null}
             {view === "settings" ? (
               <SettingsPage theme={theme} setTheme={switchTheme} reload={reload}
