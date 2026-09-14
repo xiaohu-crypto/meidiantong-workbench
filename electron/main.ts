@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain, nativeImage, safeStorage, dialog } from "electron";
+import { app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain, nativeImage, safeStorage, dialog, shell } from "electron";
 import { mkdir, readdir, writeFile, unlink, readFile } from "node:fs/promises";
 import path2 from "node:path";
 const authOf = (k: string) => ("Bea" + "rer ") + k;
@@ -131,6 +131,7 @@ app.whenReady().then(() => {
     return true;
   });
   ipcMain.handle("window:close", () => { win?.close(); return true; });
+  ipcMain.handle("shell:openPath", async (_e, p: string) => { try { return await shell.openPath(p); } catch { return "failed"; } });
 
   // ===== AI:密钥加密存储(safeStorage)+ 云调用代理(主进程无 CORS) =====
   ipcMain.handle("ai:saveKey", (_e, plain: string) => {

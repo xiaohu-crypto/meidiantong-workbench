@@ -24,4 +24,5 @@ contextBridge.exposeInMainWorld("mta", {
   windowMinimize: () => ipcRenderer.invoke("window:minimize"),
   windowMaximize: () => ipcRenderer.invoke("window:maximize"),
   windowClose: () => ipcRenderer.invoke("window:close"),
+  openPath: (path: string) => ipcRenderer.invoke("shell:openPath", path) as Promise<string>,
 });

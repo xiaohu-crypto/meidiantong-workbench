@@ -133,7 +133,7 @@ export default function CRM(props: Props) {
   }, []);
   /* 客户级媒介策略(存于 customer.custom.mediaStrategy) */
   const [strategyEdit, setStrategyEdit] = useState(false);
-  const [strategyDraft, setStrategyDraft] = useState({ audience: "", budget: "", mix: "", resources: "", note: "" });
+  const [strategyDraft, setStrategyDraft] = useState<{ audience: string; budget: string; mix: string; resources: string; note: string; attachments: { name: string; path: string }[] }>({ audience: "", budget: "", mix: "", resources: "", note: "", attachments: [] });
   const [cpOpen, setCpOpen] = useState(false);
   const [cpForm, setCpForm] = useState<{ channel: ContactPoint["channel"]; summary: string }>({ channel: "微信", summary: "" });
 
@@ -164,7 +164,7 @@ export default function CRM(props: Props) {
   function openStrategyEdit() {
     if (!drawerC) return;
     const s = ((drawerC.custom ?? {}) as Record<string, Record<string, string>>).mediaStrategy ?? {};
-    setStrategyDraft({ audience: s.audience ?? "", budget: s.budget ?? "", mix: s.mix ?? "", resources: s.resources ?? "", note: s.note ?? "" });
+    setStrategyDraft({ audience: s.audience ?? "", budget: s.budget ?? "", mix: s.mix ?? "", resources: s.resources ?? "", note: s.note ?? "", attachments: ((s.attachments as unknown) as { name: string; path: string }[]) ?? [] });
     setStrategyEdit(true);
   }
   async function saveStrategy() {
@@ -908,6 +908,29 @@ export default function CRM(props: Props) {
           <Field label="建议配比"><input className="inp" style={{ width: "100%" }} value={strategyDraft.mix} onChange={(e) => setStrategyDraft({ ...strategyDraft, mix: e.target.value })} placeholder="如:种草50% / 效果30% / 品牌20%" /></Field>
           <Field label="首选资源"><input className="inp" style={{ width: "100%" }} value={strategyDraft.resources} onChange={(e) => setStrategyDraft({ ...strategyDraft, resources: e.target.value })} placeholder="如:抖音信息流+小红书达人+分众电梯" /></Field>
           <Field label="备注"><textarea className="inp" rows={2} style={{ width: "100%" }} value={strategyDraft.note} onChange={(e) => setStrategyDraft({ ...strategyDraft, note: e.target.value })} /></Field>
+          <Field label="方案附件">
+            <div style={{ marginBottom: 8 }}>
+              <label className="btn ghost" style={{ display: "inline-block", cursor: "pointer", fontSize: "var(--text-sm)", padding: "4px 12px" }}>
+                <input type="file" multiple style={{ display: "none" }} accept=".doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf,.txt,.md,.png,.jpg,.jpeg,.gif,.zip,.rar" onChange={(e) => {
+                  const files = Array.from(e.target.files ?? []);
+                  const newAtts = files.map((f) => ({ name: f.name, path: (f as File & { path?: string }).path ?? f.name }));
+                  setStrategyDraft({ ...strategyDraft, attachments: [...strategyDraft.attachments, ...newAtts] });
+                }} />
+                + 添加附件
+              </label>
+            </div>
+            {strategyDraft.attachments.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                {strategyDraft.attachments.map((att, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", background: "var(--surface-2)", borderRadius: 6, fontSize: "var(--text-sm)" }}>
+                    <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{att.name}</span>
+                    <Btn kind="ghost" sm onClick={() => { void (window as unknown as { mta?: { openPath?: (p: string) => Promise<string> } }).mta?.openPath?.(att.path); }}>打开</Btn>
+                    <Btn kind="ghost" sm onClick={() => setStrategyDraft({ ...strategyDraft, attachments: strategyDraft.attachments.filter((_, j) => j !== i) })}>移除</Btn>
+                  </div>
+                ))}
+              </div>
+            ) : <p className="muted" style={{ fontSize: "var(--text-xs)", margin: 0 }}>暂无附件,可添加方案文档/图片等</p>}
+          </Field>
         </Modal>
       ) : null}
       {cpOpen && drawerC ? (
