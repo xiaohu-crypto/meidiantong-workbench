@@ -91,6 +91,15 @@ export default function AIAssistant({ currentPage }: { currentPage: string }) {
           </button>
         ))}
       </div>
+      {/* 快捷任务(一键执行) */}
+      <div className="ai-shortcuts">
+        {emp.shortcuts.map((s) => (
+          <button key={s.id} className="ai-shortcut" onClick={() => void send(s.prompt)} title={s.prompt}>
+            <span className="ai-shortcut-emoji">{s.emoji}</span>
+            <span className="ai-shortcut-label">{s.label}</span>
+          </button>
+        ))}
+      </div>
       {/* 消息列表 */}
       <div className="ai-msg-list" ref={listRef}>
         {msgs.map((m) => (

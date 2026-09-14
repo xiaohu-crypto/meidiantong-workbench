@@ -14,6 +14,14 @@ export interface Employee {
   systemPrompt: string;
   welcome: string;
   suggestions: string[]; // 快捷问题建议
+  shortcuts: ShortcutTask[]; // 快捷任务(一键执行)
+}
+
+export interface ShortcutTask {
+  id: string;
+  label: string;
+  emoji: string;
+  prompt: string; // 点击后发送的prompt
 }
 
 /** 商业分析师 — 对应NocoBase Viz(洞察分析师) */
@@ -37,6 +45,11 @@ const analyst: Employee = {
     "回款逾期风险分析",
     "商机转化率怎么样？",
     "哪些客户贡献最大？",
+  ],
+  shortcuts: [
+    { id: "weekly-report", label: "生成周报", emoji: "📋", prompt: "请生成本周经营周报，包括：本周新增商机、签约合同、回款情况、毛利概况、下周重点关注事项。用简洁的表格和要点呈现。" },
+    { id: "payment-risk", label: "回款风险预警", emoji: "⚠️", prompt: "请分析当前回款风险：哪些合同已逾期或即将到期？风险等级如何？建议采取什么催收措施？" },
+    { id: "conversion", label: "商机转化分析", emoji: "📈", prompt: "请分析商机转化漏斗：各阶段商机数量、转化率、平均周期、瓶颈阶段在哪里？给出优化建议。" },
   ],
 };
 
@@ -62,6 +75,11 @@ const customer: Employee = {
     "客户健康度分析",
     "本周跟进计划",
   ],
+  shortcuts: [
+    { id: "health-check", label: "客户健康度", emoji: "💚", prompt: "请分析所有客户的健康度：按最近接触时间、商机阶段、回款情况分类，标出高风险客户（超过30天无接触、商机停滞、回款逾期），并给出跟进优先级。" },
+    { id: "weekly-follow", label: "本周跟进计划", emoji: "📅", prompt: "请制定本周客户跟进计划：按优先级列出需要跟进的客户，每个客户给出跟进目的、建议方式（电话/微信/拜访）、关键话题。" },
+    { id: "sleeping", label: "沉睡客户唤醒", emoji: "😴", prompt: "请找出超过60天无接触的沉睡客户，分析可能的原因，给出唤醒策略和首次联系话术。" },
+  ],
 };
 
 /** 商机顾问 — 对应NocoBase Atlas(团队领导)+Orin(数据建模) */
@@ -85,6 +103,11 @@ const deal: Employee = {
     "盛达集团商机怎么推进？",
     "报价策略建议",
     "赢单风险分析",
+  ],
+  shortcuts: [
+    { id: "deal-priority", label: "商机优先级", emoji: "🎯", prompt: "请对所有在途商机按优先级排序：考虑金额、阶段、客户关系、预计签约时间，标出Top5重点商机，每个给出推进策略和下一步行动。" },
+    { id: "win-strategy", label: "赢单策略", emoji: "🏆", prompt: "请分析当前商机的赢单策略：决策链是否完整、竞争态势如何、我们的差异化优势是什么、需要补齐哪些关键动作。" },
+    { id: "pricing", label: "报价优化", emoji: "💰", prompt: "请给出报价优化建议：媒体成本核算、毛利空间、返点策略、付款条件，如何在保证利润的前提下提高竞争力。" },
   ],
 };
 
