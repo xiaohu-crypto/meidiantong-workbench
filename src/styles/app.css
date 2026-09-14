@@ -438,7 +438,8 @@ html[data-titlebar="integrated"] .topbar .filter-input { -webkit-app-region: no-
 .md-content .md-list li{margin-bottom:4px}
 .md-content .md-code{background:var(--surface-3);padding:1px 5px;border-radius:4px;font-size:12px;font-family:monospace}
 .md-content strong{font-weight:650;color:var(--ink-1)}
-.ai-copy-btn{position:absolute;right:-28px;top:4px;background:transparent;border:none;color:var(--ink-3);cursor:pointer;font-size:13px;padding:4px;border-radius:4px;opacity:0;transition:opacity var(--t-fast)}
+.ai-copy-btn{position:absolute;right:4px;top:4px;background:var(--surface-2);border:1px solid var(--border);color:var(--ink-3);cursor:pointer;font-size:11px;padding:2px 6px;border-radius:4px;opacity:0;transition:opacity var(--t-fast);z-index:2}
 .ai-msg.assistant:hover .ai-copy-btn{opacity:1}
-.ai-copy-btn:hover{color:var(--ink-1);background:var(--surface-2)}
+.ai-copy-btn:hover{color:var(--ink-1);background:var(--surface-3)}
 .ai-msg{position:relative}
+.ai-msg-bubble{position:relative}

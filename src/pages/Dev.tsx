@@ -245,7 +245,8 @@ export default function Dev(props: Props) {
       ) : (
       <>
       <div className="h-row"><span className="h-title">Pipeline(按阶段)</span><Chip kind="data">点击卡片查看详情</Chip></div>
-      <div className="kanban" style={{ gridTemplateColumns: "repeat(" + colStages.length + ",1fr)", marginBottom: 16 }}>
+      <div style={{ overflowX: "auto", marginBottom: 16, paddingBottom: 8 }}>
+      <div className="kanban" style={{ gridTemplateColumns: "repeat(" + colStages.length + ",minmax(200px,1fr))", minWidth: colStages.length * 200 }}>
         {colStages.map((stage) => {
           const col = deals.filter((d) => d.stage === stage);
           const STALE_MS = 14 * 24 * 60 * 60 * 1000;
@@ -286,6 +287,7 @@ export default function Dev(props: Props) {
             </div>
           );
         })}
+      </div>
       </div>
       </>
       )}
