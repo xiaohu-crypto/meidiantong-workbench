@@ -86,7 +86,10 @@ export default function AIAssistant({ currentPage }: { currentPage: string }) {
           <span className="ai-emp-name">{emp.name}</span>
           <span className="ai-emp-role">{emp.role}</span>
         </div>
-        <button className="ai-close" onClick={() => setOpen(false)} title="关闭">✕</button>
+        <div style={{display:"flex",gap:"4px"}}>
+          <button className="ai-close" onClick={() => { setMsgs([{ id: "welcome", role: "assistant", content: emp.welcome, time: Date.now() }]); setInput(""); setLoading(false); }} title="清空对话">🗑</button>
+          <button className="ai-close" onClick={() => setOpen(false)} title="关闭">✕</button>
+        </div>
       </div>
       {/* 角色切换tab */}
       <div className="ai-emp-tabs">
