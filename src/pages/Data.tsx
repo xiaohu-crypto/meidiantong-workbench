@@ -132,14 +132,14 @@ export default function Data(props: Props) {
 
   /* 导出物(HTML 成绩单)使用独立浅色打印样式,色值属导出文档而非应用 UI */
   function exportReport() {
-    const html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>月度成绩单 ${thisMonth}</title><style>body{font-family:'PingFang SC',sans-serif;max-width:680px;margin:48px auto;color:#17181C;background:#F5F6F8;padding:32px;border-radius:16px}.card{background:#fff;border:1px solid #E4E6EB;border-radius:14px;padding:28px}.k{color:#7A7F89;font-size:12px;text-transform:uppercase;letter-spacing:.06em}.v{font-size:30px;font-weight:800;margin:4px 0 18px}.v b{color:#FE2C55}h1{font-size:22px}table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}td{padding:8px 6px;border-bottom:1px solid #EEF0F3}</style></head><body><div class="card"><h1>月度成绩单 · ${thisMonth}</h1><p class="k">媒体广告个人工作台 · 自动生成</p><div class="v"><b class="num">${money(monthContracts.reduce((s, c) => s + c.amount, 0))}</b></div><table>
+    const html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>月度成绩单 ${thisMonth}</title><style>:root{--brand:#E01844;--ink:#17181C;--ink-2:#7A7F89;--surface:#F5F6F8;--surface-2:#fff;--border:#E4E6EB;--border-soft:#EEF0F3}body{font-family:'PingFang SC',sans-serif;max-width:680px;margin:48px auto;color:var(--ink);background:var(--surface);padding:32px;border-radius:16px}.card{background:var(--surface-2);border:1px solid var(--border);border-radius:14px;padding:28px}.k{color:var(--ink-2);font-size:12px;text-transform:uppercase;letter-spacing:.06em}.v{font-size:30px;font-weight:800;margin:4px 0 18px}.v b{color:var(--brand)}h1{font-size:22px}table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}td{padding:8px 6px;border-bottom:1px solid var(--border-soft)}</style></head><body><div class="card"><h1>月度成绩单 · ${thisMonth}</h1><p class="k">媒体广告个人工作台 · 自动生成</p><div class="v"><b class="num">${money(monthContracts.reduce((s, c) => s + c.amount, 0))}</b></div><table>
       <tr><td>本月新签合同</td><td class="num">${monthContracts.length} 份</td></tr>
       <tr><td>累计签约额(口径:${metric})</td><td class="num">${money(metric === "回款" ? kpiPaid : metric === "毛利" ? kpiSign - mediaCost : kpiSign)}</td></tr>
       <tr><td>回款率(到期口径)</td><td class="num">${collectRate}%</td></tr>
       <tr><td>综合毛利率</td><td class="num">${marginRate}%</td></tr>
       <tr><td>在途加权商机</td><td class="num">${money(weighted)}</td></tr>
       <tr><td>本月完成任务</td><td class="num">见工作管理看板</td></tr>
-    </table><p style="color:#7A7F89;font-size:11px;margin-top:16px">品牌高光面排版 · 数据口径见需求文档 2.3 · 本地生成不上传</p></div></body></html>`;
+    </table><p style="color:var(--ink-2);font-size:11px;margin-top:16px">品牌高光面排版 · 数据口径见需求文档 2.3 · 本地生成不上传</p></div></body></html>`;
     const blob = new Blob([html], { type: "text/html" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -297,7 +297,7 @@ export default function Data(props: Props) {
                     <div key={st} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                       <div style={{ width: 40, fontSize: 12, color: "var(--ink-3)", textAlign: "right" }}>{st}</div>
                       <div style={{ flex: 1, background: "var(--surface-2)", borderRadius: 4, overflow: "hidden" }}>
-                        <div style={{ width: (counts[i] / maxC) * 100 + "%", background: i === stages.length - 1 ? "var(--success)" : "var(--chart-1)", height: 22, display: "flex", alignItems: "center", paddingLeft: 6, fontSize: 11, color: "#fff", fontWeight: 600 }}>
+                        <div style={{ width: (counts[i] / maxC) * 100 + "%", background: i === stages.length - 1 ? "var(--success)" : "var(--chart-1)", height: 22, display: "flex", alignItems: "center", paddingLeft: 6, fontSize: 11, color: "var(--ink)", fontWeight: 600 }}>
                           {counts[i]}
                         </div>
                       </div>
