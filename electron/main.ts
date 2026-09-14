@@ -123,6 +123,15 @@ app.whenReady().then(() => {
     return true;
   });
 
+  // ===== 窗口控制(自定义标题栏按钮) =====
+  ipcMain.handle("window:minimize", () => { win?.minimize(); return true; });
+  ipcMain.handle("window:maximize", () => {
+    if (!win) return false;
+    if (win.isMaximized()) { win.unmaximize(); } else { win.maximize(); }
+    return true;
+  });
+  ipcMain.handle("window:close", () => { win?.close(); return true; });
+
   // ===== AI:密钥加密存储(safeStorage)+ 云调用代理(主进程无 CORS) =====
   ipcMain.handle("ai:saveKey", (_e, plain: string) => {
     try {

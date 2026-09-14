@@ -21,4 +21,7 @@ contextBridge.exposeInMainWorld("mta", {
   onStreamChunk: (cb: (chunk: string) => void) => { ipcRenderer.on("ai:stream-chunk", (_e, d) => cb(d.chunk)); },
   onStreamDone: (cb: () => void) => { ipcRenderer.on("ai:stream-done", () => cb()); },
   onStreamError: (cb: (err: string) => void) => { ipcRenderer.on("ai:stream-error", (_e, d) => cb(d.error)); },
+  windowMinimize: () => ipcRenderer.invoke("window:minimize"),
+  windowMaximize: () => ipcRenderer.invoke("window:maximize"),
+  windowClose: () => ipcRenderer.invoke("window:close"),
 });

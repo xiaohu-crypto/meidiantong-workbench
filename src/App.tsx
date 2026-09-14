@@ -50,6 +50,9 @@ declare global {
       onStreamError: (cb: (err: string) => void) => void;
       onUpdateReady: (cb: (version: string) => void) => void;
       installUpdate: () => void;
+      windowMinimize: () => Promise<boolean>;
+      windowMaximize: () => Promise<boolean>;
+      windowClose: () => Promise<boolean>;
     };
   }
 }
