@@ -20,7 +20,7 @@ html.focus-mode .brand{justify-content:center;padding-left:8px;padding-right:8px
 .nav-foot .dot{width:6px;height:6px;border-radius:50%;background:var(--success);flex:none}
 
 .main{display:flex;flex-direction:column;min-width:0;min-height:0}
-.topbar{height:52px;display:flex;align-items:center;gap:12px;padding:0 18px;border-bottom:1px solid var(--border);background:var(--surface);flex:none}
+.topbar{height:52px;display:flex;align-items:center;justify-content:center;gap:12px;padding:0 160px 0 18px;border-bottom:1px solid var(--border);background:var(--surface);flex:none}
 .crumb{font-size:var(--text-sm);color:var(--ink-4)}
 .crumb b{color:var(--ink-2);font-weight:550;margin-left:6px}
 .tb-right{margin-left:auto;display:flex;align-items:center;gap:8px}
@@ -197,7 +197,7 @@ table.tgrid tbody tr:hover{background:var(--surface-2)}
 .ph .big{width:52px;height:52px;border-radius:14px;background:var(--surface);border:1px solid var(--border);display:grid;place-items:center;color:var(--ink-4);margin:0 auto 14px}
 
 /* === 融合标题栏:顶栏为拖拽区;交互元素 no-drag;右侧预留 Windows overlay 窗口控制条 === */
-html[data-titlebar="integrated"] .topbar { -webkit-app-region: drag; padding-right: 280px; }
+html[data-titlebar="integrated"] .topbar { -webkit-app-region: drag; padding-right: 160px; padding-left: 18px; }
 html[data-titlebar="integrated"] .topbar .btn,
 html[data-titlebar="integrated"] .topbar .icon-btn,
 html[data-titlebar="integrated"] .topbar input,
@@ -257,6 +257,18 @@ html[data-titlebar="integrated"] .topbar .filter-input { -webkit-app-region: no-
 .stage-chip:hover{color:var(--ink-2);border-color:var(--ink-4)}
 .stage-chip.active{background:var(--brand-soft);border-color:transparent;color:var(--brand);font-weight:600}
 
+/* === CRM 视图切换 Segmented(表格/看板) === */
+.seg{display:inline-flex;gap:2px;padding:2px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md)}
+.seg button{padding:4px 12px;font-size:var(--text-xs);border:none;background:transparent;color:var(--ink-3);border-radius:var(--r-sm);cursor:pointer;transition:all var(--t-fast)}
+.seg button:hover{color:var(--ink-2)}
+.seg button.active{background:var(--brand-soft);color:var(--brand);font-weight:600}
+
+/* === CRM 活跃筛选条件 inline chips === */
+.filter-chip{display:inline-flex;align-items:center;gap:5px;background:var(--surface-2);color:var(--ink-3);border:1px solid var(--border);border-radius:var(--r-full);padding:3px 10px;font-size:var(--text-xs);transition:all var(--t-fast)}
+.filter-chip:hover{color:var(--ink-2);border-color:var(--ink-4)}
+.filter-chip button{background:transparent;border:none;color:var(--ink-3);cursor:pointer;padding:0;line-height:1;font-size:13px}
+.filter-chip button:hover{color:var(--danger)}
+
 /* === CRM 列表密度三档(舒适=默认) === */
 .tgrid-wrap.density-紧凑 td{padding-top:5px;padding-bottom:5px}
 .tgrid-wrap.density-精简 td{padding-top:3px;padding-bottom:3px;font-size:var(--text-xs)}
@@ -313,10 +325,9 @@ html[data-titlebar="integrated"] .topbar .filter-input { -webkit-app-region: no-
 .field-visibility label{display:flex;align-items:center;gap:6px;font-size:var(--text-xs);color:var(--ink-2);padding:2px 0;cursor:pointer}
 
 /* === 侧边栏底部用户菜单(WorkBuddy风格) === */
-.sidebar-user-menu{position:relative;padding:8px 10px;border-top:1px solid var(--border-soft)}
-.user-menu-trigger{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:var(--r-md);background:transparent;border:none;cursor:pointer;transition:background var(--t-fast)}
-.user-menu-trigger:hover{background:var(--surface-2)}
-.user-avatar{width:32px;height:32px;border-radius:50%;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex:none}
+.sidebar-user-menu{position:relative;padding:6px 10px 8px;border-top:1px solid var(--border-soft)}
+.user-menu-trigger{display:flex;align-items:center;gap:8px;width:100%;padding:4px 6px;border-radius:var(--r-md);background:transparent}
+.user-avatar{width:30px;height:30px;border-radius:50%;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex:none}
 .user-avatar.lg{width:40px;height:40px;font-size:16px}
 .user-meta{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start}
 .user-name{font-size:var(--text-sm);font-weight:600;color:var(--ink-1);line-height:1.2}

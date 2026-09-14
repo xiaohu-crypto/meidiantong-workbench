@@ -20,7 +20,7 @@ export function rebuildIndex(docs: SearchDoc[]): void {
     fields: ["title", "sub"],
     storeFields: ["type", "title", "sub", "refId"],
     tokenize,
-    searchOptions: { tokenize },
+    searchOptions: { tokenize, prefix: true, fuzzy: 0.2 },
   });
   mini.addAll(docs);
 }

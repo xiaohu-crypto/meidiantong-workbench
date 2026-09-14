@@ -84,6 +84,8 @@ export default function Dev(props: Props) {
 
   const [efOpen, setEfOpen] = useState(false);
   const [ef, setEf] = useState<{ title: string; value: string; closeDate: string }>({ title: "", value: "", closeDate: "" });
+  const [contractOpen, setContractOpen] = useState(false);
+  const [contractForm, setContractForm] = useState<{ name: string; amount: string; signDate: string }>({ name: "", amount: "", signDate: new Date().toISOString().slice(0, 10) });
 
   function openDealEdit(d: Deal) {
     setEf({ title: d.title, value: String(d.value), closeDate: d.closeDate ?? "" });
@@ -96,6 +98,21 @@ export default function Dev(props: Props) {
     await db.put("deals", { ...sel, title: ef.title.trim(), value: Number(ef.value) || 0, closeDate: ef.closeDate || undefined }, "编辑商机「" + ef.title.trim() + "」");
     show("商机已更新");
     setEfOpen(false);
+    await props.reload();
+  }
+
+  async function generateContract() {
+    if (!sel) return;
+    const amount = Number(contractForm.amount) || 0;
+    if (!contractForm.name.trim()) { show("合同名称必填"); return; }
+    const contractId = uid("ct");
+    await db.put("contracts", { id: contractId, customerId: sel.customerId, name: contractForm.name.trim(), amount, signDate: contractForm.signDate, status: "执行中" }, "生成合同「" + contractForm.name.trim() + "」");
+    const due = new Date(contractForm.signDate);
+    due.setDate(due.getDate() + 30);
+    const dueStr = due.toISOString().slice(0, 10);
+    await db.put("payments", { id: uid("pay"), contractId, customerId: sel.customerId, amount, dueDate: dueStr, status: "未到" }, "创建回款计划");
+    show("合同已生成，回款计划已创建");
+    setContractOpen(false);
     await props.reload();
   }
 
@@ -198,8 +215,23 @@ export default function Dev(props: Props) {
   return (
     <div>
       <div className="page-head">
-        <div><h1>商机管理</h1><div className="date">Deal 唯一漏斗 · 加权在途 {money(weightedTotal)} · 比稿胜率 {winRate === null ? "—" : winRate + "%"}({decided.length} 场)</div></div>
+        <div><h1>商机管理</h1></div>
         <div className="actions"><Btn kind="primary" onClick={() => setPitchOpen(true)}><IconPlus size={14} /> 登记比稿</Btn></div>
+      </div>
+
+      <div className="kpis" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 18 }}>
+        <div className="card card-pad" style={{ marginBottom: 0 }}>
+          <div style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)", fontWeight: 600, marginBottom: 6 }}>在途商机</div>
+          <div style={{ fontSize: "var(--text-2xl)", fontWeight: 750 }}>{active.length}<span style={{ fontSize: "var(--text-sm)", color: "var(--ink-3)", fontWeight: 500, marginLeft: 4 }}>个</span></div>
+        </div>
+        <div className="card card-pad" style={{ marginBottom: 0 }}>
+          <div style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)", fontWeight: 600, marginBottom: 6 }}>加权金额</div>
+          <div style={{ fontSize: "var(--text-2xl)", fontWeight: 750, color: "var(--data)" }}>{money(weightedTotal)}</div>
+        </div>
+        <div className="card card-pad" style={{ marginBottom: 0 }}>
+          <div style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)", fontWeight: 600, marginBottom: 6 }}>比稿胜率</div>
+          <div style={{ fontSize: "var(--text-2xl)", fontWeight: 750, color: "var(--success)" }}>{winRate === null ? "—" : winRate + "%"}<span style={{ fontSize: "var(--text-sm)", color: "var(--ink-3)", fontWeight: 500, marginLeft: 4 }}>{decided.length} 场</span></div>
+        </div>
       </div>
 
       {deals.length === 0 ? (
@@ -302,6 +334,9 @@ export default function Dev(props: Props) {
               />
             </div>
             <div className="drawer-foot">
+              {sel.stage === "签约" ? (
+                <Btn kind="primary" onClick={() => { setContractForm({ name: sel.title, amount: String(sel.value), signDate: new Date().toISOString().slice(0, 10) }); setContractOpen(true); }}>生成合同</Btn>
+              ) : null}
               <Btn kind="primary" onClick={() => openDealEdit(sel)}>编辑商机</Btn>
             </div>
           </>
@@ -327,6 +362,22 @@ export default function Dev(props: Props) {
             </Field>
           </div>
           <p className="muted" style={{ fontSize: "var(--text-xs)" }}>概率由阶段自动派生;阶段在抽屉头部下拉调整。</p>
+        </Modal>
+      ) : null}
+
+      {contractOpen && sel ? (
+        <Modal title="生成合同" onClose={() => setContractOpen(false)} footer={
+          <div className="grow" style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <Btn kind="ghost" onClick={() => setContractOpen(false)}>取消</Btn>
+            <Btn kind="primary" onClick={() => { void generateContract(); }}>确认生成</Btn>
+          </div>
+        }>
+          <Field label="合同名称"><input className="inp" style={{ width: "100%" }} value={contractForm.name} onChange={(e) => setContractForm({ ...contractForm, name: e.target.value })} /></Field>
+          <div className="field-row">
+            <Field label="合同金额(元)"><input className="inp num" style={{ width: "100%" }} value={contractForm.amount} onChange={(e) => setContractForm({ ...contractForm, amount: e.target.value })} /></Field>
+            <Field label="签订日期"><input className="inp num" type="date" style={{ width: "100%" }} value={contractForm.signDate} onChange={(e) => setContractForm({ ...contractForm, signDate: e.target.value })} /></Field>
+          </div>
+          <p className="muted" style={{ fontSize: "var(--text-xs)" }}>确认后将自动创建一条回款计划（签订日后 30 天到期）。</p>
         </Modal>
       ) : null}
 

@@ -25,7 +25,7 @@ import NotificationPanel from "./components/NotificationPanel";
 import { Btn, Modal } from "./ui/common";
 import {
   IconHome, IconUsers, IconTask, IconKb, IconFunnel, IconToday,
-  IconMedia, IconChart, IconGrowth, IconSettings, IconMoon, IconSun, IconBell,
+  IconMedia, IconChart, IconGrowth, IconSettings, IconMoon, IconSun, IconBell, IconHelp,
 } from "./components/icons";
 
 declare global {
@@ -76,6 +76,8 @@ const NAV: { key: View; label: string; icon: (p: { size?: number }) => JSX.Eleme
   { key: "kb", label: "知识库", icon: IconKb, group: "业务" },
   { key: "data", label: "数据报表", icon: IconChart, group: "业务" },
   { key: "growth", label: "成长规划", icon: IconGrowth, group: "业务" },
+  { key: "settings", label: "系统设置", icon: IconSettings, group: "系统" },
+  { key: "help", label: "帮助中心", icon: IconHelp, group: "系统" },
 ];
 
 async function loadAll(): Promise<DataSet> {
@@ -224,8 +226,6 @@ export default function App() {
     else if (doc.type === "笔记") { setKbFocus(doc.id); setView("kb"); }
   }
 
-  const crumb = NAV.find((n) => n.key === view)?.label ?? (view === "settings" ? "设置" : view === "help" ? "帮助中心" : view === "notifications" ? "通知中心" : "媒电通工作台");
-
   return (
     <div className="app">
       <aside className="sidebar">
@@ -237,8 +237,8 @@ export default function App() {
           </div>
         </div>
         <nav className="nav">
-          {["常用", "业务"].map((group) => (
-            <div key={group} className="nav-group">
+          {["常用", "业务", "系统"].map((group) => (
+            <div key={group} className={"nav-group" + (group === "系统" ? " nav-sys" : "")}>
               <div className="nav-label">{group}</div>
               {NAV.filter((n) => n.group === group).map((n) => (
                 <div key={n.key} className={"nav-item" + (view === n.key ? " active" : "")}
@@ -251,44 +251,39 @@ export default function App() {
           ))}
         </nav>
         <div className="sidebar-user-menu">
-          <button className="user-menu-trigger" onClick={() => setUserMenuOpen(!userMenuOpen)}>
-            <div className="user-avatar">媒</div>
-            <div style={{ position: "relative", display: "inline-flex" }}>
-              <button data-notification-trigger className="icon-btn sm" title="通知中心" onClick={(e) => { e.stopPropagation(); setUserMenuOpen(false); setNotifyOpen((v) => !v); }}>
-                <IconBell size={16} />
-                {unreadCount > 0 ? <span className="badge-dot">{unreadCount > 99 ? "99+" : unreadCount}</span> : null}
+          <div className="user-menu-trigger">
+            <div className="user-avatar" onClick={() => setUserMenuOpen(!userMenuOpen)} style={{cursor:"pointer"}}>媒</div>
+            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 2 }}>
+              <div style={{ position: "relative" }}>
+                <button data-notification-trigger className="icon-btn sm" title="通知中心" onClick={(e) => { e.stopPropagation(); setNotifyOpen((v) => !v); }}>
+                  <IconBell size={16} />
+                  {unreadCount > 0 ? <span className="badge-dot">{unreadCount > 99 ? "99+" : unreadCount}</span> : null}
+                </button>
+                {notifyOpen && data ? (
+                  <NotificationPanel
+                    customers={data.customers}
+                    payments={data.payments}
+                    cps={data.cps}
+                    notificationsReadAt={data.notificationsReadAt}
+                    reload={reload}
+                    onClose={closeNotify}
+                    onViewAll={goAllNotifications}
+                  />
+                ) : null}
+              </div>
+              <button className="icon-btn sm" title="切换主题" onClick={() => switchTheme(theme === "dark" ? "light" : "dark")}>
+                {theme === "dark" ? <IconSun size={16} /> : <IconMoon size={16} />}
               </button>
-              {notifyOpen && data ? (
-                <NotificationPanel
-                  customers={data.customers}
-                  payments={data.payments}
-                  cps={data.cps}
-                  notificationsReadAt={data.notificationsReadAt}
-                  reload={reload}
-                  onClose={closeNotify}
-                  onViewAll={goAllNotifications}
-                />
-              ) : null}
             </div>
-            <button className="icon-btn sm" title="切换主题" onClick={(e) => { e.stopPropagation(); switchTheme(theme === "dark" ? "light" : "dark"); }}>
-              {theme === "dark" ? <IconSun size={16} /> : <IconMoon size={16} />}
-            </button>
-          </button>
+          </div>
           {userMenuOpen ? (
             <div className="user-menu-dropdown" onClick={(e) => e.stopPropagation()}>
               <div className="user-menu-header">
                 <div className="user-avatar lg">媒</div>
                 <div>
                   <div className="user-menu-name">媒电通工作台</div>
-                  <div className="user-menu-sub">本地优先 · 数据不上传</div>
+                  <div className="user-menu-sub">v0.1.0</div>
                 </div>
-              </div>
-              <div className="user-menu-divider" />
-              <div className="user-menu-item" onClick={() => { setView("settings"); setUserMenuOpen(false); }}>
-                <IconSettings size={16} /><span>系统设置</span>
-              </div>
-              <div className="user-menu-item" onClick={() => { setView("help"); setUserMenuOpen(false); }}>
-                <span style={{ fontSize: 16 }}>?</span><span>帮助中心</span>
               </div>
               <div className="user-menu-divider" />
               <div className="user-menu-item" onClick={() => { setUserMenuOpen(false); window.mta?.installUpdate(); }}>
@@ -297,12 +292,10 @@ export default function App() {
             </div>
           ) : null}
         </div>
-        <div className="nav-foot"><span className="dot" /><span>本地优先 · 数据不上传</span></div>
       </aside>
 
       <div className="main">
         <header className="topbar">
-          <div className="crumb"><b>{crumb}</b></div>
           <TopSearch onSelect={onSearchSelect} />
         </header>
 

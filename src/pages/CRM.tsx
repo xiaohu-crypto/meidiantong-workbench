@@ -6,7 +6,7 @@ import { healthOf, latestTouch, customerStage, type CustomerStage } from "../cor
 import { validateCustomer } from "../core/validators";
 import type { Contact, ContactPoint, Contract, Customer, Deal, Payment, Rel, Task } from "../types";
 import { Btn, Chip, money, Modal, Field, uid, useToast } from "../ui/common";
-import { IconClose, IconPlus, IconSearch } from "../components/icons";
+import { IconClose, IconPlus, IconSearch, IconUsers } from "../components/icons";
 import ImportCustomers from "../components/ImportCustomers";
 import { RecordPage, type WidgetDef, type RecordLayout } from "../ui/RecordPage";
 import { FieldsWidget } from "../ui/widgets/FieldsWidget";
@@ -208,6 +208,12 @@ export default function CRM(props: Props) {
   const [vc, setVc] = useState<Record<string, boolean>>(DEFAULT_COLS);
   const [colsOpen, setColsOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  /* 客户列表视图:表格 / 看板(按阶段分4列),持久化到 settings.crmViewMode */
+  const [crmView, setCrmView] = useState<"table" | "kanban">("table");
+  function switchCrmView(v: "table" | "kanban") {
+    setCrmView(v);
+    void db.setSetting("crmViewMode", v);
+  }
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
   const [viewName, setViewName] = useState("");
   const [savingView, setSavingView] = useState(false);
@@ -227,6 +233,7 @@ export default function CRM(props: Props) {
     void (async () => {
       setDensity(await db.getSetting<Density>("crmDensity", "舒适"));
       setVc(await db.getSetting<Record<string, boolean>>("crmColumns", DEFAULT_COLS));
+      setCrmView(await db.getSetting<"table" | "kanban">("crmViewMode", "table"));
     })();
   }, []);
 
@@ -465,6 +472,11 @@ export default function CRM(props: Props) {
         <div style={{ display: "flex", gap: 6, padding: "10px 14px 0", flexWrap: "wrap" }}>
           <Btn kind="ghost" sm onClick={cycleDensity}>密度:{density}</Btn>
           <Btn kind="ghost" sm onClick={() => setColsOpen(true)}>字段管理</Btn>
+          <div className="seg" style={{ marginLeft: "auto" }}>
+            {([["table", "表格"], ["kanban", "看板"]] as const).map(([k, l]) => (
+              <button key={k} className={crmView === k ? "active" : ""} onClick={() => switchCrmView(k)}>{l}</button>
+            ))}
+          </div>
         </div>
         <div className="stage-filter">
           {(["", "潜在", "有效", "合作", "流失"] as const).map((s) => (
@@ -494,6 +506,15 @@ export default function CRM(props: Props) {
           </select>
           <Btn kind="draft" sm onClick={() => setSavingView(true)} style={{ marginLeft: "auto" }}>保存为视图</Btn>
         </div>
+        { /* active filter inline chips */ }
+        {(q || industry || stageFilter || groupBy) ? (
+          <div style={{ display: "flex", gap: 6, padding: "8px 14px 0", flexWrap: "wrap", alignItems: "center" }}>
+            {q ? <span className="filter-chip">搜索: {q} <button onClick={() => setQ("")} aria-label="clear search">×</button></span> : null}
+            {industry ? <span className="filter-chip">行业: {industry} <button onClick={() => setIndustry("")} aria-label="clear industry">×</button></span> : null}
+            {stageFilter ? <span className="filter-chip">阶段: {stageFilter} <button onClick={() => setStageFilter("")} aria-label="clear stage">×</button></span> : null}
+            {groupBy ? <span className="filter-chip">分组: {groupBy === "industry" ? "按行业" : "按等级"} <button onClick={() => setGroupBy("")} aria-label="clear group">×</button></span> : null}
+          </div>
+        ) : null}
         {savingView ? (
           <div style={{ display: "flex", gap: 6, padding: "0 14px 8px", alignItems: "center" }}>
             <input className="inp" style={{ width: 160, minHeight: 28, padding: "2px 8px", fontSize: "var(--text-xs)" }} value={viewName}
@@ -531,6 +552,38 @@ export default function CRM(props: Props) {
             <button className="btn ghost sm" onClick={() => setSelected(new Set())}>取消选择</button>
           </div>
         ) : null}
+        {crmView === "kanban" ? (
+          <div className="kanban" style={{ gridTemplateColumns: "repeat(4,1fr)", padding: "12px 14px", margin: 0 }}>
+            {(["潜在", "有效", "合作", "流失"] as const).map((stg) => {
+              const col = rows.filter((c) => customerStage(c.id, deals, props.contracts) === stg);
+              return (
+                <div className="kcol" key={stg} style={{ minHeight: 200, maxHeight: "calc(100vh - 320px)", display: "flex", flexDirection: "column" }}>
+                  <div className="kcol-head">{stg}<span className="chip gray" style={{ marginLeft: "auto" }}>{col.length}</span></div>
+                  <div className="kcol-body" style={{ overflowY: "auto", flex: 1 }}>
+                    {col.map((c) => {
+                      const h = healthOf(c.id, props.cps, payments);
+                      const lt = latestTouch(c.id, props.cps);
+                      return (
+                        <div className="kcard" key={c.id} onClick={() => { setOpenId(c.id); setTab("概览"); }} style={{ cursor: "pointer" }}>
+                          <div className="t" style={{ fontWeight: 650, marginBottom: 4 }}>{c.name}</div>
+                          <div className="m">
+                            <Chip gray>{c.industry}</Chip>
+                            <Chip kind={c.grade === "A" || c.grade === "S" ? "brand" : "gray"}>{c.grade}</Chip>
+                          </div>
+                          <div className="m" style={{ marginTop: 6 }}>
+                            <span className="num" style={{ fontSize: "var(--text-xs)", color: h >= 80 ? "var(--success)" : h >= 60 ? "var(--warning)" : "var(--danger)" }}>健康度 {h}</span>
+                            <span className="cell-sub" style={{ marginLeft: "auto", fontSize: "var(--text-xs)" }}>{lt ? new Date(lt).toLocaleDateString("zh-CN") : "无跟进"}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {col.length === 0 ? <p className="muted" style={{ fontSize: "var(--text-xs)", textAlign: "center", padding: "16px 0" }}>暂无客户</p> : null}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
         <div className={"tgrid-wrap density-" + density}>
           <table className="tgrid">
             <thead><tr><th style={{ width: 32 }}><input type="checkbox" checked={selected.size === rows.length && rows.length > 0} onChange={(e) => { if (e.target.checked) setSelected(new Set(rows.map((r) => r.id))); else setSelected(new Set()); }} /></th><th style={{ width: "20%" }}>客户</th>{vc.industry ? <th>行业</th> : null}{vc.grade ? <th>等级</th> : null}{vc.health ? <th>健康度</th> : null}{vc.stage ? <th>客户阶段</th> : null}{vc.deal ? <th style={{ textAlign: "right" }}>在途商机</th> : null}{vc.touch ? <th>最近跟进</th> : null}</tr></thead>
@@ -591,17 +644,27 @@ export default function CRM(props: Props) {
               )}
               {rows.length === 0 ? (
                 <tr><td colSpan={colCount} style={{ padding: 0 }}>
-                  <div className="empty-state">
-                    <div className="es-icon">&#128101;</div>
-                    <div className="es-title">暂无客户</div>
-                    <div className="es-desc">点击右上角新增客户，开始管理你的客户关系</div>
-                    <Btn kind="primary" onClick={() => setAddOpen(true)}><IconPlus size={14} /> 新增客户</Btn>
-                  </div>
+                  {customers.length === 0 ? (
+                    <div className="empty-state" style={{ padding: "60px 20px" }}>
+                      <div className="es-icon"><IconUsers size={44} /></div>
+                      <div className="es-title">暂无客户</div>
+                      <div className="es-desc">点击下方按钮添加你的第一个客户，开始管理客户全生命周期</div>
+                      <Btn kind="primary" onClick={() => setAddOpen(true)}><IconPlus size={14} /> 新增客户</Btn>
+                    </div>
+                  ) : (
+                    <div className="empty-state" style={{ padding: "60px 20px" }}>
+                      <div className="es-icon" style={{ fontSize: 32 }}>🔍</div>
+                      <div className="es-title">无匹配客户</div>
+                      <div className="es-desc">当前筛选条件下没有匹配的客户，试试调整筛选条件</div>
+                      <Btn kind="ghost" onClick={() => { setQ(""); setIndustry(""); setStageFilter(""); setGroupBy(""); }}>清除筛选</Btn>
+                    </div>
+                  )}
                 </td></tr>
               ) : null}
             </tbody>
           </table>
         </div>
+        )}
       </div>
 
       <div className={"drawer-mask" + (open ? " open" : "")} onClick={() => setOpenId(null)} />

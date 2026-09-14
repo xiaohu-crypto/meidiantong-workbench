@@ -35,7 +35,7 @@ function createWindow() {
   };
   if (mode === "integrated") {
     opts.titleBarStyle = "hidden";
-    opts.titleBarOverlay = { color: "#0E0F13", symbolColor: "#E8E8EC", height: 38 };
+    opts.titleBarOverlay = { color: "#16181D", symbolColor: "#E8E8EC", height: 52 };
   }
   win = new BrowserWindow(opts);
   win.webContents.on("before-input-event", (e, input) => {
@@ -116,9 +116,9 @@ app.whenReady().then(() => {
     if (!win) return false;
     const isLight = theme === "light";
     win.setTitleBarOverlay({
-      color: isLight ? "#FFFFFF" : "#0E0F13",
+      color: isLight ? "#FFFFFF" : "#16181D",
       symbolColor: isLight ? "#333333" : "#E8E8EC",
-      height: 38,
+      height: 52,
     });
     return true;
   });
