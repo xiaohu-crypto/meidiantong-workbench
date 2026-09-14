@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { aiChat } from "../core/ai/client";
 import { EMPLOYEE_LIST, type Employee, type EmployeeId, buildContext } from "../core/ai/employees";
+import { retrieveNotes } from "../core/ai/rag";
 
 interface Msg {
   id: string;
@@ -39,16 +40,20 @@ export default function AIAssistant({ currentPage }: { currentPage: string }) {
     setLoading(true);
     try {
       const ctx = buildContext(currentPage);
+      // RAG:检索知识库相关笔记注入上下文
+      const rag = await retrieveNotes(q);
+      const systemContent = emp.systemPrompt + "\n\n" + ctx + (rag.context ? "\n\n" + rag.context + "\n\n请参考以上知识库资料回答问题，如资料与问题无关可忽略。" : "");
       const messages = [
-        { role: "system", content: emp.systemPrompt + "\n\n" + ctx },
+        { role: "system", content: systemContent },
         ...msgs.filter((m) => m.id !== "welcome").map((m) => ({ role: m.role, content: m.content })),
         { role: "user", content: q },
       ];
       const r = await aiChat(messages);
+      const refSuffix = rag.notes.length > 0 ? `\n\n📚 参考知识库：${rag.notes.map((n) => "《" + n.title + "》").join("、")}` : "";
       const reply: Msg = {
         id: `a-${Date.now()}`,
         role: "assistant",
-        content: r.ok ? r.content ?? "（无回复）" : `⚠️ ${r.error ?? "调用失败"}`,
+        content: (r.ok ? r.content ?? "（无回复）" : `⚠️ ${r.error ?? "调用失败"}`) + refSuffix,
         time: Date.now(),
       };
       setMsgs((prev) => [...prev, reply]);
