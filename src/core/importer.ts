@@ -1,5 +1,18 @@
 import { validateCustomer, type Errors, GRADES } from "./validators";
 
+/** 等级值归一化:常见分档映射到 S/A/B/C,无法识别的统一为 C */
+const GRADE_MAP: Record<string, "S" | "A" | "B" | "C"> = {
+  S: "S", A: "A", B: "B", C: "C",
+  VIP: "A", 重要: "A", 高: "A", 核心: "A", 重点: "A", 战略: "A", KA: "A", 关键: "A", 头部: "A", 优质: "A",
+  中: "B", 一般: "B", 普通: "B", 中等: "B", 常规: "B", 活跃: "B", 腰部: "B", 标准: "B",
+  低: "C", 潜在: "C", 小: "C", 新客户: "C", 待培育: "C", 边缘: "C", 尾部: "C", 普通客户: "C", 小型: "C",
+};
+export function normalizeGrade(v: string): "S" | "A" | "B" | "C" {
+  const clean = v.trim().toUpperCase();
+  if (clean === "S" || clean === "A" || clean === "B" || clean === "C") return clean;
+  return GRADE_MAP[clean] ?? "C";
+}
+
 /** 列名同义词匹配(规则引擎,即需求所称"AI 匹配"的确定性实现) */
 const SYNONYMS: Record<string, string[]> = {
   name: ["客户名称", "名称", "客户", "公司", "公司名称", "客户名", "单位", "企业名称", "企业", "公司全称", "单位名称", "客户公司", "企业全称", "客户全称", "机构名称", "组织名称", "客户单位", "品牌名称", "品牌方"],
@@ -214,7 +227,7 @@ export function rowsFromSheet(parsed: ParsedFile, sheetIdx: number): { headers: 
       row: i + parsed.headerRow + 2,
       name: mapping.name !== undefined ? String(r[mapping.name] ?? "").trim() : "",
       industry: mapping.industry !== undefined ? String(r[mapping.industry] ?? "").trim() : "",
-      grade: mapping.grade !== undefined ? String(r[mapping.grade] ?? "").trim().toUpperCase() : "",
+      grade: mapping.grade !== undefined ? normalizeGrade(String(r[mapping.grade] ?? "")) : "C",
       phone: mapping.phone !== undefined ? String(r[mapping.phone] ?? "").trim() : "",
       billingTitle: mapping.billingTitle !== undefined ? String(r[mapping.billingTitle] ?? "").trim() : "",
       billingTaxNo: mapping.billingTaxNo !== undefined ? String(r[mapping.billingTaxNo] ?? "").trim() : "",
