@@ -1,9 +1,10 @@
 /* ===== AI员工角色定义(复刻NocoBase AI Employees设计) =====
  * 每个角色有独立的system prompt、欢迎语、适用场景。
  * 聊天时自动注入当前页面上下文(Blocks)。
+ * 支持用户自定义员工（settings.aiEmployees合并）。
  */
 
-export type EmployeeId = "analyst" | "customer" | "deal";
+export type EmployeeId = string;
 
 export interface Employee {
   id: EmployeeId;
@@ -111,8 +112,19 @@ const deal: Employee = {
   ],
 };
 
-export const EMPLOYEES: Record<EmployeeId, Employee> = { analyst, customer, deal };
+export const EMPLOYEES: Record<string, Employee> = { analyst, customer, deal };
 export const EMPLOYEE_LIST: Employee[] = [analyst, customer, deal];
+export const BUILTIN_EMPLOYEE_IDS: EmployeeId[] = ["analyst", "customer", "deal"];
+
+/** 合并内置员工与用户自定义员工（自定义覆盖同名内置，追加新员工） */
+export function mergeEmployees(custom: Employee[]): Employee[] {
+  const merged = new Map<string, Employee>();
+  for (const e of EMPLOYEE_LIST) merged.set(e.id, e);
+  for (const e of custom) {
+    if (e && e.id) merged.set(e.id, { ...e, id: e.id });
+  }
+  return Array.from(merged.values());
+}
 
 /** 根据当前页面获取上下文描述(复刻NocoBase Blocks) */
 export function buildContext(page: string, data?: Record<string, unknown>): string {

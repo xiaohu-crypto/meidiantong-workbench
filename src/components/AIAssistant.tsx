@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { getAiConfig, loadAiKey } from "../core/ai/client";
-import { EMPLOYEE_LIST, type Employee, type EmployeeId, buildContext } from "../core/ai/employees";
+import { EMPLOYEE_LIST, mergeEmployees, type Employee, type EmployeeId, buildContext } from "../core/ai/employees";
 import { retrieveNotes } from "../core/ai/rag";
 import { Markdown } from "./Markdown";
 import { db } from "../db/db";
@@ -20,10 +20,18 @@ export default function AIAssistant({ currentPage }: { currentPage: string }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [empList, setEmpList] = useState<Employee[]>(EMPLOYEE_LIST);
   const listRef = useRef<HTMLDivElement>(null);
   const stoppedRef = useRef(false);
 
-  const emp: Employee = EMPLOYEE_LIST.find((e) => e.id === empId) ?? EMPLOYEE_LIST[0];
+  const emp: Employee = empList.find((e) => e.id === empId) ?? empList[0];
+
+  // 加载自定义员工配置
+  useEffect(() => {
+    void db.getSetting<Employee[]>("aiEmployees", []).then((custom) => {
+      setEmpList(mergeEmployees(custom));
+    });
+  }, []);
 
   // 停止生成
   function stopGeneration() {
@@ -177,7 +185,7 @@ export default function AIAssistant({ currentPage }: { currentPage: string }) {
       </div>
       {/* 角色切换tab */}
       <div className="ai-emp-tabs">
-        {EMPLOYEE_LIST.map((e) => (
+        {empList.map((e) => (
           <button
             key={e.id}
             className={`ai-emp-tab ${e.id === empId ? "active" : ""}`}

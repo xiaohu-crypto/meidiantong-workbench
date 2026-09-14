@@ -18,15 +18,26 @@ const Help = lazy(() => import("./pages/Help"));
 import { startupCatchUp, maybeNotify } from "./core/notify";
 const SettingsPage = lazy(() => import("./pages/Settings"));
 const Notifications = lazy(() => import("./pages/Notifications"));
+const BuilderPage = lazy(() => import("./pages/Builder"));
+const WorkflowsPage = lazy(() => import("./pages/Workflows"));
+const CollectionsPage = lazy(() => import("./pages/Collections"));
+const AuditPage = lazy(() => import("./pages/Audit"));
+const RolesPage = lazy(() => import("./pages/Roles"));
+const AIStaffPage = lazy(() => import("./pages/AIStaff"));
+const AIKbPage = lazy(() => import("./pages/AIKb"));
 import QuickCapture from "./components/QuickCapture";
 import TopSearch from "./components/TopSearch";
 import Onboarding from "./components/Onboarding";
 import NotificationPanel from "./components/NotificationPanel";
 import AIAssistant from "./components/AIAssistant";
-import { Btn, Modal } from "./ui/common";
+import { Btn, Modal, useToast } from "./ui/common";
+import { engine } from "./core/flow/engine";
+import { FormBlock } from "./components/blocks/FormBlock";
+import { DetailsBlock } from "./components/blocks/DetailsBlock";
 import {
   IconHome, IconUsers, IconTask, IconKb, IconFunnel, IconToday,
-  IconMedia, IconChart, IconGrowth, IconSettings, IconMoon, IconSun, IconBell, IconHelp,
+  IconMedia, IconChart, IconGrowth, IconSettings, IconMoon, IconSun, IconBell, IconHelp, IconAI,
+  IconGrid, IconClock,
 } from "./components/icons";
 
 declare global {
@@ -69,7 +80,7 @@ interface DataSet {
   notificationsReadAt: number;
 }
 
-type View = "today" | "crm" | "work" | "dev" | "media" | "kb" | "data" | "growth" | "settings" | "help" | "notifications";
+type View = "today" | "crm" | "work" | "dev" | "media" | "kb" | "data" | "growth" | "settings" | "help" | "notifications" | "builder" | "workflows" | "collections" | "audit" | "roles" | "aistaff" | "aikb";
 
 const NAV: { key: View; label: string; icon: (p: { size?: number }) => JSX.Element; group: string }[] = [
   { key: "today", label: "首页", icon: IconToday, group: "常用" },
@@ -80,6 +91,13 @@ const NAV: { key: View; label: string; icon: (p: { size?: number }) => JSX.Eleme
   { key: "kb", label: "知识库", icon: IconKb, group: "业务" },
   { key: "data", label: "数据报表", icon: IconChart, group: "业务" },
   { key: "growth", label: "成长规划", icon: IconGrowth, group: "业务" },
+  { key: "builder", label: "页面构建器", icon: IconAI, group: "系统" },
+  { key: "workflows", label: "工作流", icon: IconFunnel, group: "系统" },
+  { key: "collections", label: "数据建模", icon: IconGrid, group: "系统" },
+  { key: "audit", label: "操作日志", icon: IconClock, group: "系统" },
+  { key: "roles", label: "角色权限", icon: IconUsers, group: "系统" },
+  { key: "aistaff", label: "AI员工", icon: IconAI, group: "系统" },
+  { key: "aikb", label: "知识库管理", icon: IconKb, group: "系统" },
   { key: "settings", label: "系统设置", icon: IconSettings, group: "系统" },
   { key: "help", label: "帮助中心", icon: IconHelp, group: "系统" },
 ];
@@ -124,10 +142,40 @@ export default function App() {
   const [updateVer, setUpdateVer] = useState<string | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
+  const [flowForm, setFlowForm] = useState<{ store: string; id?: string } | null>(null);
+  const [flowDetail, setFlowDetail] = useState<{ store: string; id: string } | null>(null);
+  const toast = useToast();
 
   const reload = useCallback(async () => { setData(await loadAll()); }, []);
   const closeNotify = useCallback(() => setNotifyOpen(false), []);
   const goAllNotifications = useCallback(() => { setNotifyOpen(false); setView("notifications"); }, []);
+
+  // FlowEngine事件桥接：openForm/openDetail/refresh/notify/closeDrawer 全局响应
+  useEffect(() => {
+    return engine.onEvent((e) => {
+      const p = (e.payload ?? {}) as Record<string, unknown>;
+      switch (e.type) {
+        case "openForm":
+          setFlowForm({ store: String(p.store ?? ""), id: p.id ? String(p.id) : undefined });
+          break;
+        case "openDetail":
+          setFlowDetail({ store: String(p.store ?? ""), id: String(p.id ?? "") });
+          break;
+        case "refresh":
+          void reload();
+          break;
+        case "notify":
+          toast.show(String(p.text ?? "操作完成"), undefined);
+          break;
+        case "closeDrawer":
+          setFlowForm(null);
+          setFlowDetail(null);
+          break;
+        default:
+          break;
+      }
+    });
+  }, [reload, toast.show]);
 
   // 未读通知数:逾期回款 + 14天无接触客户
   const unreadCount = data ? (
@@ -153,6 +201,10 @@ export default function App() {
       document.documentElement.setAttribute("data-theme", t);
       void window.mta?.titlebarSetTheme?.(t);
       document.documentElement.dataset.titlebar = window.mta?.windowMode ?? "integrated";
+      // 启动定时工作流（自动检测沉睡客户/到期合同）
+      const { setupBuiltinWorkflows, startTimerWorkflows } = await import("./core/workflow/triggers");
+      setupBuiltinWorkflows();
+      startTimerWorkflows(30 * 60 * 1000);
     })();
     const onKey = async (e: KeyboardEvent) => {
       const qk = await db.getSetting<{ key: string }>("quickKey", { key: "k" });
@@ -346,6 +398,13 @@ export default function App() {
               <Notifications customers={data.customers} payments={data.payments} cps={data.cps} goCrm={goCrm} reload={reload} notificationsReadAt={data.notificationsReadAt} />
             ) : null}
             {view === "help" ? <Help /> : null}
+            {view === "builder" ? <BuilderPage /> : null}
+            {view === "workflows" ? <WorkflowsPage /> : null}
+            {view === "collections" ? <CollectionsPage /> : null}
+            {view === "audit" ? <AuditPage /> : null}
+            {view === "roles" ? <RolesPage /> : null}
+            {view === "aistaff" ? <AIStaffPage /> : null}
+            {view === "aikb" ? <AIKbPage /> : null}
             {view === "settings" ? (
               <SettingsPage theme={theme} setTheme={switchTheme} reload={reload}
                 customers={data?.customers ?? []} notes={data?.notes ?? []} customFields={data?.customFields ?? []} />
@@ -356,6 +415,20 @@ export default function App() {
       </div>
 
       <QuickCapture open={showQuick} onClose={() => setShowQuick(false)} reload={reload} customers={data?.customers ?? []} />
+      {flowForm ? (
+        <Modal title={flowForm.id ? "编辑记录" : "新增记录"} onClose={() => setFlowForm(null)}
+          footer={<><Btn kind="ghost" onClick={() => setFlowForm(null)}>取消</Btn></>}>
+          <FormBlock store={flowForm.store} recordId={flowForm.id}
+            onClose={() => setFlowForm(null)}
+            notify={(m) => toast.show(m, undefined)} />
+        </Modal>
+      ) : null}
+      {flowDetail ? (
+        <Modal title="记录详情" onClose={() => setFlowDetail(null)}
+          footer={<><Btn kind="ghost" onClick={() => setFlowDetail(null)}>关闭</Btn></>}>
+          <DetailsBlock store={flowDetail.store} recordId={flowDetail.id} />
+        </Modal>
+      ) : null}
       {showOnboard ? (
         <Onboarding onDone={async () => { setShowOnboard(false); await seedIfEmpty(); await seedExtraIfEmpty(); await reload(); }} />
       ) : null}
@@ -366,6 +439,7 @@ export default function App() {
         </Modal>
       ) : null}
       <AIAssistant currentPage={NAV.find((n) => n.key === view)?.label ?? view} />
+      {toast.node}
     </div>
   );
 }

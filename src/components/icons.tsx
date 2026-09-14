@@ -44,3 +44,5 @@ export function IconSun(p: IconProps) { return base(p.size, p.className, <><circ
 export function IconWallet(p: IconProps) { return base(p.size, p.className, <><rect x="3" y="6" width="18" height="13" rx="2.5" /><path d="M3 10h18" /><circle cx="16.5" cy="14.5" r="1.2" /></>); }
 export function IconFlag(p: IconProps) { return base(p.size, p.className, <><path d="M6 21V4" /><path d="M6 5h11l-2.5 3.5L17 12H6" /></>); }
 export function IconHelp(p: IconProps) { return base(p.size, p.className, <><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 0 1 4.8 1c0 1.7-2.3 2-2.3 3.5" /><path d="M12 17.5h.01" /></>); }
+export function IconGrid(p: IconProps) { return base(p.size, p.className, <><rect x="3.5" y="3.5" width="7" height="7" rx="1.5" /><rect x="13.5" y="3.5" width="7" height="7" rx="1.5" /><rect x="3.5" y="13.5" width="7" height="7" rx="1.5" /><rect x="13.5" y="13.5" width="7" height="7" rx="1.5" /></>); }
+export function IconClock(p: IconProps) { return base(p.size, p.className, <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></>); }
