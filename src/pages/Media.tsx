@@ -310,11 +310,11 @@ export default function Media(props: Props) {
       <div className="tabs media-tabs">
         {(["排期", "资源与刊例", "达人库", "报价器", "售后数据"] as const).map((t) => (
           <span key={t} className={"tab" + (tab === t ? " active" : "")}
-            onClick={() => { setTab(t); document.getElementById("media-" + t)?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>{t}</span>
+            onClick={() => setTab(t)}>{t}</span>
         ))}
       </div>
 
-      <section className="media-sec" id="media-排期">
+      <section className="media-sec" id="media-排期" style={{ display: tab === "排期" ? "block" : "none" }}>
         <>
           <div className="alert-strip" style={{ marginTop: 0, marginBottom: 16 }}>
             <div className="card card-pad">
@@ -351,7 +351,7 @@ export default function Media(props: Props) {
         </>
       </section>
 
-      <section className="media-sec" id="media-资源与刊例">
+      <section className="media-sec" id="media-资源与刊例" style={{ display: tab === "资源与刊例" ? "block" : "none" }}>
         <div className="card" style={{ overflow: "hidden" }}>
           <div className="toolbar-row" style={{ padding: "12px 14px" }}>
             <span className="h-title sm">媒体资源库({resources.length})</span>
@@ -408,7 +408,7 @@ export default function Media(props: Props) {
         </div>
       </section>
 
-      <section className="media-sec" id="media-达人库">
+      <section className="media-sec" id="media-达人库" style={{ display: tab === "达人库" ? "block" : "none" }}>
         <div className="card" style={{ overflow: "hidden" }}>
           <div className="toolbar-row" style={{ padding: "12px 14px" }}>
             <span className="h-title sm">达人库({influencers.length})</span>
@@ -438,7 +438,7 @@ export default function Media(props: Props) {
         </div>
       </section>
 
-      <section className="media-sec" id="media-报价器">
+      <section className="media-sec" id="media-报价器" style={{ display: tab === "报价器" ? "block" : "none" }}>
         <div className="card card-pad">
           <div className="h-row" style={{ marginBottom: 12 }}>
             <span className="h-title sm">自助报价器 · 选点位 × 时长自动算价</span>
@@ -483,7 +483,7 @@ export default function Media(props: Props) {
         </div>
       </section>
 
-      <section className="media-sec" id="media-售后数据">
+      <section className="media-sec" id="media-售后数据" style={{ display: tab === "售后数据" ? "block" : "none" }}>
         <>
           <div className="card card-pad" style={{ marginBottom: 16 }}>
             <div className="h-row">
