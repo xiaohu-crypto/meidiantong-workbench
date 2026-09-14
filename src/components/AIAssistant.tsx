@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { aiChat } from "../core/ai/client";
 import { EMPLOYEE_LIST, type Employee, type EmployeeId, buildContext } from "../core/ai/employees";
 import { retrieveNotes } from "../core/ai/rag";
+import { Markdown } from "./Markdown";
+import { db } from "../db/db";
 
 interface Msg {
   id: string;
@@ -17,18 +19,59 @@ export default function AIAssistant({ currentPage }: { currentPage: string }) {
   const [msgs, setMsgs] = useState<Msg[]>([{ id: "welcome", role: "assistant", content: EMPLOYEE_LIST[0].welcome, time: Date.now() }]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
   const emp: Employee = EMPLOYEE_LIST.find((e) => e.id === empId) ?? EMPLOYEE_LIST[0];
 
-  // 切换角色:清空对话,显示新角色欢迎语
+  // 加载该角色的对话历史
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const saved = await db.getSetting<Msg[] | null>(`aiChat_${empId}`, null);
+        if (!cancelled && saved && saved.length > 0) {
+          setMsgs(saved);
+        } else {
+          setMsgs([{ id: "welcome", role: "assistant", content: emp.welcome, time: Date.now() }]);
+        }
+      } catch {
+        setMsgs([{ id: "welcome", role: "assistant", content: emp.welcome, time: Date.now() }]);
+      } finally {
+        if (!cancelled) setLoaded(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [empId]);
+
+  // 保存对话历史(防抖)
+  useEffect(() => {
+    if (!loaded) return;
+    const t = setTimeout(() => {
+      void db.setSetting(`aiChat_${empId}`, msgs);
+    }, 500);
+    return () => clearTimeout(t);
+  }, [msgs, empId, loaded]);
+
+  // 切换角色:加载该角色历史或显示欢迎语
   function switchEmployee(id: EmployeeId) {
     if (id === empId) return;
+    setLoaded(false);
     setEmpId(id);
-    const e = EMPLOYEE_LIST.find((x) => x.id === id) ?? EMPLOYEE_LIST[0];
-    setMsgs([{ id: "welcome", role: "assistant", content: e.welcome, time: Date.now() }]);
     setInput("");
     setLoading(false);
+  }
+
+  // 清空当前角色对话
+  function clearChat() {
+    setMsgs([{ id: "welcome", role: "assistant", content: emp.welcome, time: Date.now() }]);
+    setInput("");
+    setLoading(false);
+  }
+
+  // 复制回复
+  function copyReply(content: string) {
+    void navigator.clipboard.writeText(content).catch(() => {});
   }
 
   // 自动滚动到底部
@@ -87,7 +130,7 @@ export default function AIAssistant({ currentPage }: { currentPage: string }) {
           <span className="ai-emp-role">{emp.role}</span>
         </div>
         <div style={{display:"flex",gap:"4px"}}>
-          <button className="ai-close" onClick={() => { setMsgs([{ id: "welcome", role: "assistant", content: emp.welcome, time: Date.now() }]); setInput(""); setLoading(false); }} title="清空对话">🗑</button>
+          <button className="ai-close" onClick={clearChat} title="清空对话">🗑</button>
           <button className="ai-close" onClick={() => setOpen(false)} title="关闭">✕</button>
         </div>
       </div>
@@ -117,7 +160,12 @@ export default function AIAssistant({ currentPage }: { currentPage: string }) {
       <div className="ai-msg-list" ref={listRef}>
         {msgs.map((m) => (
           <div key={m.id} className={`ai-msg ${m.role}`}>
-            <div className="ai-msg-bubble">{m.content}</div>
+            <div className="ai-msg-bubble">
+              {m.role === "assistant" ? <Markdown text={m.content} /> : m.content}
+            </div>
+            {m.role === "assistant" && m.id !== "welcome" && (
+              <button className="ai-copy-btn" onClick={() => copyReply(m.content)} title="复制">📋</button>
+            )}
           </div>
         ))}
         {loading && <div className="ai-msg assistant"><div className="ai-msg-bubble ai-typing">思考中…</div></div>}
