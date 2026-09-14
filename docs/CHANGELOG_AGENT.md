@@ -118,3 +118,23 @@ Phase 0 - 项目扫描（深度补充）
 | Phase 8 | 配置持久化 | ⏳ 待执行 |
 | Phase 9 | Plugin系统 | ⏳ 待执行 |
 | Phase 10 | Builder | ⏳ 待执行 |
+
+---
+
+## 2026-09-14 全量复刻NocoBase架构 · 8批交付完成
+
+**交付范围**：
+- 批1 数据层：collections.ts（25 store→Collection定义）/ field.ts / relation.ts / repository.ts / datasource.ts / useResource.ts + i18n（locale.ts 中文简体约200 key）
+- 批2 引擎层：flow/engine + step + template + context + action/registry + model/registry/renderer；11个标准Step；模板支持 `{{num:path}}`/`{{bool:path}}`/`{{$context.today+N}}` 类型保留
+- 批3 区块层：TableBlock/FormBlock/KanbanBlock/DetailsBlock/ListBlock/CalendarBlock/MarkdownBlock
+- 批4 构建器：Palette+Canvas+SettingsPanel三栏 + persist.ts（flowModels存settings）+ pages/Builder.tsx + Flow事件桥接（openForm/openDetail/refresh/notify/closeDrawer）
+- 批5 工作流：triggers.ts（recordCreated/Updated/Deleted + timer触发器）+ actions.ts；内置3个工作流：商机签约→自动建合同+回款计划、沉睡客户提醒、合同到期提醒；Repository create/update/destroy自动触发；App启动30分钟定时
+- 批6 管理页：插件系统(plugin/manager) + 角色权限(auth/permission) + 审计页(Audit,读operationLogs+撤销) + 数据建模页(Collections,自定义Collection存settings) + 角色权限页(Roles)
+- 批7 AI增强：AI员工管理页(自定义员工settings.aiEmployees，AIAssistant实时同步) + 知识库管理页(统计+重建索引)
+- 批8 联调：typecheck 0错误；vitest 全量 75 通过（新增39个NocoBase测试）；vite构建成功；asar更新安装版（已备份 app.asar.bak-20260914-134229）；PrintWindow截图验证AI员工页渲染正常；git提交 5d7cb14 并推送
+
+**经验沉淀**：
+- 模板引擎正则 `\$?([\w.]+)` 会吞掉 `$step` 的 `$` → 用 `(\$[\w.+]+|\w[\w.]*)`
+- 模板解析永远返回字符串导致金额字段变字符串 → resolveValue 支持类型前缀 num/bool/str
+- 定时任务去重：settings.wfLastRun_<uid> 控制间隔
+- 异步fireAfterWrite用动态import避免repository↔triggers循环依赖
