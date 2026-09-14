@@ -14,7 +14,6 @@ import { FieldsWidget } from "../ui/widgets/FieldsWidget";
 import { RelatedListWidget } from "../ui/widgets/RelatedListWidget";
 import { getAllScripts, addScript, updateScript, deleteScript, type SopScript } from "../core/sop";
 import { TimelineWidget } from "../ui/widgets/TimelineWidget";
-import { parseStructuredAdvice, type StructuredAdvice } from "../core/ai/script";
 import { askCustomer, type AskContext } from "../core/ai/ask";
 
 interface Props {
@@ -184,20 +183,22 @@ export default function CRM(props: Props) {
     await props.reload();
   }
   const [aiBusy, setAiBusy] = useState(false);
-  const [aiAdvice, setAiAdvice] = useState("");
   const [sopScripts, setSopScripts] = useState<SopScript[]>([]);
   const [sopOpen, setSopOpen] = useState(false);
   const [sopForm, setSopForm] = useState({ id: "", scene: "", text: "" });
-  const [aiStructured, setAiStructured] = useState<StructuredAdvice | null>(null);
   /* P3 本地问数:输入框 + 最近 3 条问答历史(纯本地,不调云端) */
   const [askInput, setAskInput] = useState("");
-  const [askHistory, setAskHistory] = useState<{ q: string; a: string }[]>([]);
-  useEffect(() => { setAiAdvice(""); setAiStructured(null); setAskHistory([]); setAskInput(""); }, [openId]);
+  interface AiMsg { role: "user" | "assistant"; content: string; ts: number; }
+  interface AiConv { id: string; title: string; createdAt: number; messages: AiMsg[]; }
+  const [aiConvs, setAiConvs] = useState<AiConv[]>([]);
+  const [curConvId, setCurConvId] = useState<string | null>(null);
+  const [renamingConv, setRenamingConv] = useState<string | null>(null);
+  useEffect(() => { setAskInput(""); }, [openId]);
   useEffect(() => { void (async () => { setSopScripts(await getAllScripts()); })(); }, []);
 
   async function genAdvice() {
     if (!drawerC) return;
-    setAiBusy(true); setAiAdvice(""); setAiStructured(null);
+    setAiBusy(true);
     try {
       const { aiChat } = await import("../core/ai/client");
       const recentCps = props.cps.filter((cp) => cp.customerId === drawerC.id && !cp.deletedAt).slice(-5);
@@ -215,8 +216,8 @@ export default function CRM(props: Props) {
         { role: "user", content: ctx },
       ]);
       const text = r.ok ? (r.content ?? "") : "调用失败:" + (r.error ?? "");
-      setAiAdvice(text);
-      setAiStructured(r.ok ? parseStructuredAdvice(text) : null);
+      appendMsg("user", "生成跟进建议");
+      appendMsg("assistant", text);
     } finally { setAiBusy(false); }
   }
 
@@ -233,9 +234,25 @@ export default function CRM(props: Props) {
       rels: drawerRels,
     };
     const ans = askCustomer(askInput, askCtx);
-    setAskHistory((h) => [{ q: askInput.trim(), a: ans }, ...h].slice(0, 3));
+    appendMsg("user", askInput.trim());
+    appendMsg("assistant", ans);
     setAskInput("");
   }
+  function ensureConv(): AiConv {
+    if (curConvId && aiConvs.find((c) => c.id === curConvId)) return aiConvs.find((c) => c.id === curConvId)!;
+    const c: AiConv = { id: "conv-" + Date.now(), title: "新对话 " + new Date().toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }), createdAt: Date.now(), messages: [] };
+    setAiConvs((cs) => [c, ...cs]); setCurConvId(c.id); return c;
+  }
+  function appendMsg(role: AiMsg["role"], content: string) {
+    const c = ensureConv();
+    const msg: AiMsg = { role, content, ts: Date.now() };
+    setAiConvs((cs) => cs.map((x) => x.id === c.id ? { ...x, messages: [...x.messages, msg], title: x.messages.length === 0 && role === "user" ? content.slice(0, 20) : x.title } : x));
+  }
+  function newAiConv() { const c: AiConv = { id: "conv-" + Date.now(), title: "新对话", createdAt: Date.now(), messages: [] }; setAiConvs((cs) => [c, ...cs]); setCurConvId(c.id); }
+  function renameAiConv(id: string, title: string) { setAiConvs((cs) => cs.map((x) => x.id === id ? { ...x, title } : x)); setRenamingConv(null); }
+  function deleteAiConv(id: string) { setAiConvs((cs) => cs.filter((x) => x.id !== id)); if (curConvId === id) setCurConvId(null); }
+  function deleteMsg(convId: string, msgIdx: number) { setAiConvs((cs) => cs.map((x) => x.id === convId ? { ...x, messages: x.messages.filter((_, i) => i !== msgIdx) } : x)); }
+  function copyText(text: string) { navigator.clipboard?.writeText(text).then(() => show("已复制")).catch(() => show("复制失败")); }
   const [addOpen, setAddOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editCid, setEditCid] = useState<string | null>(null);
@@ -790,51 +807,55 @@ export default function CRM(props: Props) {
                 <MediaStrategyView customer={drawerC} onEdit={openStrategyEdit} />
               ) : null}
               {tab === "AI建议" && (
-                <div className="advice-structured">
-                  <Btn kind="primary" onClick={() => { void genAdvice(); }} disabled={aiBusy}>
-                    {aiBusy ? "思考中…" : "生成跟进建议"}
-                  </Btn>
-
-                  <div className="ask-box">
-                    <div style={{ display: "flex", gap: 6 }}>
+                <div style={{ display: "flex", gap: 12, height: "100%" }}>
+                  <div style={{ width: 180, flexShrink: 0, borderRight: "1px solid var(--border)", paddingRight: 10, overflowY: "auto" }}>
+                    <Btn kind="primary" sm style={{ width: "100%", marginBottom: 8 }} onClick={newAiConv}><IconPlus size={12} /> 新对话</Btn>
+                    {aiConvs.map((c) => (
+                      <div key={c.id} style={{ padding: "6px 8px", borderRadius: 6, background: curConvId === c.id ? "var(--surface-2)" : "transparent", cursor: "pointer", marginBottom: 2, fontSize: "var(--text-sm)" }} onClick={() => setCurConvId(c.id)}>
+                        {renamingConv === c.id ? (
+                          <input className="inp" style={{ width: "100%", fontSize: "var(--text-xs)" }} defaultValue={c.title} autoFocus onBlur={(e) => renameAiConv(c.id, e.target.value || c.title)} onKeyDown={(e) => { if (e.key === "Enter") renameAiConv(c.id, (e.target as HTMLInputElement).value || c.title); }} />
+                        ) : (
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} onDoubleClick={() => setRenamingConv(c.id)}>{c.title}</span>
+                            <span style={{ fontSize: 10, color: "var(--ink-3)", cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); setRenamingConv(c.id); }}>重命名</span>
+                            <span style={{ fontSize: 10, color: "var(--danger)", cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); deleteAiConv(c.id); }}>删除</span>
+                          </div>
+                        )}
+                        <div style={{ fontSize: 10, color: "var(--ink-3)", marginTop: 2 }}>{new Date(c.createdAt).toLocaleDateString("zh-CN")} · {c.messages.length}条</div>
+                      </div>
+                    ))}
+                    {aiConvs.length === 0 ? <p className="muted" style={{ fontSize: "var(--text-xs)", textAlign: "center", padding: 10 }}>暂无对话</p> : null}
+                  </div>
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+                    <div style={{ marginBottom: 8, display: "flex", gap: 6 }}>
+                      <Btn kind="primary" sm onClick={() => { void genAdvice(); }} disabled={aiBusy}>{aiBusy ? "思考中…" : "生成跟进建议"}</Btn>
+                    </div>
+                    <div style={{ flex: 1, overflowY: "auto", paddingRight: 4 }}>
+                      {curConvId ? (() => {
+                        const conv = aiConvs.find((c) => c.id === curConvId);
+                        if (!conv || conv.messages.length === 0) return <p className="muted" style={{ textAlign: "center", padding: 30, fontSize: "var(--text-sm)" }}>点击上方"生成跟进建议"或在下方输入问题开始对话</p>;
+                        return conv.messages.map((m, i) => (
+                          <div key={i} style={{ marginBottom: 10, textAlign: m.role === "user" ? "right" : "left" }}>
+                            <div style={{ display: "inline-block", maxWidth: "85%", textAlign: "left", padding: "8px 12px", borderRadius: 10, background: m.role === "user" ? "var(--brand)" : "var(--surface-2)", color: m.role === "user" ? "#fff" : "var(--ink)", fontSize: "var(--text-sm)", lineHeight: 1.6 }}>
+                              <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.content}</div>
+                              <div style={{ fontSize: 10, color: m.role === "user" ? "rgba(255,255,255,0.7)" : "var(--ink-3)", marginTop: 4, display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                                <span>{new Date(m.ts).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}</span>
+                                <span style={{ cursor: "pointer" }} onClick={() => copyText(m.content)}>复制</span>
+                                <span style={{ cursor: "pointer" }} onClick={() => deleteMsg(conv.id, i)}>删除</span>
+                              </div>
+                            </div>
+                          </div>
+                        ));
+                      })() : <p className="muted" style={{ textAlign: "center", padding: 30, fontSize: "var(--text-sm)" }}>选择或新建一个对话</p>}
+                    </div>
+                    <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
                       <div className="filter-input" style={{ flex: 1 }}>
                         <IconSearch size={13} />
-                        <input value={askInput}
-                          onChange={(e) => setAskInput(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Enter") runAsk(); }}
-                          placeholder="问我:这个客户有多少在途商机?最近跟进是什么时候?" />
+                        <input value={askInput} onChange={(e) => setAskInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") runAsk(); }} placeholder="问我:这个客户有多少在途商机?最近跟进是什么时候?" />
                       </div>
                       <Btn kind="data" sm onClick={runAsk}>提问</Btn>
                     </div>
-                    {askHistory.map((h, i) => (
-                      <div className="ask-item" key={i}>
-                        <div className="ask-q"><Chip kind="data">本地问数</Chip><span>{h.q}</span></div>
-                        <div className="ask-a">{h.a}</div>
-                      </div>
-                    ))}
                   </div>
-
-                  {aiStructured ? (
-                    <div className="advice-result">
-                      <div className="advice-summary">{aiStructured.summary || "客户现状如上,建议优先推动关键决策与待办动作。"}</div>
-                      <div className="advice-cols">
-                        <div className="advice-section">
-                          <div className="sec-title"><Chip kind="data">关键决策</Chip></div>
-                          {aiStructured.decisions.length ? <ol className="advice-list">{aiStructured.decisions.map((x, i) => <li key={i}>{x}</li>)}</ol> : <p className="muted" style={{ fontSize: "var(--text-xs)" }}>无</p>}
-                        </div>
-                        <div className="advice-section">
-                          <div className="sec-title"><Chip kind="brand">待办</Chip></div>
-                          {aiStructured.todos.length ? <ol className="advice-list">{aiStructured.todos.map((x, i) => <li key={i}>{x}</li>)}</ol> : <p className="muted" style={{ fontSize: "var(--text-xs)" }}>无</p>}
-                        </div>
-                        <div className="advice-section">
-                          <div className="sec-title"><Chip kind="danger">风险</Chip></div>
-                          {aiStructured.risks.length ? <ol className="advice-list">{aiStructured.risks.map((x, i) => <li key={i}>{x}</li>)}</ol> : <p className="muted" style={{ fontSize: "var(--text-xs)" }}>无明显风险</p>}
-                        </div>
-                      </div>
-                    </div>
-                  ) : aiAdvice ? (
-                    <pre style={{ whiteSpace: "pre-wrap", marginTop: 12, fontSize: 13, lineHeight: 1.7, background: "var(--surface-2)", padding: 12, borderRadius: 8 }}>{aiAdvice}</pre>
-                  ) : null}
                 </div>
               )}
               {tab === "SOP话术" && (
