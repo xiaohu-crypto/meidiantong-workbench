@@ -4,11 +4,10 @@
  */
 
 import { useMemo } from "react";
-import { useSingleRecordResource } from "../../core/resource/useResource";
-import { getCollection, type FieldDef } from "../../core/data/collections";
+import { useCollection, useStoreRecordSingle } from "../../core/resource/useResource";
+import { type FieldDef } from "../../core/data/collections";
 import { Btn, Chip } from "../../ui/common";
 import { useT } from "../../core/i18n/useT";
-import type { StoreName } from "../../db/db";
 
 interface DetailsBlockProps {
   store: string;
@@ -18,8 +17,8 @@ interface DetailsBlockProps {
 
 export function DetailsBlock({ store, recordId, onEdit }: DetailsBlockProps) {
   const t = useT();
-  const col = getCollection(store);
-  const res = useSingleRecordResource<{ id: string; deletedAt?: number } & Record<string, unknown>>(store as StoreName, recordId);
+  const col = useCollection(store);
+  const res = useStoreRecordSingle(store, recordId);
 
   const fields = useMemo(() => {
     if (!col) return [];

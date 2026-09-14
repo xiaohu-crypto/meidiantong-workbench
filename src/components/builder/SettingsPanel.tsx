@@ -2,7 +2,8 @@
  * 编辑选中区块的props：根据Block类型动态渲染配置表单。
  */
 
-import { getCollection, listCollections } from "../../core/data/collections";
+import { useEffect, useState } from "react";
+import { getCollection, listCollectionsAll, type CollectionDef } from "../../core/data/collections";
 import { Btn, Field } from "../../ui/common";
 import { useT } from "../../core/i18n/useT";
 import type { FlowModel } from "../../core/model/model";
@@ -18,10 +19,21 @@ interface SettingsPanelProps {
   onDeleteBlock: (uid: string) => void;
 }
 
+/** 数据源列表（内置+自定义模型） */
+function useStores(): CollectionDef[] {
+  const [stores, setStores] = useState<CollectionDef[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    void listCollectionsAll().then((cs) => { if (!cancelled) setStores(cs); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+  return stores;
+}
+
 export function SettingsPanel({ block, page, onUpdateBlock, onUpdatePage, onDeleteBlock }: SettingsPanelProps) {
   const t = useT();
   const meta = PALETTE_ITEMS.find((p) => p.use === block?.use);
-  const stores = listCollections();
+  const stores = useStores();
 
   if (!block) {
     return (
@@ -92,12 +104,13 @@ function KanbanSettings({ block, onUpdateBlock }: { block: FlowModel; onUpdateBl
   const t = useT();
   const store = String(block.props?.store ?? "");
   const col = getCollection(store);
+  const stores = useStores();
   const selectFields = col ? Object.entries(col.fields).filter(([, f]) => f.type === "select") : [];
   return (
     <>
       <Field label={t("block.collection")}>
         <select className="inp" value={store} onChange={(e) => onUpdateBlock(block.uid, { props: { ...block.props, store: e.target.value } })}>
-          {listCollections().map((c) => <option key={c.name} value={c.name}>{c.label}（{c.name}）</option>)}
+          {stores.map((c) => <option key={c.name} value={c.name}>{c.label}（{c.name}）</option>)}
         </select>
       </Field>
       <Field label="分组字段">

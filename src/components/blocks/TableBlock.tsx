@@ -4,13 +4,12 @@
  */
 
 import { useMemo, useState } from "react";
-import { useMultiRecordResource } from "../../core/resource/useResource";
-import { getCollection, listFields, type FieldDef } from "../../core/data/collections";
+import { useCollection, useStoreRecordList } from "../../core/resource/useResource";
+import { type FieldDef } from "../../core/data/collections";
 import { Btn, Chip, Modal, Field } from "../../ui/common";
 import { validateRecord, serializeValue } from "../../core/data/field";
 import { useT } from "../../core/i18n/useT";
 import { uid } from "../../core/data/repository";
-import type { StoreName } from "../../db/db";
 
 interface TableBlockProps {
   store: string;
@@ -24,8 +23,8 @@ interface TableBlockProps {
 
 export function TableBlock({ store, title, pageSize = 20, editable = true, onOpenDetail, notify }: TableBlockProps) {
   const t = useT();
-  const col = getCollection(store);
-  const res = useMultiRecordResource<{ id: string; deletedAt?: number } & Record<string, unknown>>(store as StoreName);
+  const col = useCollection(store);
+  const res = useStoreRecordList(store);
   const [keyword, setKeyword] = useState("");
   const [sortKey, setSortKey] = useState<string>("");
   const [sortDesc, setSortDesc] = useState(false);
@@ -42,13 +41,15 @@ export function TableBlock({ store, title, pageSize = 20, editable = true, onOpe
   /** 列表展示字段（list标记优先，否则取前5个非id字段） */
   const shownFields = useMemo(() => {
     if (!col) return [];
-    const listed = listFields(store);
-    if (listed.length > 0) return listed.map((f) => ({ key: f.key, def: f.def }));
+    const listed = Object.entries(col.fields)
+      .filter(([k, f]) => k !== "id" && f.list && f.type !== "json")
+      .map(([key, def]) => ({ key, def }));
+    if (listed.length > 0) return listed;
     return Object.entries(col.fields)
       .filter(([k, f]) => k !== "id" && f.type !== "json" && f.type !== "text")
       .slice(0, 5)
       .map(([key, def]) => ({ key, def }));
-  }, [col, store]);
+  }, [col]);
 
   const filtered = useMemo(() => {
     let rows = res.data;
@@ -231,7 +232,7 @@ function renderInput(def: FieldDef, value: unknown, onChange: (v: unknown) => vo
       return <textarea className="inp" rows={3} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} />;
     case "relation": {
       const target = def.relation?.collection;
-      const relLabel = target ? getCollection(target)?.label ?? target : "关联";
+      const relLabel = target ?? "关联";
       return (
         <input className="inp" placeholder={`${relLabel}ID`} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} />
       );

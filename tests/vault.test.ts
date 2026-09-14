@@ -45,13 +45,13 @@ describe("静态加密(OS 级方案)", () => {
     const { db } = await import("../src/db/db");
     const rows = await db.getAll<{ id: string; name?: string }>("customers");
     expect(rows.map((r) => r.name)).toContain("加密迁移客户");
-    const raw = await openDB("meidiantong", 2);
+    const raw = await openDB("meidiantong", 3);
     const stored = (await raw.getAll("customers")) as { id: string; __enc?: number; name?: string }[];
     expect(stored.some((r) => r.__enc === 1 && r.id === "c-enc")).toBe(true);
     expect(stored.some((r) => r.name === "加密迁移客户")).toBe(false);
     raw.close();
     await db.put("customers", { id: "c-new", name: "新写入客户" });
-    const raw2 = await openDB("meidiantong", 2);
+    const raw2 = await openDB("meidiantong", 3);
     const stored2 = (await raw2.getAll("customers")) as { id: string; __enc?: number }[];
     expect(stored2.find((r) => r.id === "c-new")?.__enc).toBe(1);
     raw2.close();

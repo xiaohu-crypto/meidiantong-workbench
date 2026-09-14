@@ -9,6 +9,8 @@ import { listCollections, type CollectionDef, type FieldDef, type FieldType } fr
 import { FIELD_TYPES } from "../core/data/field";
 import { useT } from "../core/i18n/useT";
 import { Btn, Chip, Field, Modal } from "../ui/common";
+import { TableBlock } from "../components/blocks/TableBlock";
+import { getDynRepo } from "../core/data/repository";
 
 const CUSTOM_KEY = "customCollections";
 
@@ -17,6 +19,7 @@ export default function CollectionsPage() {
   const [custom, setCustom] = useState<CollectionDef[]>([]);
   const [selected, setSelected] = useState<string>("customers");
   const [creating, setCreating] = useState(false);
+  const [sub, setSub] = useState<"结构" | "数据">("结构");
 
   const refresh = useCallback(async () => {
     const stored = await db.getSetting<CollectionDef[]>(CUSTOM_KEY, []);
@@ -35,6 +38,9 @@ export default function CollectionsPage() {
   }
 
   async function removeCustom(name: string) {
+    // 同步清理该自定义模型下的全部记录（dynData）
+    const repo = getDynRepo(name);
+    for (const r of await repo.find()) await repo.destroy(r.id);
     const next = custom.filter((c) => c.name !== name);
     setCustom(next);
     await db.setSetting(CUSTOM_KEY, next);
@@ -46,7 +52,7 @@ export default function CollectionsPage() {
         <span className="h-title">{t("collection.title")}</span>
         <Btn sm kind="primary" onClick={() => setCreating(true)}>{t("collection.newCollection")}</Btn>
       </div>
-      <p className="muted" style={{ marginBottom: 16 }}>{t("collection.desc")}</p>
+      <p className="muted" style={{ marginBottom: 16 }}>{t("collection.desc")}（与「数据报表」区分：数据表负责定义模型与录入数据；数据报表展示经营仪表盘）</p>
 
       <div className="col-layout">
         <div className="col-side">
@@ -69,18 +75,26 @@ export default function CollectionsPage() {
                 <span className="col-title">{current.icon} {current.label}</span>
                 <Chip kind="data">{Object.keys(current.fields).length} 个字段</Chip>
               </div>
-              <div className="col-fields">
-                {Object.entries(current.fields).map(([key, f]) => (
-                  <div key={key} className="col-field">
-                    <span className="col-field-name">{key}</span>
-                    <span className="col-field-label">{f.label}</span>
-                    <span className="col-field-type">{typeLabel(f)}</span>
-                    {f.required ? <Chip kind="danger" gray={false}>必填</Chip> : null}
-                    {f.list ? <Chip kind="brand">列表显示</Chip> : null}
-                    {f.options ? <span className="col-field-options">{f.options.join(" / ")}</span> : null}
-                  </div>
-                ))}
+              <div className="tabs" style={{ margin: "10px 0" }}>
+                <span className={"tab" + (sub === "结构" ? " active" : "")} onClick={() => setSub("结构")}>结构</span>
+                <span className={"tab" + (sub === "数据" ? " active" : "")} onClick={() => setSub("数据")}>数据</span>
               </div>
+              {sub === "数据" ? (
+                <TableBlock store={current.name} title={`${current.label} · 记录`} pageSize={10} editable notify={() => {}} />
+              ) : (
+                <div className="col-fields">
+                  {Object.entries(current.fields).map(([key, f]) => (
+                    <div key={key} className="col-field">
+                      <span className="col-field-name">{key}</span>
+                      <span className="col-field-label">{f.label}</span>
+                      <span className="col-field-type">{typeLabel(f)}</span>
+                      {f.required ? <Chip kind="danger" gray={false}>必填</Chip> : null}
+                      {f.list ? <Chip kind="brand">列表显示</Chip> : null}
+                      {f.options ? <span className="col-field-options">{f.options.join(" / ")}</span> : null}
+                    </div>
+                  ))}
+                </div>
+              )}
             </>
           ) : <p className="muted">未找到模型</p>}
         </div>

@@ -8,6 +8,7 @@ export const STORES = [
   "operationLogs", "settings",
   "pitches", "suppliers", "resources", "ratecards", "scheduleItems", "postbuys", "notes", "baselines", "aars",
   "influencers",
+  "dynData",
 ] as const;
 
 export type StoreName = (typeof STORES)[number];
@@ -24,7 +25,7 @@ export interface OpLog {
 
 const DB_NAME = "meidiantong";
 const NEW_V2_STORES = ["pitches", "suppliers", "resources", "ratecards", "scheduleItems", "postbuys", "notes", "baselines", "aars", "influencers"];
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
 
@@ -34,7 +35,11 @@ export const migrations: { version: number; up: (db: IDBPDatabase) => Promise<vo
     version: 1,
     up: async (db) => {
       for (const s of STORES) {
-        if (!db.objectStoreNames.contains(s)) db.createObjectStore(s, { keyPath: "id" });
+        if (!db.objectStoreNames.contains(s)) {
+          const os = db.createObjectStore(s, { keyPath: "id" });
+          // dynData：自定义模型通用容器，按 collection 索引过滤
+          if (s === "dynData") os.createIndex("collection", "collection");
+        }
       }
     },
   },
@@ -43,6 +48,17 @@ export const migrations: { version: number; up: (db: IDBPDatabase) => Promise<vo
     up: async (db) => {
       for (const s of NEW_V2_STORES) {
         if (!db.objectStoreNames.contains(s)) db.createObjectStore(s, { keyPath: "id" });
+      }
+    },
+  },
+  {
+    version: 3,
+    up: async (db) => {
+      // 旧库（v1/v2 时代）升级：补充 dynData 容器与 collection 索引。
+      // 新库由 v1 迁移直接建好（upgrade 期间不可再开事务，故此处仅处理旧库补建）。
+      if (!db.objectStoreNames.contains("dynData")) {
+        const os = db.createObjectStore("dynData", { keyPath: "id" });
+        os.createIndex("collection", "collection");
       }
     },
   },

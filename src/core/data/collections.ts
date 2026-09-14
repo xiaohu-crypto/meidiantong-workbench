@@ -324,6 +324,33 @@ export function listCollections(): CollectionDef[] {
   return Object.values(COLLECTIONS);
 }
 
+/** 自定义模型在settings中的存储键（与 Collections 页共用） */
+export const CUSTOM_COLLECTIONS_KEY = "customCollections";
+
+/** 读取用户自定义模型（settings） */
+export async function loadCustomCollections(): Promise<CollectionDef[]> {
+  const { db } = await import("../../db/db");
+  const stored = await db.getSetting<CollectionDef[]>(CUSTOM_COLLECTIONS_KEY, []);
+  return Array.isArray(stored) ? stored : [];
+}
+
+/** 获取所有Collection（内置+用户自定义，去重按name） */
+export async function listCollectionsAll(): Promise<CollectionDef[]> {
+  const custom = await loadCustomCollections();
+  const map = new Map<string, CollectionDef>();
+  for (const c of Object.values(COLLECTIONS)) map.set(c.name, c);
+  for (const c of custom) map.set(c.name, c);
+  return Array.from(map.values());
+}
+
+/** 按名称获取Collection（内置+自定义） */
+export async function getCollectionAll(name: string): Promise<CollectionDef | undefined> {
+  const builtin = COLLECTIONS[name];
+  if (builtin) return builtin;
+  const custom = await loadCustomCollections();
+  return custom.find((c) => c.name === name);
+}
+
 /** 按名称获取Collection */
 export function getCollection(name: string): CollectionDef | undefined {
   return COLLECTIONS[name];

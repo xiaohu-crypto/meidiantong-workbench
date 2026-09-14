@@ -112,6 +112,55 @@ export function getRepo<T extends HasId>(store: StoreName): Repository<T> {
   return new Repository<T>(store);
 }
 
+/* ===== 自定义模型通用数据仓库（dynData）=====
+ * 自定义 Collection 的记录统一存 db.ts 的 dynData store，按 collection 字段过滤。
+ * 对外返回"行"形状（{ id, ...字段 }），与内置 store 的记录形状一致，
+ * 供 TableBlock/FormBlock/DetailsBlock 等数据驱动组件无差别使用。
+ */
+export interface DynRecord extends HasId {
+  collection: string;
+  data: Record<string, unknown>;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface DynRow extends HasId {
+  [key: string]: unknown;
+}
+
+export interface DynRepo {
+  find(): Promise<DynRow[]>;
+  create(data: Record<string, unknown>): Promise<DynRow>;
+  update(id: string, data: Record<string, unknown>): Promise<DynRow | undefined>;
+  destroy(id: string): Promise<void>;
+}
+
+export function getDynRepo(collection: string): DynRepo {
+  const repo = new Repository<DynRecord>("dynData");
+  return {
+    async find(): Promise<DynRow[]> {
+      const all = await repo.find();
+      return all.filter((r) => r.collection === collection).map((r) => ({ id: r.id, ...r.data }));
+    },
+    async create(data: Record<string, unknown>): Promise<DynRow> {
+      const now = Date.now();
+      const rec = await repo.create({ collection, data, createdAt: now, updatedAt: now } as never);
+      return { id: rec.id, ...rec.data };
+    },
+    async update(id: string, data: Record<string, unknown>): Promise<DynRow | undefined> {
+      const cur = await repo.findOne(id);
+      if (!cur) return undefined;
+      const merged: DynRecord = { ...cur, data: { ...(cur.data ?? {}), ...data }, updatedAt: Date.now() };
+      await db.put("dynData", merged, "更新");
+      void fireAfterWrite("dynData", merged, "recordUpdated");
+      return { id: merged.id, ...merged.data };
+    },
+    async destroy(id: string): Promise<void> {
+      await repo.destroy(id);
+    },
+  };
+}
+
 /** 触发工作流记录事件（动态import避免循环依赖） */
 function fireAfterWrite(store: string, record: HasId, event: "recordCreated" | "recordUpdated" | "recordDeleted"): void {
   void import("../workflow/triggers").then((m) => m.afterRecordWrite(store, record as unknown as Record<string, unknown>, event)).catch(() => { /* 工作流失败不影响主流程 */ });

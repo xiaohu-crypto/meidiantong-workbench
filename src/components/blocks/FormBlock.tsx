@@ -4,12 +4,11 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { useSingleRecordResource } from "../../core/resource/useResource";
+import { useCollection, useStoreRecordSingle } from "../../core/resource/useResource";
 import { getCollection, type FieldDef } from "../../core/data/collections";
 import { Btn, Field } from "../../ui/common";
 import { validateRecord, serializeValue } from "../../core/data/field";
 import { useT } from "../../core/i18n/useT";
-import type { StoreName } from "../../db/db";
 
 interface FormBlockProps {
   store: string;
@@ -26,8 +25,8 @@ interface FormBlockProps {
 
 export function FormBlock({ store, recordId, onSaved, onClose, notify, embedded }: FormBlockProps) {
   const t = useT();
-  const col = getCollection(store);
-  const res = useSingleRecordResource<{ id: string; deletedAt?: number } & Record<string, unknown>>(store as StoreName, recordId ?? null);
+  const col = useCollection(store);
+  const res = useStoreRecordSingle(store, recordId ?? null);
   const [form, setForm] = useState<Record<string, unknown>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -58,7 +57,7 @@ export function FormBlock({ store, recordId, onSaved, onClose, notify, embedded 
       }
       const saved = await res.save(data as never);
       notify?.(t("common.success"), "ok");
-      onSaved?.(saved.id);
+      onSaved?.(String(saved.id));
       if (onClose) onClose();
     } catch (e) {
       notify?.(e instanceof Error ? e.message : String(e), "err");
