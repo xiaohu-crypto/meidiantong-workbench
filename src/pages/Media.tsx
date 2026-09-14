@@ -16,7 +16,7 @@ const emptyIf = { name: "", platform: "抖音" as Influencer["platform"], follow
 
 export default function Media(props: Props) {
   const { show, node } = useToast();
-  const [tab, setTab] = useState<"排期" | "资源与刊例" | "达人库" | "报价器" | "投后 PostBuy">("排期");
+  const [tab, setTab] = useState<"排期" | "资源与刊例" | "达人库" | "报价器" | "售后数据">("排期");
   const [resOpen, setResOpen] = useState(false);
   const [editResId, setEditResId] = useState<string | null>(null);
   const [rf, setRf] = useState(emptyRf);
@@ -33,7 +33,7 @@ export default function Media(props: Props) {
   const [editIfId, setEditIfId] = useState<string | null>(null);
   const [ifForm, setIfForm] = useState(emptyIf);
 
-  /* PostBuy 手动表单 */
+  /* 售后数据手动表单 */
   const [pbOpen, setPbOpen] = useState(false);
   const [pbForm, setPbForm] = useState({ resourceId: "", month: "", actualImpression: "", cpm: "", roi: "", ctr: "", clicks: "", thirdParty: "" });
 
@@ -156,7 +156,7 @@ export default function Media(props: Props) {
     show("已移入回收站"); await props.reload();
   }
 
-  /* PostBuy 手动保存 */
+  /* 售后数据手动保存 */
   async function savePostBuy() {
     if (!pbForm.resourceId || !pbForm.month) { show("资源和月份必填"); return; }
     await db.put("postbuys", {
@@ -165,7 +165,7 @@ export default function Media(props: Props) {
       ctr: pbForm.ctr ? Number(pbForm.ctr) : undefined, clicks: pbForm.clicks ? Number(pbForm.clicks) : undefined,
       thirdParty: pbForm.thirdParty.trim() || undefined,
       dataSource: "手动",
-    }, "PostBuy 手动录入");
+    }, "售后数据手动录入");
     setPbOpen(false); setPbForm({ resourceId: "", month: "", actualImpression: "", cpm: "", roi: "", ctr: "", clicks: "", thirdParty: "" });
     show("已保存"); await props.reload();
   }
@@ -176,10 +176,10 @@ export default function Media(props: Props) {
       return `<tr><td>${r?.name ?? "—"}</td><td>${p.month}</td><td style="text-align:right">${p.actualImpression.toLocaleString()}</td><td style="text-align:right">${p.ctr ? p.ctr + "%" : "—"}</td><td style="text-align:right">${p.clicks?.toLocaleString() ?? "—"}</td><td style="text-align:right">${money(p.cpm)}</td><td style="text-align:right">1:${p.roi}</td><td>${p.thirdParty ?? p.dataSource}</td></tr>`;
     }).join("");
     const avgRoi = postbuys.length ? (postbuys.reduce((s, p) => s + p.roi, 0) / postbuys.length).toFixed(2) : "0";
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>PostBuy 分析报告</title><style>:root{--brand:#E01844;--border:#E4E6EB;--surface:#F5F6F8}body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;max-width:900px;margin:40px auto}h1{font-size:22px}h1 span{color:var(--brand)}table{width:100%;border-collapse:collapse;font-size:13px;margin-top:16px}th,td{border:1px solid var(--border);padding:8px 10px}th{background:var(--surface)}</style></head><body><h1>PostBuy 分析报告 <span>· ${new Date().toLocaleDateString("zh-CN")}</span></h1><p>共 ${postbuys.length} 条 · 平均 ROI 1:${avgRoi}</p><table><tr><th>资源</th><th>月份</th><th>曝光</th><th>CTR</th><th>点击</th><th>CPM</th><th>ROI</th><th>数据来源</th></tr>${rows}</table></body></html>`;
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>售后数据分析报告</title><style>:root{--brand:#E01844;--border:#E4E6EB;--surface:#F5F6F8}body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;max-width:900px;margin:40px auto}h1{font-size:22px}h1 span{color:var(--brand)}table{width:100%;border-collapse:collapse;font-size:13px;margin-top:16px}th,td{border:1px solid var(--border);padding:8px 10px}th{background:var(--surface)}</style></head><body><h1>售后数据分析报告 <span>· ${new Date().toLocaleDateString("zh-CN")}</span></h1><p>共 ${postbuys.length} 条 · 平均 ROI 1:${avgRoi}</p><table><tr><th>资源</th><th>月份</th><th>曝光</th><th>CTR</th><th>点击</th><th>CPM</th><th>ROI</th><th>数据来源</th></tr>${rows}</table></body></html>`;
     const blob = new Blob([html], { type: "text/html" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
-    a.download = `PostBuy分析报告_${new Date().toISOString().slice(0, 10)}.html`; a.click();
+    a.download = `售后数据分析报告_${new Date().toISOString().slice(0, 10)}.html`; a.click();
     URL.revokeObjectURL(a.href);
     show("分析报告已导出");
   }
@@ -221,7 +221,7 @@ export default function Media(props: Props) {
       const [resourceName, month, imp, cpm, roi] = cols;
       const res = resources.find((r) => r.name === resourceName);
       if (!res) continue;
-      await db.put("postbuys", { id: uid("pb"), resourceId: res.id, month, actualImpression: Number(imp) || 0, cpm: Number(cpm) || 0, roi: Number(roi) || 0, dataSource: "CSV回填" }, "PostBuy CSV");
+      await db.put("postbuys", { id: uid("pb"), resourceId: res.id, month, actualImpression: Number(imp) || 0, cpm: Number(cpm) || 0, roi: Number(roi) || 0, dataSource: "CSV回填" }, "售后数据 CSV");
       n++;
     }
     setCsv(""); show(`CSV 回填:${n} 条`); await props.reload();
@@ -280,7 +280,7 @@ export default function Media(props: Props) {
   return (
     <div>
       <div className="page-head">
-        <div><h1>媒介资源</h1><div className="date">资源档案 / 达人库 / 自助报价 / PostBuy</div></div>
+        <div><h1>媒介资源</h1><div className="date">资源档案 / 达人库 / 自助报价 / 售后数据</div></div>
         <div className="actions">
           <Btn kind="ghost" onClick={exportScheduleQuote}>导出排期报价单</Btn>
           <Btn kind="primary" onClick={() => setBuyOpen(true)}><IconPlus size={14} /> 新建排期</Btn>
@@ -288,7 +288,7 @@ export default function Media(props: Props) {
       </div>
 
       <div className="tabs media-tabs">
-        {(["排期", "资源与刊例", "达人库", "报价器", "投后 PostBuy"] as const).map((t) => (
+        {(["排期", "资源与刊例", "达人库", "报价器", "售后数据"] as const).map((t) => (
           <span key={t} className={"tab" + (tab === t ? " active" : "")}
             onClick={() => { setTab(t); document.getElementById("media-" + t)?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>{t}</span>
         ))}
@@ -463,7 +463,7 @@ export default function Media(props: Props) {
         </div>
       </section>
 
-      <section className="media-sec" id="media-投后 PostBuy">
+      <section className="media-sec" id="media-售后数据">
         <>
           <div className="card card-pad" style={{ marginBottom: 16 }}>
             <div className="h-row">
@@ -586,7 +586,7 @@ export default function Media(props: Props) {
       ) : null}
 
       {pbOpen ? (
-        <Modal title="PostBuy 手动录入" onClose={() => setPbOpen(false)} footer={
+        <Modal title="售后数据手动录入" onClose={() => setPbOpen(false)} footer={
           <div className="grow"><Btn kind="ghost" onClick={() => setPbOpen(false)}>取消</Btn><Btn kind="primary" onClick={() => { void savePostBuy(); }}>保存</Btn></div>
         }>
           <div className="field-row">
@@ -597,11 +597,11 @@ export default function Media(props: Props) {
           </div>
           <div className="field-row">
             <Field label="实际曝光"><input className="inp num" style={{ width: "100%" }} value={pbForm.actualImpression} onChange={(e) => setPbForm({ ...pbForm, actualImpression: e.target.value })} /></Field>
-            <Field label="CPM(元)"><input className="inp num" style={{ width: "100%" }} value={pbForm.cpm} onChange={(e) => setPbForm({ ...pbForm, cpm: e.target.value })} /></Field>
+            <Field label="CPM(千次曝光成本)"><input className="inp num" style={{ width: "100%" }} value={pbForm.cpm} onChange={(e) => setPbForm({ ...pbForm, cpm: e.target.value })} /></Field>
           </div>
           <div className="field-row">
-            <Field label="ROI(1:x)"><input className="inp num" style={{ width: "100%" }} value={pbForm.roi} onChange={(e) => setPbForm({ ...pbForm, roi: e.target.value })} placeholder="如 3.5" /></Field>
-            <Field label="CTR(%)"><input className="inp num" style={{ width: "100%" }} value={pbForm.ctr} onChange={(e) => setPbForm({ ...pbForm, ctr: e.target.value })} placeholder="如 2.8" /></Field>
+            <Field label="ROI(投产比)"><input className="inp num" style={{ width: "100%" }} value={pbForm.roi} onChange={(e) => setPbForm({ ...pbForm, roi: e.target.value })} placeholder="如 3.5" /></Field>
+            <Field label="CTR(点击率)"><input className="inp num" style={{ width: "100%" }} value={pbForm.ctr} onChange={(e) => setPbForm({ ...pbForm, ctr: e.target.value })} placeholder="如 2.8" /></Field>
           </div>
           <div className="field-row">
             <Field label="点击数"><input className="inp num" style={{ width: "100%" }} value={pbForm.clicks} onChange={(e) => setPbForm({ ...pbForm, clicks: e.target.value })} /></Field>
