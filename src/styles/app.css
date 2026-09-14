@@ -652,3 +652,58 @@ html[data-titlebar="integrated"] .topbar .filter-input { -webkit-app-region: no-
 .kb-stat{color:var(--ink-3);white-space:nowrap}
 .kb-stat b{color:var(--brand);font-weight:650}
 .kb-tags{max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---- 我的页面（运行入口） ---- */
+.mypages-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:var(--sp-3)}
+.mypages-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--sp-3);display:flex;flex-direction:column;gap:var(--sp-2);transition:border-color .15s}
+.mypages-card:hover{border-color:var(--brand)}
+.mypages-card-head{display:flex;align-items:center;gap:8px;font-weight:650;color:var(--ink-1)}
+.mypages-card-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mypages-card-meta{font-size:var(--text-xs);color:var(--ink-3);margin-top:auto}
+.mypages-card-actions{display:flex;gap:8px}
+.mypages-runbar{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-2) 0 var(--sp-3);border-bottom:1px solid var(--border-soft);margin-bottom:var(--sp-3)}
+.mypages-runtitle{font-size:var(--text-lg);font-weight:700}
+.mypages-run-actions{margin-left:auto;display:flex;gap:8px}
+.mypages-runtime{display:flex;flex-direction:column;gap:var(--sp-3);overflow-y:auto;flex:1;min-height:0}
+/* ---- CRM 客户详情独立视图（去抽屉化） ---- */
+.page-crm{position:relative;min-height:100%}
+.crm-detail{position:fixed;inset:0;background:var(--surface);z-index:60;display:flex;flex-direction:column;overflow:hidden}
+.crm-detail .drawer-head{flex:none}
+.crm-detail .drawer-body{flex:1 1 auto;min-height:0;overflow-y:auto;padding-bottom:20px}
+.crm-detail .drawer-foot{flex:none}
+/* ---- 媒介资源 5 Tab 平铺（锚点导航 + 全部渲染） ---- */
+.media-sec{scroll-margin-top:70px;padding-top:var(--sp-4);border-top:1px solid var(--border-soft);margin-top:var(--sp-4)}
+.media-sec:first-of-type{border-top:none;padding-top:0;margin-top:0}
+.media-tabs{position:sticky;top:0;background:var(--surface);z-index:20;padding:6px 0}
+/* ---- 顶部横排菜单（P3 UI 结构改造） ---- */
+.topnav{flex:none;display:flex;align-items:center;gap:14px;padding:0 14px;height:54px;border-bottom:1px solid var(--border);background:var(--surface);z-index:40}
+.app > .main{flex:1;min-height:0}
+.topnav-brand{display:flex;align-items:center;gap:10px;margin-right:4px;flex:none}
+.topnav-nav{display:flex;align-items:center;gap:2px;overflow-x:auto;flex:1;min-width:0;scrollbar-width:none}
+.topnav-nav::-webkit-scrollbar{display:none}
+.topnav-item{display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:var(--r-md);font-size:var(--text-sm);color:var(--ink-2);cursor:pointer;white-space:nowrap;border:1px solid transparent}
+.topnav-item:hover{background:var(--surface-2);color:var(--ink-1)}
+.topnav-item.active{background:color-mix(in srgb,var(--brand) 10%,transparent);color:var(--brand);font-weight:600}
+.topnav-right{margin-left:auto;display:flex;align-items:center;gap:6px;flex:none}
+.topnav-pop{position:relative;display:flex;align-items:center}
+.sys-drop{position:relative}
+.topnav-sys-btn{display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:var(--r-md);font-size:var(--text-sm);color:var(--ink-2);background:transparent;border:1px solid var(--border);cursor:pointer}
+.topnav-sys-btn:hover,.topnav-sys-btn.open{background:var(--surface-2);color:var(--ink-1)}
+.sys-caret{font-size:10px;opacity:.7}
+.sys-drop-menu{position:absolute;right:0;top:calc(100% + 6px);min-width:176px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--shadow-md);padding:6px;z-index:80;display:flex;flex-direction:column}
+.sys-drop-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--r-md);font-size:var(--text-sm);color:var(--ink-2);cursor:pointer;white-space:nowrap}
+.sys-drop-item:hover{background:var(--surface-2);color:var(--ink-1)}
+.sys-drop-item.active{color:var(--brand);font-weight:600}
+.user-menu-dropdown.down{top:calc(100% + 6px);bottom:auto;left:auto;right:0;width:212px}
+/* ---- 顶栏布局：.app 容器改纵向 flex（覆盖原 grid 两列） ---- */
+.app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+html.focus-mode .app{display:flex;flex-direction:column}
+/* ---- 顶栏紧凑化：保证系统聚合按钮可见 ---- */
+.topnav{padding:0 10px;gap:8px}
+.topnav-nav{gap:0}
+.topnav-item{padding:6px 9px;gap:5px;font-size:13px}
+.topnav-sys-btn{padding:6px 9px;font-size:13px}
+/* ---- 顶栏nav宽度修正：自适应内容，右侧靠 margin-left:auto 推右 ---- */
+.topnav-nav{flex:0 1 auto;max-width:calc(100% - 320px)}
+/* ---- 顶栏防溢出：容器允许收缩，内容横向裁剪 ---- */
+.topnav{min-width:0;overflow:hidden}

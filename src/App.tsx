@@ -23,6 +23,7 @@ const WorkflowsPage = lazy(() => import("./pages/Workflows"));
 const CollectionsPage = lazy(() => import("./pages/Collections"));
 const AuditPage = lazy(() => import("./pages/Audit"));
 const AIStaffPage = lazy(() => import("./pages/AIStaff"));
+const MyPagesPage = lazy(() => import("./pages/MyPages"));
 import QuickCapture from "./components/QuickCapture";
 import TopSearch from "./components/TopSearch";
 import Onboarding from "./components/Onboarding";
@@ -35,7 +36,7 @@ import { DetailsBlock } from "./components/blocks/DetailsBlock";
 import {
   IconHome, IconUsers, IconTask, IconKb, IconFunnel, IconToday,
   IconMedia, IconChart, IconGrowth, IconSettings, IconMoon, IconSun, IconBell, IconHelp, IconAI,
-  IconGrid, IconClock,
+  IconGrid, IconClock, IconLayout, IconBot,
 } from "./components/icons";
 
 declare global {
@@ -78,7 +79,7 @@ interface DataSet {
   notificationsReadAt: number;
 }
 
-type View = "today" | "crm" | "work" | "dev" | "media" | "kb" | "data" | "growth" | "settings" | "help" | "notifications" | "builder" | "workflows" | "collections" | "audit" | "aistaff";
+type View = "today" | "crm" | "work" | "dev" | "media" | "kb" | "data" | "growth" | "settings" | "help" | "notifications" | "builder" | "workflows" | "collections" | "audit" | "aistaff" | "mypages";
 
 const NAV: { key: View; label: string; icon: (p: { size?: number }) => JSX.Element; group: string }[] = [
   { key: "today", label: "首页", icon: IconToday, group: "常用" },
@@ -90,13 +91,17 @@ const NAV: { key: View; label: string; icon: (p: { size?: number }) => JSX.Eleme
   { key: "data", label: "数据报表", icon: IconChart, group: "业务" },
   { key: "growth", label: "成长规划", icon: IconGrowth, group: "业务" },
   { key: "builder", label: "页面构建器", icon: IconAI, group: "系统" },
+  { key: "mypages", label: "我的页面", icon: IconLayout, group: "系统" },
   { key: "workflows", label: "工作流", icon: IconFunnel, group: "系统" },
   { key: "collections", label: "数据表", icon: IconGrid, group: "系统" },
   { key: "audit", label: "操作记录", icon: IconClock, group: "系统" },
-  { key: "aistaff", label: "AI员工", icon: IconAI, group: "系统" },
+  { key: "aistaff", label: "AI员工", icon: IconBot, group: "系统" },
   { key: "settings", label: "系统设置", icon: IconSettings, group: "系统" },
   { key: "help", label: "帮助中心", icon: IconHelp, group: "系统" },
 ];
+
+/** 合法视图集合（nav 事件校验用） */
+const VIEW_KEYS = NAV.map((n) => n.key);
 
 async function loadAll(): Promise<DataSet> {
   const alive = async <T extends { deletedAt?: number }>(store: Parameters<typeof db.getAll>[0]) =>
@@ -137,9 +142,11 @@ export default function App() {
   const [kbFocus, setKbFocus] = useState<string | null>(null);
   const [updateVer, setUpdateVer] = useState<string | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [sysOpen, setSysOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [flowForm, setFlowForm] = useState<{ store: string; id?: string } | null>(null);
   const [flowDetail, setFlowDetail] = useState<{ store: string; id: string } | null>(null);
+  const [builderPageUid, setBuilderPageUid] = useState<string | null>(null);
   const toast = useToast();
 
   const reload = useCallback(async () => { setData(await loadAll()); }, []);
@@ -167,11 +174,26 @@ export default function App() {
           setFlowForm(null);
           setFlowDetail(null);
           break;
+        case "openBuilder":
+          setBuilderPageUid(p.pageUid ? String(p.pageUid) : null);
+          setView("builder");
+          break;
         default:
           break;
       }
     });
   }, [reload, toast.show]);
+
+  // 区块内跳转（ModelRenderCtx.nav）→ 切换当前视图
+  useEffect(() => {
+    const onNav = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      const v = typeof detail === "string" ? detail : (detail as { view?: string } | undefined)?.view;
+      if (v && (VIEW_KEYS as readonly string[]).includes(v)) setView(v as View);
+    };
+    window.addEventListener("nav", onNav);
+    return () => window.removeEventListener("nav", onNav);
+  }, []);
 
   // 未读通知数:逾期回款 + 14天无接触客户
   const unreadCount = data ? (
@@ -280,56 +302,69 @@ export default function App() {
 
   return (
     <div className="app">
-      <aside className="sidebar">
-        <div className="brand">
-          <div className="brand-mark"><IconHome size={17} /></div>
-          <div>
-            <div className="brand-name">媒电通工作台</div>
-            <div className="brand-sub">本地优先工作台</div>
-          </div>
+          <header className="topnav">
+      <div className="topnav-brand">
+        <div className="brand-mark"><IconHome size={17} /></div>
+        <div>
+          <div className="brand-name">媒电通工作台</div>
+          <div className="brand-sub">本地优先工作台</div>
         </div>
-        <nav className="nav">
-          {["常用", "业务", "系统"].map((group) => (
-            <div key={group} className={"nav-group" + (group === "系统" ? " nav-sys" : "")}>
-              <div className="nav-label">{group}</div>
-              {NAV.filter((n) => n.group === group).map((n) => (
-                <div key={n.key} className={"nav-item" + (view === n.key ? " active" : "")}
-                  onClick={() => { setView(n.key); setUserMenuOpen(false); if (n.key === "crm") setFocusCid(null); if (n.key === "kb") setKbFocus(null); }}>
-                  <n.icon size={16} />
-                  <span className="ni-label">{n.label}</span>
+      </div>
+
+      <nav className="topnav-nav">
+        {NAV.filter((n) => n.group !== "系统").map((n) => (
+          <div key={n.key} className={"topnav-item" + (view === n.key ? " active" : "")}
+            onClick={() => { setView(n.key); if (n.key === "crm") setFocusCid(null); if (n.key === "kb") setKbFocus(null); }}>
+            <n.icon size={15} />
+            <span>{n.label}</span>
+          </div>
+        ))}
+      </nav>
+
+      <div className="topnav-right">
+        <div className="sys-drop">
+          <button className={"topnav-sys-btn" + (sysOpen ? " open" : "")} onClick={() => setSysOpen(!sysOpen)}>
+            <IconGrid size={15} /> 系统 <span className="sys-caret">▾</span>
+          </button>
+          {sysOpen ? (
+            <div className="sys-drop-menu" onClick={(e) => e.stopPropagation()}>
+              {NAV.filter((n) => n.group === "系统").map((n) => (
+                <div key={n.key} className={"sys-drop-item" + (view === n.key ? " active" : "")}
+                  onClick={() => { setSysOpen(false); setView(n.key); if (n.key === "crm") setFocusCid(null); if (n.key === "kb") setKbFocus(null); }}>
+                  <n.icon size={15} />
+                  <span>{n.label}</span>
                 </div>
               ))}
             </div>
-          ))}
-        </nav>
-        <div className="sidebar-user-menu">
-          <div className="user-menu-trigger">
-            <div className="user-avatar" onClick={() => setUserMenuOpen(!userMenuOpen)} style={{cursor:"pointer"}}>媒</div>
-            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 2 }}>
-              <div style={{ position: "relative" }}>
-                <button data-notification-trigger className="icon-btn sm" title="通知中心" onClick={(e) => { e.stopPropagation(); setNotifyOpen((v) => !v); }}>
-                  <IconBell size={16} />
-                  {unreadCount > 0 ? <span className="badge-dot">{unreadCount > 99 ? "99+" : unreadCount}</span> : null}
-                </button>
-                {notifyOpen && data ? (
-                  <NotificationPanel
-                    customers={data.customers}
-                    payments={data.payments}
-                    cps={data.cps}
-                    notificationsReadAt={data.notificationsReadAt}
-                    reload={reload}
-                    onClose={closeNotify}
-                    onViewAll={goAllNotifications}
-                  />
-                ) : null}
-              </div>
-              <button className="icon-btn sm" title="切换主题" onClick={() => switchTheme(theme === "dark" ? "light" : "dark")}>
-                {theme === "dark" ? <IconSun size={16} /> : <IconMoon size={16} />}
-              </button>
-            </div>
-          </div>
+          ) : null}
+        </div>
+
+        <div className="topnav-pop">
+          <button data-notification-trigger className="icon-btn sm" title="通知中心" onClick={(e) => { e.stopPropagation(); setNotifyOpen((v) => !v); }}>
+            <IconBell size={16} />
+            {unreadCount > 0 ? <span className="badge-dot">{unreadCount > 99 ? "99+" : unreadCount}</span> : null}
+          </button>
+          {notifyOpen && data ? (
+            <NotificationPanel
+              customers={data.customers}
+              payments={data.payments}
+              cps={data.cps}
+              notificationsReadAt={data.notificationsReadAt}
+              reload={reload}
+              onClose={closeNotify}
+              onViewAll={goAllNotifications}
+            />
+          ) : null}
+        </div>
+
+        <button className="icon-btn sm" title="切换主题" onClick={() => switchTheme(theme === "dark" ? "light" : "dark")}>
+          {theme === "dark" ? <IconSun size={16} /> : <IconMoon size={16} />}
+        </button>
+
+        <div className="topnav-pop">
+          <div className="user-avatar" onClick={() => setUserMenuOpen(!userMenuOpen)} style={{ cursor: "pointer" }}>媒</div>
           {userMenuOpen ? (
-            <div className="user-menu-dropdown" onClick={(e) => e.stopPropagation()}>
+            <div className="user-menu-dropdown down" onClick={(e) => e.stopPropagation()}>
               <div className="user-menu-header">
                 <div className="user-avatar lg">媒</div>
                 <div>
@@ -344,7 +379,8 @@ export default function App() {
             </div>
           ) : null}
         </div>
-      </aside>
+      </div>
+    </header>
 
       <div className="main">
         <header className="topbar">
@@ -394,7 +430,8 @@ export default function App() {
               <Notifications customers={data.customers} payments={data.payments} cps={data.cps} goCrm={goCrm} reload={reload} notificationsReadAt={data.notificationsReadAt} />
             ) : null}
             {view === "help" ? <Help /> : null}
-            {view === "builder" ? <BuilderPage /> : null}
+            {view === "builder" ? <BuilderPage initialPageUid={builderPageUid} /> : null}
+            {view === "mypages" ? <MyPagesPage /> : null}
             {view === "workflows" ? <WorkflowsPage /> : null}
             {view === "collections" ? <CollectionsPage /> : null}
             {view === "audit" ? <AuditPage /> : null}

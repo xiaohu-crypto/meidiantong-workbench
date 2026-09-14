@@ -451,9 +451,9 @@ export default function CRM(props: Props) {
   }, [rows, groupBy]);
 
   return (
-    <div>
+    <div className="page page-crm">
       <div className="page-head">
-        <div><h1>客户管理</h1><div className="date">客户 {customers.length} · 在途商机 {deals.filter((d) => !["签约", "输单", "流失"].includes(d.stage)).length} 个 · 点击行打开 360° 抽屉</div></div>
+        <div><h1>客户管理</h1><div className="date">客户 {customers.length} · 在途商机 {deals.filter((d) => !["签约", "输单", "流失"].includes(d.stage)).length} 个 · 点击行查看客户详情</div></div>
         <div className="actions">
           <Btn kind="ghost" onClick={() => setImportOpen(true)}>批量导入</Btn>
           <Btn kind="primary" onClick={() => setAddOpen(true)}><IconPlus size={14} /> 新增客户</Btn>
@@ -668,8 +668,7 @@ export default function CRM(props: Props) {
         )}
       </div>
 
-      <div className={"drawer-mask" + (open ? " open" : "")} onClick={() => setOpenId(null)} />
-      <aside className={"drawer" + (open ? " open" : "")}>
+      <div className={"crm-detail" + (open ? " open" : "")}>
         {drawerC ? (
           <>
             <div className="drawer-head">
@@ -683,7 +682,8 @@ export default function CRM(props: Props) {
                 </div>
               </div>
               <Btn kind={editingLayout ? "data" : "ghost"} sm style={{ marginLeft: "auto" }} onClick={() => { if (editingLayout) void finishEditLayout(); else setEditingLayout(true); }}>{editingLayout ? "完成" : "编辑布局"}</Btn>
-              <button className="icon-btn" onClick={() => setOpenId(null)} aria-label="关闭"><IconClose size={16} /></button>
+              <button className="icon-btn" onClick={() => setOpenId(null)} aria-label="返回"><IconClose size={16} /></button>
+              <Btn sm kind="ghost" onClick={() => setOpenId(null)}>← 返回</Btn>
             </div>
             <div className="drawer-body">
               <RecordPage
@@ -776,7 +776,7 @@ export default function CRM(props: Props) {
             </div>
           </>
         ) : null}
-      </aside>
+      </div>
 
       {addOpen ? (
         <Modal title="新增客户" onClose={() => setAddOpen(false)} footer={

@@ -106,9 +106,8 @@ export default function NotificationPanel(props: Props) {
       data-notification-panel
       style={{
         position: "absolute",
-        bottom: "100%",
+        top: "calc(100% + 6px)",
         right: 0,
-        marginBottom: 8,
         width: 360,
         maxHeight: 400,
         display: "flex",
