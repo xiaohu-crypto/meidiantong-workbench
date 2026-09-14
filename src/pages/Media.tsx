@@ -467,7 +467,7 @@ export default function Media(props: Props) {
         <>
           <div className="card card-pad" style={{ marginBottom: 16 }}>
             <div className="h-row">
-              <span className="h-title sm">PostBuy 数据</span>
+              <span className="h-title sm">售后数据</span>
               <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
                 <Btn kind="ghost" sm onClick={exportPostBuyReport}>导出分析报告</Btn>
                 <Btn kind="primary" sm onClick={() => setPbOpen(true)}>手动录入</Btn>

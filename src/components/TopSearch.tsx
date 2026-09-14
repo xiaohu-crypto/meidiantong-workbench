@@ -52,7 +52,7 @@ export default function TopSearch(props: { onSelect: (doc: SearchDoc) => void })
     <div ref={boxRef} style={{ position: "relative", flex: 1, maxWidth: 340 }}>
       <div className="filter-input" style={{ maxWidth: "none" }}>
         <IconSearch size={14} />
-        <input value={q} placeholder="搜索客户、商机、笔记…  ↑↓ 选择 · Enter 打开"
+        <input value={q} placeholder="搜索客户、商机、笔记…  ↑↓ 选择 · 回车打开"
           onChange={(e) => { setQ(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKey} />

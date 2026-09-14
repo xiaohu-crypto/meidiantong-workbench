@@ -11,12 +11,15 @@ import { FieldsWidget } from "../ui/widgets/FieldsWidget";
 
 const STAGES: DealStage[] = ["线索", "MQL", "SQL", "商机", "报价", "谈判", "签约", "输单", "流失"];
 const PROB: Record<DealStage, number> = { 线索: 0.05, MQL: 0.1, SQL: 0.25, 商机: 0.4, 报价: 0.6, 谈判: 0.75, 签约: 1, 输单: 0, 流失: 0 };
+const STAGE_LABELS: Record<string, string> = { MQL: "市场线索", SQL: "销售线索" };
+function stageLabel(stage: string): string { return STAGE_LABELS[stage] ?? stage; }
+
 /** 自定义阶段概率兜底:未命中 PROB 的自定义阶段按中漏斗 40% 计,保证加权金额/百分比展示不为 NaN */
 function probOf(stage: string): number {
   return PROB[stage as DealStage] ?? 0.4;
 }
-const MEDDIC = ["Metrics 指标", "Economic buyer 经济决策人", "Decision criteria 决策标准", "Decision process 决策流程", "Identify pain 痛点确认", "Champion 支持者"];
-const BANT = ["Budget 预算", "Authority 决策权", "Need 需求", "Timeline 时间"];
+const MEDDIC = ["指标", "经济决策人", "决策标准", "决策流程", "痛点确认", "支持者"];
+const BANT = ["预算", "决策权", "需求", "时间"];
 
 /** P1 商机详情默认布局(P4 再做拖拽,数据结构预留) */
 const DEFAULT_DEAL_LAYOUT: RecordLayout = {
@@ -119,7 +122,7 @@ export default function Dev(props: Props) {
   }
 
   async function setStage(d: Deal, stage: DealStage) {
-    await repos.deals.update(d.id, { stage, probability: probOf(stage) }, `商机「${d.title}」阶段改为 ${stage}`);
+    await repos.deals.update(d.id, { stage, probability: probOf(stage) }, `商机「${d.title}」阶段改为 ${stageLabel(stage)}`);
     await props.reload();
   }
 
@@ -174,7 +177,7 @@ export default function Dev(props: Props) {
       return (
         <FieldsWidget title="商机信息" fields={[
           { label: "商机金额", value: money(sel.value) },
-          { label: "阶段", value: sel.stage },
+          { label: "阶段", value: stageLabel(sel.stage) },
           { label: "概率", value: Math.round(probOf(sel.stage) * 100) + "%" },
           { label: "预计成交日", value: sel.closeDate ?? "未设定" },
           { label: "加权金额", value: money(weightedValue(sel)) },
@@ -245,7 +248,7 @@ export default function Dev(props: Props) {
         </div>
       ) : (
       <>
-      <div className="h-row"><span className="h-title">Pipeline(按阶段)</span><Chip kind="data">点击卡片查看详情</Chip></div>
+      <div className="h-row"><span className="h-title">商机漏斗（按阶段）</span><Chip kind="data">点击卡片查看详情</Chip></div>
       <div style={{ overflowX: "auto", marginBottom: 16, paddingBottom: 8 }}>
       <div className="kanban" style={{ gridTemplateColumns: "repeat(" + colStages.length + ",minmax(200px,1fr))", minWidth: colStages.length * 200 }}>
         {colStages.map((stage) => {
@@ -261,12 +264,12 @@ export default function Dev(props: Props) {
                 if (!dragId) return;
                 const d = deals.find((x) => x.id === dragId);
                 if (d && d.stage !== stage) {
-                  void repos.deals.update(d.id, { stage: stage as Deal["stage"], probability: probOf(stage) }, `拖拽商机「${d.title}」到 ${stage}`);
+                  void repos.deals.update(d.id, { stage: stage as Deal["stage"], probability: probOf(stage) }, `拖拽商机「${d.title}」到 ${stageLabel(stage)}`);
                 }
                 setDragId(null);
               }}>
               <div className="kcol-head">
-                <span>{stage}</span>
+                <span>{stageLabel(stage)}</span>
                 {staleCount > 0 ? <span className="health-badge">{staleCount}</span> : null}
                 <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
                   <span className="num" style={{ fontSize: "var(--text-xs)", color: "var(--ink-2)" }}>{money(colTotal)}</span>
@@ -309,7 +312,7 @@ export default function Dev(props: Props) {
                     value={sel.stage}
                     onChange={(e) => { void setStage(sel, e.target.value as DealStage); }}
                   >
-                    {[...STAGES, ...extraStages.filter((s) => !STAGES.includes(s as DealStage))].map((s) => <option key={s} value={s}>{s}({Math.round(probOf(s) * 100)}%)</option>)}
+                    {[...STAGES, ...extraStages.filter((s) => !STAGES.includes(s as DealStage))].map((s) => <option key={s} value={s}>{stageLabel(s)}({Math.round(probOf(s) * 100)}%)</option>)}
                   </select>
                 </div>
               </div>

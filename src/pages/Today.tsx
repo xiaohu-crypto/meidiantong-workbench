@@ -81,8 +81,8 @@ export default function Today(props: Props) {
         <div className="grid-c">
           <div className="card card-pad">
             <div className="h-row">
-              <span className="h-title">今日建议 · Next-Best-Action</span>
-              <Chip kind="brand">Next-Best-Action</Chip>
+              <span className="h-title">今日建议</span>
+              <Chip kind="brand">智能建议</Chip>
               <span className="muted" style={{ marginLeft: "auto", fontSize: "var(--text-xs)" }}>规则引擎:沉默天数 × 价值 × 阶段(非 AI)</span>
             </div>
             <div className="nbxs">

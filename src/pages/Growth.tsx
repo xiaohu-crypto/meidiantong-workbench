@@ -74,7 +74,7 @@ export default function Growth(props: Props) {
           </div>
         ) : (
           <>
-            <div className="alert-line" title="数据来源:接触点记录(contactPoints)中本周新增的条目,含微信/拜访/电话/邮件">
+            <div className="alert-line" title="数据来源：接触点记录中本周新增的条目，含微信/拜访/电话/邮件">
               <span className="txt">周拜访数<small style={{ display: "block", color: "var(--ink-4)", fontSize: 11 }}>来源:本周新增接触点记录</small></span>
               <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
                 <input className="inp num" style={{ width: 64, minHeight: 28 }} value={String(targets.weeklyVisits)} onChange={(e) => { const v = { ...targets, weeklyVisits: Math.max(0, Number(e.target.value) || 0) }; setTargets(v); void db.setSetting("growthTargets", v); }} />
@@ -82,7 +82,7 @@ export default function Growth(props: Props) {
                 <div className="progress" style={{ width: 120 }}><div className="bar-track"><div className="bar-fill" style={{ width: Math.min(100, Math.round(actVisits * 100 / Math.max(1, targets.weeklyVisits))) + "%" }} /></div></div>
               </span>
             </div>
-            <div className="alert-line" title="数据来源:合同表(contracts)中 signDate 在本月的合同金额合计">
+            <div className="alert-line" title="数据来源：合同表中本月签约的合同金额合计">
               <span className="txt">月签约额<small style={{ display: "block", color: "var(--ink-4)", fontSize: 11 }}>来源:本月新签合同金额</small></span>
               <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
                 <input className="inp num" style={{ width: 90, minHeight: 28 }} value={String(targets.monthlySign)} onChange={(e) => { const v = { ...targets, monthlySign: Math.max(0, Number(e.target.value) || 0) }; setTargets(v); void db.setSetting("growthTargets", v); }} />
@@ -90,7 +90,7 @@ export default function Growth(props: Props) {
                 <div className="progress" style={{ width: 120 }}><div className="bar-track"><div className="bar-fill" style={{ width: Math.min(100, Math.round(actSign * 100 / Math.max(1, targets.monthlySign))) + "%" }} /></div></div>
               </span>
             </div>
-            <div className="alert-line" title="数据来源:AAR 周复盘中 createdAt 在本月的复盘条数">
+            <div className="alert-line" title="数据来源：周复盘中本月创建的复盘条数">
               <span className="txt">月复盘次数<small style={{ display: "block", color: "var(--ink-4)", fontSize: 11 }}>来源:本月已保存的 AAR 周复盘</small></span>
               <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
                 <input className="inp num" style={{ width: 64, minHeight: 28 }} value={String(targets.monthlyAar)} onChange={(e) => { const v = { ...targets, monthlyAar: Math.max(0, Number(e.target.value) || 0) }; setTargets(v); void db.setSetting("growthTargets", v); }} />

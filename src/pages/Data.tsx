@@ -314,10 +314,10 @@ export default function Data(props: Props) {
           </div>
 
           <div className="card card-pad" style={{ marginBottom: 16 }}>
-            <div className="h-row"><span className="h-title sm">投放ROI看板</span><Chip kind="data" style={{ marginLeft: "auto" }}>PostBuy 口径</Chip></div>
+            <div className="h-row"><span className="h-title sm">投放ROI看板</span><Chip kind="data" style={{ marginLeft: "auto" }}>售后数据口径</Chip></div>
             {(() => {
               const pbs = (props.postbuys ?? []).filter((p) => !p.deletedAt);
-              if (pbs.length === 0) return <p className="muted" style={{ padding: 12 }}>暂无投后数据,去媒介页录入PostBuy</p>;
+              if (pbs.length === 0) return <p className="muted" style={{ padding: 12 }}>暂无投后数据,去媒介页录入售后数据</p>;
               const resName = (id: string) => (props.resources ?? []).find((r) => r.id === id)?.name ?? id;
               return (
                 <table className="tgrid">

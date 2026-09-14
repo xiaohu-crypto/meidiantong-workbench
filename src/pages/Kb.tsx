@@ -128,7 +128,7 @@ async function askAi() {
         <div><h1>知识库</h1><div className="date">PARA 归档 · 双链 [[]] · 版本历史 · 标签检索</div></div>
         <div className="actions">
           <Btn kind={mode === "graph" ? "data" : "ghost"} onClick={() => setMode(mode === "graph" ? "list" : "graph")}>{mode === "graph" ? "列表视图" : "知识图谱"}</Btn>
-          <Btn kind="ghost" onClick={() => { const url = prompt("粘贴网页 URL 或标题:"); if (url) { void (async () => { const n: Note = { id: uid("n"), title: url.slice(0, 40), content: "来源:" + url + "\n\n", tags: ["外链"], para: "Resources", versions: [] }; await db.put("notes", n, "导入网页笔记"); await props.reload(); setSelId(n.id); })(); } }}>网页剪藏</Btn>
+          <Btn kind="ghost" onClick={() => { const url = prompt("粘贴网页链接或标题:"); if (url) { void (async () => { const n: Note = { id: uid("n"), title: url.slice(0, 40), content: "来源:" + url + "\n\n", tags: ["外链"], para: "Resources", versions: [] }; await db.put("notes", n, "导入网页笔记"); await props.reload(); setSelId(n.id); })(); } }}>网页剪藏</Btn>
           <Btn kind="data" onClick={() => setAiOpen(true)}>AI 问答</Btn>
           <Btn kind="primary" onClick={openNew}><IconPlus size={14} /> 新建笔记</Btn>
         </div>

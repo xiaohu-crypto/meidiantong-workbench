@@ -510,10 +510,10 @@ export default function CRM(props: Props) {
         { /* active filter inline chips */ }
         {(q || industry || stageFilter || groupBy) ? (
           <div style={{ display: "flex", gap: 6, padding: "8px 14px 0", flexWrap: "wrap", alignItems: "center" }}>
-            {q ? <span className="filter-chip">搜索: {q} <button onClick={() => setQ("")} aria-label="clear search">×</button></span> : null}
-            {industry ? <span className="filter-chip">行业: {industry} <button onClick={() => setIndustry("")} aria-label="clear industry">×</button></span> : null}
-            {stageFilter ? <span className="filter-chip">阶段: {stageFilter} <button onClick={() => setStageFilter("")} aria-label="clear stage">×</button></span> : null}
-            {groupBy ? <span className="filter-chip">分组: {groupBy === "industry" ? "按行业" : "按等级"} <button onClick={() => setGroupBy("")} aria-label="clear group">×</button></span> : null}
+            {q ? <span className="filter-chip">搜索: {q} <button onClick={() => setQ("")} aria-label="清除搜索">×</button></span> : null}
+            {industry ? <span className="filter-chip">行业: {industry} <button onClick={() => setIndustry("")} aria-label="清除行业">×</button></span> : null}
+            {stageFilter ? <span className="filter-chip">阶段: {stageFilter} <button onClick={() => setStageFilter("")} aria-label="清除阶段">×</button></span> : null}
+            {groupBy ? <span className="filter-chip">分组: {groupBy === "industry" ? "按行业" : "按等级"} <button onClick={() => setGroupBy("")} aria-label="清除分组">×</button></span> : null}
           </div>
         ) : null}
         {savingView ? (

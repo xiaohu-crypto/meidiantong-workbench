@@ -37,7 +37,7 @@ export const COLLECTIONS: Record<string, CollectionDef> = {
     label: "客户",
     icon: "👥",
     fields: {
-      id: { type: "string", label: "ID", required: true },
+      id: { type: "string", label: "编号", required: true },
       name: { type: "string", label: "客户名称", required: true, list: true },
       industry: { type: "string", label: "行业", list: true },
       grade: { type: "select", label: "等级", options: ["S", "A", "B", "C"], list: true },
@@ -53,7 +53,7 @@ export const COLLECTIONS: Record<string, CollectionDef> = {
     label: "联系人",
     icon: "🧑‍💼",
     fields: {
-      id: { type: "string", label: "ID", required: true },
+      id: { type: "string", label: "编号", required: true },
       name: { type: "string", label: "姓名", required: true, list: true },
       phone: { type: "string", label: "电话", list: true },
       wechat: { type: "string", label: "微信" },
@@ -68,7 +68,7 @@ export const COLLECTIONS: Record<string, CollectionDef> = {
     label: "客户联系人关联",
     icon: "🔗",
     fields: {
-      id: { type: "string", label: "ID", required: true },
+      id: { type: "string", label: "编号", required: true },
       contactId: { type: "relation", label: "联系人", relation: { collection: "contacts", type: "belongsTo" } },
       customerId: { type: "relation", label: "客户", relation: { collection: "customers", type: "belongsTo" } },
       role: { type: "select", label: "角色", options: ["决策人DM", "影响者", "使用者", "把关人", "审批人"] },
@@ -80,7 +80,7 @@ export const COLLECTIONS: Record<string, CollectionDef> = {
     label: "商机",
     icon: "🎯",
     fields: {
-      id: { type: "string", label: "ID", required: true },
+      id: { type: "string", label: "编号", required: true },
       customerId: { type: "relation", label: "客户", relation: { collection: "customers", type: "belongsTo" }, list: true },
       title: { type: "string", label: "商机名称", required: true, list: true },
       stage: { type: "select", label: "阶段", options: ["线索", "MQL", "SQL", "商机", "报价", "谈判", "签约", "输单", "流失"], list: true },
@@ -99,7 +99,7 @@ export const COLLECTIONS: Record<string, CollectionDef> = {
     label: "合同",
     icon: "📄",
     fields: {
-      id: { type: "string", label: "ID", required: true },
+      id: { type: "string", label: "编号", required: true },
       customerId: { type: "relation", label: "客户", relation: { collection: "customers", type: "belongsTo" }, list: true },
       name: { type: "string", label: "合同名称", required: true, list: true },
       amount: { type: "number", label: "合同金额", unit: "元", list: true },
@@ -113,7 +113,7 @@ export const COLLECTIONS: Record<string, CollectionDef> = {
     label: "回款",
     icon: "💰",
     fields: {
-      id: { type: "string", label: "ID", required: true },
+      id: { type: "string", label: "编号", required: true },
       contractId: { type: "relation", label: "合同", relation: { collection: "contracts", type: "belongsTo" } },
       customerId: { type: "relation", label: "客户", relation: { collection: "customers", type: "belongsTo" }, list: true },
       amount: { type: "number", label: "金额", unit: "元", list: true },
@@ -128,7 +128,7 @@ export const COLLECTIONS: Record<string, CollectionDef> = {
     label: "任务",
     icon: "✅",
     fields: {
-      id: { type: "string", label: "ID", required: true },
+      id: { type: "string", label: "编号", required: true },
       title: { type: "string", label: "任务标题", required: true, list: true },
       type: { type: "select", label: "类型", options: ["跟进", "客户", "想法", "费用", "任务"] },
       priority: { type: "select", label: "优先级", options: ["高", "中", "低"], list: true },
@@ -144,7 +144,7 @@ export const COLLECTIONS: Record<string, CollectionDef> = {
     label: "目标",
     icon: "🏁",
     fields: {
-      id: { type: "string", label: "ID", required: true },
+      id: { type: "string", label: "编号", required: true },
       quarter: { type: "string", label: "季度", list: true },
       title: { type: "string", label: "目标名称", required: true, list: true },
       keyResults: { type: "json", label: "关键结果" },
@@ -155,7 +155,7 @@ export const COLLECTIONS: Record<string, CollectionDef> = {
     label: "接触点",
     icon: "🤝",
     fields: {
-      id: { type: "string", label: "ID", required: true },
+      id: { type: "string", label: "编号", required: true },
       customerId: { type: "relation", label: "客户", relation: { collection: "customers", type: "belongsTo" }, list: true },
       channel: { type: "select", label: "渠道", options: ["微信", "拜访", "电话", "邮件"], list: true },
       time: { type: "number", label: "时间", list: true },
@@ -168,7 +168,7 @@ export const COLLECTIONS: Record<string, CollectionDef> = {
     label: "比稿",
     icon: "🏆",
     fields: {
-      id: { type: "string", label: "ID", required: true },
+      id: { type: "string", label: "编号", required: true },
       customerId: { type: "relation", label: "客户", relation: { collection: "customers", type: "belongsTo" } },
       name: { type: "string", label: "比稿名称", required: true, list: true },
       date: { type: "date", label: "日期", list: true },
@@ -185,7 +185,7 @@ export const COLLECTIONS: Record<string, CollectionDef> = {
     label: "供应商",
     icon: "🏭",
     fields: {
-      id: { type: "string", label: "ID", required: true },
+      id: { type: "string", label: "编号", required: true },
       name: { type: "string", label: "供应商名称", required: true, list: true },
       type: { type: "select", label: "类型", options: ["官方", "代理", "达人机构"], list: true },
       rebatePolicy: { type: "string", label: "返点政策" },
@@ -199,7 +199,7 @@ export const COLLECTIONS: Record<string, CollectionDef> = {
     label: "媒介资源",
     icon: "📺",
     fields: {
-      id: { type: "string", label: "ID", required: true },
+      id: { type: "string", label: "编号", required: true },
       name: { type: "string", label: "资源名称", required: true, list: true },
       type: { type: "string", label: "资源类型", list: true },
       supplierId: { type: "relation", label: "供应商", relation: { collection: "suppliers", type: "belongsTo" } },
@@ -215,7 +215,7 @@ export const COLLECTIONS: Record<string, CollectionDef> = {
     label: "刊例价",
     icon: "📊",
     fields: {
-      id: { type: "string", label: "ID", required: true },
+      id: { type: "string", label: "编号", required: true },
       resourceId: { type: "relation", label: "资源", relation: { collection: "resources", type: "belongsTo" } },
       version: { type: "string", label: "版本", list: true },
       effectiveFrom: { type: "date", label: "生效日期" },
@@ -228,7 +228,7 @@ export const COLLECTIONS: Record<string, CollectionDef> = {
     label: "排期",
     icon: "📅",
     fields: {
-      id: { type: "string", label: "ID", required: true },
+      id: { type: "string", label: "编号", required: true },
       customerId: { type: "relation", label: "客户", relation: { collection: "customers", type: "belongsTo" }, list: true },
       name: { type: "string", label: "排期名称", required: true, list: true },
       resourceId: { type: "relation", label: "资源", relation: { collection: "resources", type: "belongsTo" } },
@@ -247,7 +247,7 @@ export const COLLECTIONS: Record<string, CollectionDef> = {
     label: "售后数据",
     icon: "📈",
     fields: {
-      id: { type: "string", label: "ID", required: true },
+      id: { type: "string", label: "编号", required: true },
       resourceId: { type: "relation", label: "资源", relation: { collection: "resources", type: "belongsTo" } },
       month: { type: "string", label: "月份", list: true },
       actualImpression: { type: "number", label: "实际曝光" },
@@ -265,7 +265,7 @@ export const COLLECTIONS: Record<string, CollectionDef> = {
     label: "笔记",
     icon: "📝",
     fields: {
-      id: { type: "string", label: "ID", required: true },
+      id: { type: "string", label: "编号", required: true },
       title: { type: "string", label: "标题", required: true, list: true },
       content: { type: "text", label: "内容" },
       tags: { type: "json", label: "标签" },
@@ -279,7 +279,7 @@ export const COLLECTIONS: Record<string, CollectionDef> = {
     label: "基线数据",
     icon: "📐",
     fields: {
-      id: { type: "string", label: "ID", required: true },
+      id: { type: "string", label: "编号", required: true },
       dimension: { type: "string", label: "维度", list: true },
       metric: { type: "string", label: "指标", list: true },
       value: { type: "string", label: "数值" },
@@ -292,7 +292,7 @@ export const COLLECTIONS: Record<string, CollectionDef> = {
     label: "复盘",
     icon: "🔍",
     fields: {
-      id: { type: "string", label: "ID", required: true },
+      id: { type: "string", label: "编号", required: true },
       period: { type: "string", label: "周期", list: true },
       stats: { type: "text", label: "数据" },
       lessons: { type: "text", label: "经验教训" },
@@ -305,7 +305,7 @@ export const COLLECTIONS: Record<string, CollectionDef> = {
     label: "达人",
     icon: "🌟",
     fields: {
-      id: { type: "string", label: "ID", required: true },
+      id: { type: "string", label: "编号", required: true },
       name: { type: "string", label: "达人名称", required: true, list: true },
       platform: { type: "select", label: "平台", options: ["抖音", "小红书", "B站", "微博", "快手"], list: true },
       followers: { type: "number", label: "粉丝数" },

@@ -53,7 +53,7 @@ export function KanbanBlock({ store, groupField, titleField, subField, amountFie
   /** 未匹配任何列的记录 */
   const orphans = useMemo(() => res.data.filter((r) => !columns.includes(String(r[groupField] ?? ""))), [res.data, groupField, columns]);
 
-  if (!col || !groupDef) return <div className="block-empty">看板区块需要有效的分组字段（select类型）</div>;
+  if (!col || !groupDef) return <div className="block-empty">看板区块需要有效的分组字段（下拉选择类型）</div>;
 
   async function handleDrop(target: string) {
     setOverCol(null);

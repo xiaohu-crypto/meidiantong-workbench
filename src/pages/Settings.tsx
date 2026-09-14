@@ -140,7 +140,7 @@ export default function SettingsPage(props: { theme: "dark" | "light"; setTheme:
           <div className="h-row" style={{ marginTop: 20 }}><span className="h-title sm">快捷键</span></div>
           <div className="alert-line">
             <span className="txt">全局搜索 / 快速采集(可自定义)</span>
-            <span className="chip data">Ctrl + <input style={{ width: 28, border: "1px solid var(--border)", borderRadius: 4, textAlign: "center", background: "transparent", color: "var(--ink)" }} defaultValue="K" onChange={(e) => { const v = e.target.value.toLowerCase(); if (v.length === 1) void db.setSetting("quickKey", { key: v }); }} /> — ↑↓ 选择 · Enter 打开 · Esc 关闭</span>
+            <span className="chip data">Ctrl + <input style={{ width: 28, border: "1px solid var(--border)", borderRadius: 4, textAlign: "center", background: "transparent", color: "var(--ink)" }} defaultValue="K" onChange={(e) => { const v = e.target.value.toLowerCase(); if (v.length === 1) void db.setSetting("quickKey", { key: v }); }} /> — ↑↓ 选择 · 回车打开 · Esc 关闭</span>
           </div>
           <div className="alert-line"><span className="txt">搜索框内清空</span><span className="chip data">Esc</span></div>
           <p className="muted" style={{ fontSize: "var(--text-xs)", marginTop: 6 }}>更多快捷键自定义(如切换视图)将在后续版本支持;当前为系统内置。</p>
@@ -215,10 +215,10 @@ export default function SettingsPage(props: { theme: "dark" | "light"; setTheme:
             <input className="inp num" style={{ width: 120, minHeight: 28 }} value={String(aiCfg.monthlyTokenLimit ?? 0)} onChange={(e) => { const v = { ...aiCfg, monthlyTokenLimit: Math.max(0, Number(e.target.value) || 0) }; setAiCfg(v); void saveAiConfig(v); }} />
           </div>
 <div className="field-row">
-            <Field label="API Base URL"><input className="inp" style={{ width: "100%" }} value={aiCfg.baseUrl} onChange={(e) => setAiCfg({ ...aiCfg, baseUrl: e.target.value })} onBlur={() => { void saveAiConfig(aiCfg); }} /></Field>
+            <Field label="接口地址"><input className="inp" style={{ width: "100%" }} value={aiCfg.baseUrl} onChange={(e) => setAiCfg({ ...aiCfg, baseUrl: e.target.value })} onBlur={() => { void saveAiConfig(aiCfg); }} /></Field>
             <Field label="模型 ID"><input className="inp" style={{ width: "100%" }} value={aiCfg.model} onChange={(e) => setAiCfg({ ...aiCfg, model: e.target.value })} onBlur={() => { void saveAiConfig(aiCfg); }} /></Field>
           </div>
-          <div className="alert-line"><span className="txt">API Key(当前:{keyState.has ? (keyState.encrypted ? (keyState.fromEnv ? "已加密存储(自 AGNES_KEY 环境变量导入)" : "已加密存储") : "明文(浏览器回退)") : "未配置"})</span></div>
+          <div className="alert-line"><span className="txt">接口密钥（当前：{keyState.has ? (keyState.encrypted ? (keyState.fromEnv ? "已加密存储(自 AGNES_KEY 环境变量导入)" : "已加密存储") : "明文(浏览器回退)") : "未配置"})</span></div>
           <div className="field-row">
             <Field label={keyState.has ? "更换 Key" : "填入 Key"}>
               <input className="inp" type="password" style={{ width: "100%" }} value={keyInput} onChange={(e) => setKeyInput(e.target.value)} placeholder="sk-…" />
@@ -419,7 +419,7 @@ function CustomFieldsGov(props: { defs: { id: string; entity: string; key: strin
             <option value="deals">商机</option>
           </select>
         </Field>
-        <Field label="字段标识(英文)"><input className="inp" style={{ width: "100%" }} value={key} onChange={(e) => setKey(e.target.value)} placeholder="如:channel" /></Field>
+        <Field label="字段标识"><input className="inp" style={{ width: "100%" }} value={key} onChange={(e) => setKey(e.target.value)} placeholder="如:channel" /></Field>
       </div>
       <div className="field-row">
         <Field label="显示名称"><input className="inp" style={{ width: "100%" }} value={label} onChange={(e) => setLabel(e.target.value)} placeholder="如:获客渠道" /></Field>

@@ -245,7 +245,7 @@ function CreateCollectionModal({ onClose, onCreate }: { onClose: () => void; onC
       label: label.trim(),
       icon: icon.trim() || "📦",
       fields: {
-        id: { type: "string", label: "ID", required: true },
+        id: { type: "string", label: "编号", required: true },
       },
     };
     for (const f of fields) {
@@ -303,7 +303,7 @@ function EditCollectionModal({ initial, onClose, onSave }: { initial: Collection
       label: label.trim() || initial.label,
       icon: icon.trim() || initial.icon,
       fields: {
-        id: { type: "string", label: "ID", required: true },
+        id: { type: "string", label: "编号", required: true },
       },
     };
     for (const f of fields) {
