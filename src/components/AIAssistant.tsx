@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { aiChat } from "../core/ai/client";
+import { getAiConfig, loadAiKey } from "../core/ai/client";
 import { EMPLOYEE_LIST, type Employee, type EmployeeId, buildContext } from "../core/ai/employees";
 import { retrieveNotes } from "../core/ai/rag";
 import { Markdown } from "./Markdown";
@@ -84,11 +84,11 @@ export default function AIAssistant({ currentPage }: { currentPage: string }) {
     if (!q || loading) return;
     setInput("");
     const userMsg: Msg = { id: `u-${Date.now()}`, role: "user", content: q, time: Date.now() };
-    setMsgs((prev) => [...prev, userMsg]);
+    const replyId = `a-${Date.now()}`;
+    setMsgs((prev) => [...prev, userMsg, { id: replyId, role: "assistant", content: "", time: Date.now() }]);
     setLoading(true);
     try {
       const ctx = buildContext(currentPage);
-      // RAG:检索知识库相关笔记注入上下文
       const rag = await retrieveNotes(q);
       const systemContent = emp.systemPrompt + "\n\n" + ctx + (rag.context ? "\n\n" + rag.context + "\n\n请参考以上知识库资料回答问题，如资料与问题无关可忽略。" : "");
       const messages = [
@@ -96,18 +96,42 @@ export default function AIAssistant({ currentPage }: { currentPage: string }) {
         ...msgs.filter((m) => m.id !== "welcome").map((m) => ({ role: m.role, content: m.content })),
         { role: "user", content: q },
       ];
-      const r = await aiChat(messages);
-      const refSuffix = rag.notes.length > 0 ? `\n\n📚 参考知识库：${rag.notes.map((n) => "《" + n.title + "》").join("、")}` : "";
-      const reply: Msg = {
-        id: `a-${Date.now()}`,
-        role: "assistant",
-        content: (r.ok ? r.content ?? "（无回复）" : `⚠️ ${r.error ?? "调用失败"}`) + refSuffix,
-        time: Date.now(),
+      // 获取AI配置
+      const cfg = await getAiConfig();
+      const { key } = await loadAiKey();
+      if (!key) {
+        setMsgs((prev) => prev.map((m) => m.id === replyId ? { ...m, content: "⚠️ 未配置 API Key（系统管理 → AI 设置）" } : m));
+        setLoading(false);
+        return;
+      }
+      // 流式输出
+      let fullContent = "";
+      const chunkHandler = (chunk: string) => {
+        fullContent += chunk;
+        setMsgs((prev) => prev.map((m) => m.id === replyId ? { ...m, content: fullContent } : m));
       };
-      setMsgs((prev) => [...prev, reply]);
+      const doneHandler = () => {
+        const refSuffix = rag.notes.length > 0 ? `\n\n📚 参考知识库：${rag.notes.map((n) => "《" + n.title + "》").join("、")}` : "";
+        setMsgs((prev) => prev.map((m) => m.id === replyId ? { ...m, content: fullContent + refSuffix } : m));
+        setLoading(false);
+        cleanup();
+      };
+      const errorHandler = (err: string) => {
+        setMsgs((prev) => prev.map((m) => m.id === replyId ? { ...m, content: `⚠️ ${err ?? "调用失败"}` } : m));
+        setLoading(false);
+        cleanup();
+      };
+      const cleanup = () => {
+        window.mta?.onStreamChunk?.(() => {});
+        window.mta?.onStreamDone?.(() => {});
+        window.mta?.onStreamError?.(() => {});
+      };
+      window.mta?.onStreamChunk?.(chunkHandler);
+      window.mta?.onStreamDone?.(doneHandler);
+      window.mta?.onStreamError?.(errorHandler);
+      await window.mta?.chatStream?.({ baseUrl: cfg.baseUrl, apiKey: key, model: cfg.model, messages });
     } catch (e) {
       setMsgs((prev) => [...prev, { id: `e-${Date.now()}`, role: "assistant", content: `⚠️ 异常：${String(e)}`, time: Date.now() }]);
-    } finally {
       setLoading(false);
     }
   }
