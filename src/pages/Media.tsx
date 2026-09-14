@@ -3,7 +3,7 @@ import { db } from "../db/db";
 import type { Customer, Influencer, MediaResource, PostBuy, PricePoint, RateCard, ScheduleItem, Supplier } from "../types";
 import { Btn, Chip, Field, Modal, money, uid, useToast } from "../ui/common";
 import { IconPlus } from "../components/icons";
-import { parseCsv } from "../core/importer";
+import { parseCsv, parseAnyFile } from "../core/importer";
 
 interface Props {
   suppliers: Supplier[]; resources: MediaResource[]; ratecards: RateCard[];
@@ -271,10 +271,30 @@ export default function Media(props: Props) {
     }
     show(`导入完成:资源 ${resN},点位 ${ptN}`); await props.reload();
   }
-  function onMediaCsvFile(ev: React.ChangeEvent<HTMLInputElement>) {
+  async function onMediaCsvFile(ev: React.ChangeEvent<HTMLInputElement>) {
     const f = ev.target.files?.[0]; if (!f) return;
-    const fr = new FileReader(); fr.onload = () => void importMediaCsv(String(fr.result ?? ""));
-    fr.readAsText(f, "utf-8");
+    try {
+      const parsed = await parseAnyFile(f);
+      if (parsed.format === "image" || parsed.format === "unknown") { show("该格式不支持导入资源库"); return; }
+      const sheet = parsed.sheets.find((s) => s.aoa.length >= 2) ?? parsed.sheets[0];
+      if (!sheet) { show("文件为空"); return; }
+      const csvText = sheet.aoa.map((r) => r.map((c) => '"' + String(c ?? "").replace(/"/g, '""') + '"').join(",")).join("\n");
+      void importMediaCsv(csvText);
+      if (parsed.warning) show(parsed.warning);
+    } catch (e) { show("导入失败:" + (e instanceof Error ? e.message : String(e))); }
+  }
+
+  async function onPostBuyFile(ev: React.ChangeEvent<HTMLInputElement>) {
+    const f = ev.target.files?.[0]; if (!f) return;
+    try {
+      const parsed = await parseAnyFile(f);
+      if (parsed.format === "image" || parsed.format === "unknown") { show("该格式不支持回填售后数据"); return; }
+      const sheet = parsed.sheets.find((s) => s.aoa.length >= 2) ?? parsed.sheets[0];
+      if (!sheet) { show("文件为空"); return; }
+      const csvText = sheet.aoa.map((r) => r.map((c) => '"' + String(c ?? "").replace(/"/g, '""') + '"').join(",")).join("\n");
+      setCsv(csvText);
+      show("已载入 " + (sheet.aoa.length - 1) + " 行,点「解析CSV」确认导入");
+    } catch (e) { show("读取失败:" + (e instanceof Error ? e.message : String(e))); }
   }
 
   return (
@@ -337,7 +357,7 @@ export default function Media(props: Props) {
             <span className="h-title sm">媒体资源库({resources.length})</span>
             <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
               <Btn kind="ghost" sm onClick={exportMediaCsv}>导出CSV</Btn>
-              <label className="btn ghost sm" style={{ margin: 0 }}>导入CSV<input type="file" accept=".csv" style={{ display: "none" }} onChange={onMediaCsvFile} /></label>
+              <label className="btn ghost sm" style={{ margin: 0 }}>导入文件<input type="file" accept=".xlsx,.xls,.csv,.txt" style={{ display: "none" }} onChange={onMediaCsvFile} /></label>
               <Btn kind="primary" sm onClick={openNewResource}><IconPlus size={12} /> 新增</Btn>
             </div>
           </div>
@@ -476,7 +496,7 @@ export default function Media(props: Props) {
             <textarea className="inp" rows={2} style={{ width: "100%", fontFamily: "var(--mono)", fontSize: "var(--text-xs)", marginTop: 8 }}
               value={csv} onChange={(e) => setCsv(e.target.value)}
               placeholder="CSV批量回填:资源名,月份,曝光,CPM,ROI" />
-            <div style={{ marginTop: 6 }}><Btn kind="data" sm disabled={!csv.trim()} onClick={() => { void importCsv(); }}>解析CSV</Btn></div>
+            <div style={{ marginTop: 6, display: "flex", gap: 8, alignItems: "center" }}><Btn kind="data" sm disabled={!csv.trim()} onClick={() => { void importCsv(); }}>解析CSV</Btn><label className="btn ghost sm" style={{ margin: 0 }}>选择文件<input type="file" accept=".xlsx,.xls,.csv,.txt" style={{ display: "none" }} onChange={onPostBuyFile} /></label></div>
           </div>
           <div className="card" style={{ overflow: "hidden" }}>
             <table className="tgrid">

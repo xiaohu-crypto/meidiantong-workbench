@@ -2,12 +2,12 @@ import { validateCustomer, type Errors, GRADES } from "./validators";
 
 /** 列名同义词匹配(规则引擎,即需求所称"AI 匹配"的确定性实现) */
 const SYNONYMS: Record<string, string[]> = {
-  name: ["客户名称", "名称", "客户", "公司", "公司名称", "客户名"],
-  industry: ["行业", "所属行业"],
-  grade: ["等级", "客户等级", "级别"],
-  phone: ["手机", "手机号", "电话", "联系电话"],
-  billingTitle: ["开票抬头", "发票抬头"],
-  billingTaxNo: ["税号", "纳税号"],
+  name: ["客户名称", "名称", "客户", "公司", "公司名称", "客户名", "单位", "企业名称", "企业"],
+  industry: ["行业", "所属行业", "品类"],
+  grade: ["等级", "客户等级", "级别", "分级"],
+  phone: ["手机", "手机号", "电话", "联系电话", "联系方式"],
+  billingTitle: ["开票抬头", "发票抬头", "抬头"],
+  billingTaxNo: ["税号", "纳税号", "纳税人识别号"],
 };
 
 export function columnMatch(headers: string[]): Record<string, number> {
@@ -70,4 +70,144 @@ export function parseCsv(text: string): string[][] {
   }
   if (cur !== "" || row.length) { row.push(cur.trim()); out.push(row); }
   return out.filter((r) => r.some((c) => c !== ""));
+}
+
+/* ==================== 多 Sheet / 表头检测 / 多格式统一入口 ==================== */
+
+export interface SheetData { name: string; aoa: unknown[][]; }
+
+/** 解析 Excel 所有 Sheet(xlsx/xls/xlsm/ods 等 xlsx 库支持的格式) */
+export async function parseExcelSheets(buf: ArrayBuffer): Promise<SheetData[]> {
+  const XLSX = await import("xlsx");
+  const wb = XLSX.read(buf, { type: "array" });
+  return wb.SheetNames.map((name) => {
+    const ws = wb.Sheets[name];
+    const aoa = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "" });
+    return { name, aoa };
+  });
+}
+
+/** 自动检测表头行:扫描前 10 行,跳过单行大标题(非空单元格<2),取匹配同义词最多的行;找不到返回 0 */
+export function detectHeaderRow(aoa: unknown[][], maxScan = 10): number {
+  const allWords = Object.values(SYNONYMS).flat();
+  const scan = Math.min(maxScan, aoa.length);
+  let bestRow = 0;
+  let bestScore = 0;
+  for (let i = 0; i < scan; i++) {
+    const cells = (aoa[i] as unknown[] || []).map((c) => String(c ?? "").trim());
+    const nonEmpty = cells.filter((c) => c !== "").length;
+    if (nonEmpty < 2) continue;
+    let score = 0;
+    for (const c of cells) {
+      if (c && allWords.some((w) => c === w || c.includes(w))) score++;
+    }
+    if (score > bestScore) { bestScore = score; bestRow = i; }
+  }
+  return bestRow;
+}
+
+/** 从二维数组指定表头行提取表头与数据行 */
+export function extractFromAoa(aoa: unknown[][], headerRowIdx: number): { headers: string[]; rows: unknown[][] } {
+  const headers = ((aoa[headerRowIdx] as unknown[]) || []).map((c) => String(c ?? ""));
+  const rows = aoa.slice(headerRowIdx + 1) as unknown[][];
+  return { headers, rows };
+}
+
+/** 纯文本转二维数组(按行分割,行内按制表符/多空格/逗号分割) */
+export function textToAoa(text: string): string[][] {
+  return text.split(/\r?\n/).map((line) => {
+    if (line.includes("\t")) return line.split("\t").map((c) => c.trim());
+    if (line.includes(",")) return line.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
+    return line.split(/\s{2,}/).map((c) => c.trim());
+  }).filter((r) => r.some((c) => c !== ""));
+}
+
+/** 从 Word(.docx) 提取纯文本 */
+export async function extractDocxText(file: File): Promise<string> {
+  const mammoth = await import("mammoth/mammoth.browser");
+  const buf = await file.arrayBuffer();
+  const result = await mammoth.extractRawText({ arrayBuffer: buf });
+  return result.value;
+}
+
+/** 从 PDF 提取纯文本 */
+export async function extractPdfText(file: File): Promise<string> {
+  const pdfjs = await import("pdfjs-dist");
+  // Vite 会把 worker 作为资源打包
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjs.getDocument({ data: buf }).promise;
+  let text = "";
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const tc = await page.getTextContent();
+    text += tc.items.map((it: any) => it.str).join(" ") + "\n";
+  }
+  return text;
+}
+
+export type FileFormat = "excel" | "csv" | "text" | "docx" | "pdf" | "image" | "unknown";
+
+export interface ParsedFile {
+  format: FileFormat;
+  sheets: SheetData[];
+  headerRow: number;
+  warning?: string;
+}
+
+/** 统一文件解析入口:根据扩展名分发,返回所有 sheet 与自动检测的表头行 */
+export async function parseAnyFile(file: File): Promise<ParsedFile> {
+  const lower = file.name.toLowerCase();
+  // 表格类:Excel 全格式
+  if (/\.(xlsx|xls|xlsm|xlsb|ods|dif|sylk)$/.test(lower)) {
+    const sheets = await parseExcelSheets(await file.arrayBuffer());
+    const firstNonEmpty = sheets.find((s) => s.aoa.length >= 2) ?? sheets[0];
+    return { format: "excel", sheets, headerRow: detectHeaderRow(firstNonEmpty?.aoa ?? []) };
+  }
+  // CSV
+  if (lower.endsWith(".csv")) {
+    const text = await file.text();
+    const aoa = parseCsv(text) as unknown[][];
+    return { format: "csv", sheets: [{ name: "CSV", aoa }], headerRow: detectHeaderRow(aoa) };
+  }
+  // 纯文本
+  if (lower.endsWith(".txt") || lower.endsWith(".tsv")) {
+    const text = await file.text();
+    const aoa = textToAoa(text) as unknown[][];
+    return { format: "text", sheets: [{ name: "文本", aoa }], headerRow: detectHeaderRow(aoa) };
+  }
+  // Word
+  if (lower.endsWith(".docx") || lower.endsWith(".doc")) {
+    const text = await extractDocxText(file);
+    const aoa = textToAoa(text) as unknown[][];
+    return { format: "docx", sheets: [{ name: "Word", aoa }], headerRow: detectHeaderRow(aoa), warning: "Word 文档已按行/制表符转为表格,请核对列匹配" };
+  }
+  // PDF
+  if (lower.endsWith(".pdf")) {
+    const text = await extractPdfText(file);
+    const aoa = textToAoa(text) as unknown[][];
+    return { format: "pdf", sheets: [{ name: "PDF", aoa }], headerRow: detectHeaderRow(aoa), warning: "PDF 已提取文本并转为表格,请核对列匹配" };
+  }
+  // 图片(需 AI 视觉提取,调用方处理)
+  if (/\.(png|jpg|jpeg|gif|bmp|webp)$/.test(lower)) {
+    return { format: "image", sheets: [], headerRow: 0, warning: "图片格式需 AI 视觉识别,请在下一步确认调用 AI" };
+  }
+  return { format: "unknown", sheets: [], headerRow: 0, warning: "不支持的文件格式" };
+}
+
+/** 从 ParsedFile + 选中 sheet 提取 ImportRow[] */
+export function rowsFromSheet(parsed: ParsedFile, sheetIdx: number): { headers: string[]; rows: ImportRow[]; mapping: Record<string, number> } {
+  const sheet = parsed.sheets[sheetIdx];
+  const { headers, rows: rawRows } = extractFromAoa(sheet.aoa, parsed.headerRow);
+  const mapping = columnMatch(headers);
+  const rows: ImportRow[] = rawRows.map((r, i) => ({
+    row: i + parsed.headerRow + 2,
+    name: mapping.name !== undefined ? String(r[mapping.name] ?? "").trim() : "",
+    industry: mapping.industry !== undefined ? String(r[mapping.industry] ?? "").trim() : "",
+    grade: mapping.grade !== undefined ? String(r[mapping.grade] ?? "").trim().toUpperCase() : "",
+    phone: mapping.phone !== undefined ? String(r[mapping.phone] ?? "").trim() : "",
+    billingTitle: mapping.billingTitle !== undefined ? String(r[mapping.billingTitle] ?? "").trim() : "",
+    billingTaxNo: mapping.billingTaxNo !== undefined ? String(r[mapping.billingTaxNo] ?? "").trim() : "",
+  })).filter((r) => r.name !== "");
+  return { headers, rows, mapping };
 }
