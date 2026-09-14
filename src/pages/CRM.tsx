@@ -12,6 +12,7 @@ import ImportCustomers from "../components/ImportCustomers";
 import { RecordPage, type WidgetDef, type RecordLayout } from "../ui/RecordPage";
 import { FieldsWidget } from "../ui/widgets/FieldsWidget";
 import { RelatedListWidget } from "../ui/widgets/RelatedListWidget";
+import { getAllScripts, addScript, updateScript, deleteScript, type SopScript } from "../core/sop";
 import { TimelineWidget } from "../ui/widgets/TimelineWidget";
 import { parseStructuredAdvice, type StructuredAdvice } from "../core/ai/script";
 import { askCustomer, type AskContext } from "../core/ai/ask";
@@ -55,6 +56,7 @@ const DEFAULT_CUSTOMER_LAYOUT: RecordLayout = {
     { id: "决策链", title: "决策链", widgets: [] },
     { id: "媒介策略", title: "媒介策略", widgets: [] },
     { id: "AI建议", title: "AI建议", widgets: [] },
+    { id: "SOP话术", title: "SOP话术", widgets: [] },
   ],
 };
 
@@ -115,7 +117,7 @@ export default function CRM(props: Props) {
       setTimeline(items.slice(0, 80));
     })();
   }, [openId]);
-  const [tab, setTab] = useState<"概览" | "跟进" | "决策链" | "媒介策略" | "AI建议">("概览");
+  const [tab, setTab] = useState<"概览" | "跟进" | "决策链" | "媒介策略" | "AI建议" | "SOP话术">("概览");
   /* P1 记录布局:默认硬编码,从 settings.recordLayouts 合并(P4 再做拖拽) */
   const [customerLayout, setCustomerLayout] = useState<RecordLayout>(DEFAULT_CUSTOMER_LAYOUT);
   /* P4 布局编辑模式 */
@@ -146,6 +148,19 @@ export default function CRM(props: Props) {
     setContactOpen(false); setContactForm({ name: "", phone: "", title: "", role: "影响者", wechat: "" });
     await props.reload();
   }
+  async function refreshSop() { setSopScripts(await getAllScripts()); }
+  function openSopNew() { setSopForm({ id: "", scene: "", text: "" }); setSopOpen(true); }
+  function openSopEdit(sc: SopScript) { setSopForm({ id: sc.id, scene: sc.scene, text: sc.text }); setSopOpen(true); }
+  async function saveSop() {
+    if (!sopForm.scene.trim()) { show("场景名称必填"); return; }
+    if (!sopForm.text.trim()) { show("话术内容必填"); return; }
+    if (sopForm.id) { await updateScript(sopForm.id, sopForm.scene.trim(), sopForm.text.trim()); show("话术已更新"); }
+    else { await addScript(sopForm.scene.trim(), sopForm.text.trim()); show("话术已添加"); }
+    setSopOpen(false); await refreshSop();
+  }
+  async function removeSop(id: string) { await deleteScript(id); show("话术已删除"); await refreshSop(); }
+  function copySop(text: string) { navigator.clipboard?.writeText(text).then(() => show("已复制到剪贴板")).catch(() => show("复制失败,请手动复制")); }
+
   function openStrategyEdit() {
     if (!drawerC) return;
     const s = ((drawerC.custom ?? {}) as Record<string, Record<string, string>>).mediaStrategy ?? {};
@@ -170,11 +185,15 @@ export default function CRM(props: Props) {
   }
   const [aiBusy, setAiBusy] = useState(false);
   const [aiAdvice, setAiAdvice] = useState("");
+  const [sopScripts, setSopScripts] = useState<SopScript[]>([]);
+  const [sopOpen, setSopOpen] = useState(false);
+  const [sopForm, setSopForm] = useState({ id: "", scene: "", text: "" });
   const [aiStructured, setAiStructured] = useState<StructuredAdvice | null>(null);
   /* P3 本地问数:输入框 + 最近 3 条问答历史(纯本地,不调云端) */
   const [askInput, setAskInput] = useState("");
   const [askHistory, setAskHistory] = useState<{ q: string; a: string }[]>([]);
   useEffect(() => { setAiAdvice(""); setAiStructured(null); setAskHistory([]); setAskInput(""); }, [openId]);
+  useEffect(() => { void (async () => { setSopScripts(await getAllScripts()); })(); }, []);
 
   async function genAdvice() {
     if (!drawerC) return;
@@ -818,6 +837,29 @@ export default function CRM(props: Props) {
                   ) : null}
                 </div>
               )}
+              {tab === "SOP话术" && (
+                <div>
+                  <div className="h-row" style={{ marginBottom: 10 }}>
+                    <span className="h-title sm">SOP 话术库</span>
+                    <Btn kind="primary" sm style={{ marginLeft: "auto" }} onClick={openSopNew}><IconPlus size={12} /> 新增话术</Btn>
+                  </div>
+                  {sopScripts.map((sc) => (
+                    <div key={sc.id} className="card" style={{ marginBottom: 10, padding: 12 }}>
+                      <div className="h-row" style={{ marginBottom: 6 }}>
+                        <span style={{ fontWeight: 600, fontSize: "var(--text-sm)" }}>{sc.scene}</span>
+                        {sc.builtin ? <Chip gray>内置</Chip> : null}
+                        <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
+                          <Btn kind="ghost" sm onClick={() => copySop(sc.text)}>复制</Btn>
+                          {!sc.builtin ? <Btn kind="ghost" sm onClick={() => openSopEdit(sc)}>编辑</Btn> : null}
+                          {!sc.builtin ? <Btn kind="ghost" sm onClick={() => { void removeSop(sc.id); }}>删除</Btn> : null}
+                        </div>
+                      </div>
+                      <p style={{ margin: 0, fontSize: "var(--text-sm)", lineHeight: 1.7, color: "var(--ink-2)", whiteSpace: "pre-wrap" }}>{sc.text}</p>
+                    </div>
+                  ))}
+                  {sopScripts.length === 0 ? <p className="muted" style={{ textAlign: "center", padding: 20 }}>暂无话术</p> : null}
+                </div>
+              )}
             </div>
             <div className="drawer-foot">
               <Btn kind="primary" onClick={() => setCpOpen(true)}>记录跟进</Btn>
@@ -897,6 +939,14 @@ export default function CRM(props: Props) {
             <Field label="电话"><input className="inp" style={{ width: "100%" }} value={contactForm.phone} onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })} /></Field>
             <Field label="微信"><input className="inp" style={{ width: "100%" }} value={contactForm.wechat} onChange={(e) => setContactForm({ ...contactForm, wechat: e.target.value })} /></Field>
           </div>
+        </Modal>
+      ) : null}
+      {sopOpen ? (
+        <Modal title={sopForm.id ? "编辑话术" : "新增话术"} onClose={() => setSopOpen(false)} footer={
+          <div className="grow"><Btn kind="ghost" onClick={() => setSopOpen(false)}>取消</Btn><Btn kind="primary" onClick={() => { void saveSop(); }}>保存</Btn></div>
+        }>
+          <Field label="场景名称"><input className="inp" style={{ width: "100%" }} value={sopForm.scene} onChange={(e) => setSopForm({ ...sopForm, scene: e.target.value })} placeholder="如:节日促活跟进" /></Field>
+          <Field label="话术内容"><textarea className="inp" rows={5} style={{ width: "100%" }} value={sopForm.text} onChange={(e) => setSopForm({ ...sopForm, text: e.target.value })} placeholder="话术正文,可用[客户名][金额]等占位符" /></Field>
         </Modal>
       ) : null}
       {colsOpen ? (
