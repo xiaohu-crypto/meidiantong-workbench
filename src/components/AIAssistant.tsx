@@ -14,17 +14,22 @@ interface Msg {
 export default function AIAssistant({ currentPage }: { currentPage: string }) {
   const [open, setOpen] = useState(false);
   const [empId, setEmpId] = useState<EmployeeId>("analyst");
-  const [msgs, setMsgs] = useState<Msg[]>([]);
+  const [msgs, setMsgs] = useState<Msg[]>([{ id: "welcome", role: "assistant", content: EMPLOYEE_LIST[0].welcome, time: Date.now() }]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
   const emp: Employee = EMPLOYEE_LIST.find((e) => e.id === empId) ?? EMPLOYEE_LIST[0];
 
-  // 切换角色时清空消息并显示欢迎语
-  useEffect(() => {
-    setMsgs([{ id: "welcome", role: "assistant", content: emp.welcome, time: Date.now() }]);
-  }, [empId]);
+  // 切换角色:清空对话,显示新角色欢迎语
+  function switchEmployee(id: EmployeeId) {
+    if (id === empId) return;
+    setEmpId(id);
+    const e = EMPLOYEE_LIST.find((x) => x.id === id) ?? EMPLOYEE_LIST[0];
+    setMsgs([{ id: "welcome", role: "assistant", content: e.welcome, time: Date.now() }]);
+    setInput("");
+    setLoading(false);
+  }
 
   // 自动滚动到底部
   useEffect(() => {
@@ -89,7 +94,7 @@ export default function AIAssistant({ currentPage }: { currentPage: string }) {
           <button
             key={e.id}
             className={`ai-emp-tab ${e.id === empId ? "active" : ""}`}
-            onClick={() => setEmpId(e.id)}
+            onClick={() => switchEmployee(e.id)}
             title={e.desc}
           >
             {e.emoji} {e.name}
