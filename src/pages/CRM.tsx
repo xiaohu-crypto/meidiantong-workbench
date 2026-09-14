@@ -261,6 +261,8 @@ export default function CRM(props: Props) {
   const [vc, setVc] = useState<Record<string, boolean>>(DEFAULT_COLS);
   const [colsOpen, setColsOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [dupOpen, setDupOpen] = useState(false);
+  const [dupGroups, setDupGroups] = useState<Customer[][]>([]);
   /* 客户列表视图:表格 / 看板(按阶段分4列),持久化到 settings.crmViewMode */
   const [crmView, setCrmView] = useState<"table" | "kanban">("table");
   function switchCrmView(v: "table" | "kanban") {
@@ -362,6 +364,46 @@ export default function CRM(props: Props) {
     await repos.customers.destroy(c.id, `删除客户「${c.name}」(入回收站)`);
     setOpenId(null);
     show("已移入回收站(30 天内可恢复)");
+    await props.reload();
+  }
+  function findDuplicates() {
+    const active = customers.filter((c) => !c.deletedAt);
+    const groups: Customer[][] = [];
+    const used = new Set<string>();
+    for (let i = 0; i < active.length; i++) {
+      if (used.has(active[i].id)) continue;
+      const group = [active[i]];
+      used.add(active[i].id);
+      const name1 = active[i].name.replace(/[\s（）()【】\[\]]/g, "");
+      for (let j = i + 1; j < active.length; j++) {
+        if (used.has(active[j].id)) continue;
+        const name2 = active[j].name.replace(/[\s（）()【】\[\]]/g, "");
+        if (name1 === name2 || name1.includes(name2) || name2.includes(name1) ||
+            (active[i].billingTaxNo && active[i].billingTaxNo === active[j].billingTaxNo)) {
+          group.push(active[j]); used.add(active[j].id);
+        }
+      }
+      if (group.length > 1) groups.push(group);
+    }
+    setDupGroups(groups); setDupOpen(true);
+  }
+  async function mergeCustomers(keep: Customer, remove: Customer) {
+    // 迁移商机/合同/回款/联系人到主客户
+    for (const d of props.deals.filter((x) => x.customerId === remove.id && !x.deletedAt)) {
+      await repos.deals.update(d.id, { customerId: keep.id }, "合并客户:迁移商机");
+    }
+    for (const ht of props.contracts.filter((x) => x.customerId === remove.id && !x.deletedAt)) {
+      await db.put("contracts", { ...ht, customerId: keep.id }, "合并客户:迁移合同");
+    }
+    for (const pm of props.payments.filter((x) => x.customerId === remove.id && !x.deletedAt)) {
+      await db.put("payments", { ...pm, customerId: keep.id }, "合并客户:迁移回款");
+    }
+    for (const rel of props.rels.filter((r) => r.customerId === remove.id && !r.deletedAt)) {
+      await repos.rels.update(rel.id, { customerId: keep.id }, "合并客户:迁移联系人关系");
+    }
+    await repos.customers.destroy(remove.id, "合并客户「" + remove.name + "」到「" + keep.name + "」");
+    show("已合并「" + remove.name + "」到「" + keep.name + "」");
+    setDupGroups((gs) => gs.map((g) => g.filter((c) => c.id !== remove.id)).filter((g) => g.length > 1));
     await props.reload();
   }
 
@@ -530,6 +572,7 @@ export default function CRM(props: Props) {
         <div><h1>客户管理</h1><div className="date">客户 {customers.length} · 在途商机 {deals.filter((d) => !["签约", "输单", "流失"].includes(d.stage)).length} 个 · 点击行查看客户详情</div></div>
         <div className="actions">
           <Btn kind="ghost" onClick={() => setImportOpen(true)}>批量导入</Btn>
+          <Btn kind="ghost" onClick={findDuplicates}>查找重复</Btn>
           <Btn kind="primary" onClick={() => setAddOpen(true)}><IconPlus size={14} /> 新增客户</Btn>
         </div>
       </div>
@@ -919,7 +962,28 @@ export default function CRM(props: Props) {
         </Modal>
       ) : null}
 
-      <ImportCustomers open={importOpen} onClose={() => setImportOpen(false)} existingNames={customers.map((c) => c.name)} reload={props.reload} />
+      <ImportCustomers open={importOpen} onClose={() => setImportOpen(false)} existingNames={customers.map((c) => c.name)} reload={props.reload} />
+      {dupOpen ? (
+        <Modal title="重复客户合并" onClose={() => setDupOpen(false)} footer={
+          <div className="grow"><Btn kind="ghost" onClick={() => setDupOpen(false)}>关闭</Btn></div>
+        }>
+          {dupGroups.length === 0 ? <p className="muted" style={{ textAlign: "center", padding: 20 }}>未发现重复客户</p> :
+            dupGroups.map((g, gi) => (
+              <div key={gi} style={{ marginBottom: 16, padding: 12, border: "1px solid var(--border)", borderRadius: 8 }}>
+                <div style={{ fontSize: "var(--text-sm)", fontWeight: 600, marginBottom: 8 }}>疑似重复组 ({g.length}个)</div>
+                {g.map((c) => (
+                  <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid var(--border)" }}>
+                    <span style={{ flex: 1, fontSize: "var(--text-sm)" }}>{c.name} <span className="muted">({c.industry} · {c.grade}级)</span></span>
+                    {g.indexOf(c) === 0 ? <Chip kind="green">保留</Chip> :
+                      <Btn kind="danger" sm onClick={() => { void mergeCustomers(g[0], c); }}>合并到首项</Btn>}
+                  </div>
+                ))}
+              </div>
+            ))
+          }
+          <p className="muted" style={{ fontSize: "var(--text-xs)", marginTop: 8 }}>合并会将从客户的商机/合同/回款/联系人迁移到主客户,然后软删除从客户。</p>
+        </Modal>
+      ) : null}
       {strategyEdit ? (
         <Modal title="客户媒介策略" onClose={() => setStrategyEdit(false)} footer={
           <div className="grow"><Btn kind="ghost" onClick={() => setStrategyEdit(false)}>取消</Btn><Btn kind="primary" onClick={() => { void saveStrategy(); }}>保存</Btn></div>

@@ -68,6 +68,9 @@ export default function Dev(props: Props) {
   }, []);
   const [pf, setPf] = useState({ name: "", customerId: "", date: new Date().toISOString().slice(0, 10), investment: "", competitors: "", result: "待定", lossReason: "", reviewNote: "" });
   const [aiPitchBusy, setAiPitchBusy] = useState(false);
+  const [dealOpen, setDealOpen] = useState(false);
+  const [editDealId, setEditDealId] = useState<string | null>(null);
+  const [df, setDf] = useState({ customerId: "", title: "", stage: "线索" as DealStage, value: "" });
 
   const deals = props.deals.filter((d) => !d.deletedAt);
   const nameOf = (id: string) => props.customers.find((c) => c.id === id)?.name ?? "未知客户";
@@ -140,15 +143,38 @@ export default function Dev(props: Props) {
   }
   async function submitPitch() {
     if (!pf.name.trim()) { show("比稿名称必填"); return; }
-    await db.put("pitches", {
-      id: uid("pi"), name: pf.name.trim(), customerId: pf.customerId || undefined,
-      date: pf.date, investment: Number(pf.investment) || 0, competitors: pf.competitors,
-      result: pf.result as Pitch["result"], lossReason: pf.lossReason || undefined, reviewNote: pf.reviewNote || undefined,
-    }, "新增比稿记录");
-    show("比稿已记录");
-    setPitchOpen(false);
+    if (editPitchId) {
+      await db.put("pitches", { id: editPitchId, name: pf.name.trim(), customerId: pf.customerId || undefined, date: pf.date, investment: Number(pf.investment) || 0, competitors: pf.competitors, result: pf.result as Pitch["result"], lossReason: pf.lossReason || undefined, reviewNote: pf.reviewNote || undefined }, "编辑比稿记录");
+      show("比稿已更新");
+    } else {
+      await db.put("pitches", { id: uid("pi"), name: pf.name.trim(), customerId: pf.customerId || undefined, date: pf.date, investment: Number(pf.investment) || 0, competitors: pf.competitors, result: pf.result as Pitch["result"], lossReason: pf.lossReason || undefined, reviewNote: pf.reviewNote || undefined }, "新增比稿记录");
+      show("比稿已记录");
+    }
+    setPitchOpen(false); setEditPitchId(null);
     setPf({ name: "", customerId: "", date: new Date().toISOString().slice(0, 10), investment: "", competitors: "", result: "待定", lossReason: "", reviewNote: "" });
     await props.reload();
+  }
+  function openNewDeal() {
+    if (props.customers.length === 0) { show("请先在客户管理中添加客户"); return; }
+    setDf({ customerId: props.customers[0].id, title: "", stage: "线索", value: "" });
+    setEditDealId(null); setDealOpen(true);
+  }
+  function openEditDeal(d: Deal) {
+    setDf({ customerId: d.customerId, title: d.title, stage: d.stage, value: String(d.value) });
+    setEditDealId(d.id); setDealOpen(true);
+  }
+  async function submitDeal() {
+    if (!df.customerId) { show("请选择客户"); return; }
+    if (!df.title.trim()) { show("商机名称必填"); return; }
+    const val = Number(df.value) || 0;
+    if (editDealId) {
+      await repos.deals.update(editDealId, { customerId: df.customerId, title: df.title.trim(), stage: df.stage, value: val, probability: probOf(df.stage) }, "编辑商机");
+      show("商机已更新");
+    } else {
+      await repos.deals.create({ customerId: df.customerId, title: df.title.trim(), stage: df.stage, value: val, probability: probOf(df.stage), lastTouchAt: Date.now() }, "新增商机");
+      show("商机已创建");
+    }
+    setDealOpen(false); setEditDealId(null);
   }
 
   /** P1:根据 WidgetDef 渲染商机详情具体 Widget */
@@ -249,7 +275,7 @@ export default function Dev(props: Props) {
           <div className="es-icon">&#128200;</div>
           <div className="es-title">暂无商机</div>
           <div className="es-desc">新增第一个商机，追踪从线索到签约的全过程</div>
-          <Btn kind="primary" onClick={() => show("请先在客户管理中添加客户")}><IconPlus size={14} /> 新增商机</Btn>
+          <Btn kind="primary" onClick={openNewDeal}><IconPlus size={14} /> 新增商机</Btn>
         </div>
       ) : (
       <>
@@ -321,7 +347,8 @@ export default function Dev(props: Props) {
                   </select>
                 </div>
               </div>
-              <Btn kind={editingLayout ? "data" : "ghost"} sm style={{ marginLeft: "auto" }} onClick={() => { if (editingLayout) void finishEditLayout(); else setEditingLayout(true); }}>{editingLayout ? "完成" : "编辑布局"}</Btn>
+              <Btn kind="ghost" sm style={{ marginLeft: "auto" }} onClick={() => openEditDeal(sel)}>编辑</Btn>
+              <Btn kind={editingLayout ? "data" : "ghost"} sm onClick={() => { if (editingLayout) void finishEditLayout(); else setEditingLayout(true); }}>{editingLayout ? "完成" : "编辑布局"}</Btn>
               <button className="icon-btn" onClick={() => setSelected(null)} aria-label="关闭"><IconClose size={16} /></button>
             </div>
             {/* Task3: deal path progress */}
@@ -491,6 +518,26 @@ export default function Dev(props: Props) {
             }}>{aiPitchBusy ? "…" : "✦"}</Btn>
           </div>
         </Field>
+        </Modal>
+      ) : null}
+      {dealOpen ? (
+        <Modal title={editDealId ? "编辑商机" : "新增商机"} onClose={() => { setDealOpen(false); setEditDealId(null); }} footer={
+          <div className="grow"><Btn kind="ghost" onClick={() => { setDealOpen(false); setEditDealId(null); }}>取消</Btn><Btn kind="primary" onClick={() => { void submitDeal(); }}>保存</Btn></div>
+        }>
+          <Field label="客户">
+            <select className="sel" style={{ width: "100%" }} value={df.customerId} onChange={(e) => setDf({ ...df, customerId: e.target.value })}>
+              {props.customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </Field>
+          <Field label="商机名称"><input className="inp" style={{ width: "100%" }} value={df.title} onChange={(e) => setDf({ ...df, title: e.target.value })} placeholder="如:双11整合投放" /></Field>
+          <div className="field-row">
+            <Field label="阶段">
+              <select className="sel" style={{ width: "100%" }} value={df.stage} onChange={(e) => setDf({ ...df, stage: e.target.value as DealStage })}>
+                {STAGES.map((s) => <option key={s} value={s}>{stageLabel(s)}({Math.round(probOf(s) * 100)}%)</option>)}
+              </select>
+            </Field>
+            <Field label="金额(元)"><input className="inp num" style={{ width: "100%" }} value={df.value} onChange={(e) => setDf({ ...df, value: e.target.value })} placeholder="0" /></Field>
+          </div>
         </Modal>
       ) : null}
       {node}
