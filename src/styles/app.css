@@ -390,10 +390,10 @@ html[data-titlebar="integrated"] .topbar .filter-input { -webkit-app-region: no-
 .empty-state .es-desc{font-size:var(--text-sm);color:var(--ink-3);max-width:380px;margin-bottom:18px;line-height:1.6}
 
 /* === AI助手悬浮面板(复刻NocoBase AI Employees) === */
-.ai-fab{position:fixed;right:20px;bottom:20px;width:52px;height:52px;border-radius:50%;background:var(--brand);color:#fff;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;z-index:9999;transition:transform var(--t-fast),box-shadow var(--t-fast)}
-.ai-fab:hover{transform:scale(1.08);box-shadow:0 6px 20px rgba(0,0,0,.35)}
-.ai-fab-icon{font-size:24px;line-height:1}
-.ai-panel{position:fixed;right:20px;bottom:20px;width:380px;height:560px;max-height:calc(100vh - 40px);background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.3);display:flex;flex-direction:column;z-index:9999;overflow:hidden}
+.ai-fab{position:fixed;right:16px;bottom:16px;width:40px;height:40px;border-radius:50%;background:var(--brand);color:#fff;border:none;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;z-index:9999;transition:transform var(--t-fast),box-shadow var(--t-fast)}
+.ai-fab:hover{transform:scale(1.08);box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.ai-fab-icon{font-size:18px;line-height:1}
+.ai-panel{position:fixed;right:16px;bottom:16px;width:360px;height:520px;max-height:calc(100vh - 32px);background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.3);display:flex;flex-direction:column;z-index:9999;overflow:hidden}
 .ai-panel-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface-2)}
 .ai-panel-title{display:flex;align-items:center;gap:8px}
 .ai-emp-emoji{font-size:20px;line-height:1}
