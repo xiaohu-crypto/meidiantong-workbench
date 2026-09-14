@@ -2,12 +2,12 @@ import { validateCustomer, type Errors, GRADES } from "./validators";
 
 /** 列名同义词匹配(规则引擎,即需求所称"AI 匹配"的确定性实现) */
 const SYNONYMS: Record<string, string[]> = {
-  name: ["客户名称", "名称", "客户", "公司", "公司名称", "客户名", "单位", "企业名称", "企业"],
-  industry: ["行业", "所属行业", "品类"],
-  grade: ["等级", "客户等级", "级别", "分级"],
-  phone: ["手机", "手机号", "电话", "联系电话", "联系方式"],
-  billingTitle: ["开票抬头", "发票抬头", "抬头"],
-  billingTaxNo: ["税号", "纳税号", "纳税人识别号"],
+  name: ["客户名称", "名称", "客户", "公司", "公司名称", "客户名", "单位", "企业名称", "企业", "公司全称", "单位名称", "客户公司", "企业全称", "客户全称", "机构名称", "组织名称", "客户单位", "品牌名称", "品牌方"],
+  industry: ["行业", "所属行业", "品类", "行业分类", "行业类别", "所属品类", "业务领域", "赛道", "类目", "品类名称", "细分行业", "产业"],
+  grade: ["等级", "客户等级", "级别", "分级", "客户级别", "客户分级", "VIP等级", "客户分层", "重要程度", "客户星级", "优先级"],
+  phone: ["手机", "手机号", "电话", "联系电话", "联系方式", "联系人电话", "手机电话", "办公电话", "座机", "联系号码", "电话号码", "手机/电话", "联络方式"],
+  billingTitle: ["开票抬头", "发票抬头", "抬头", "发票公司", "开票名称", "发票单位", "开票单位"],
+  billingTaxNo: ["税号", "纳税号", "纳税人识别号", "统一社会信用代码", "税务登记号", "税号/统一信用代码", "社会信用代码"],
 };
 
 export function columnMatch(headers: string[]): Record<string, number> {
@@ -29,6 +29,7 @@ export interface ImportRow {
   phone: string;
   billingTitle: string;
   billingTaxNo: string;
+  extra?: Record<string, unknown>;
 }
 
 /** 逐行校验:批次内重名累加进已存在集合;返回成功集与失败明细 */
@@ -87,8 +88,8 @@ export async function parseExcelSheets(buf: ArrayBuffer): Promise<SheetData[]> {
   });
 }
 
-/** 自动检测表头行:扫描前 10 行,跳过单行大标题(非空单元格<2),取匹配同义词最多的行;找不到返回 0 */
-export function detectHeaderRow(aoa: unknown[][], maxScan = 10): number {
+/** 自动检测表头行:扫描前 15 行,跳过单行大标题(非空单元格<2),取匹配同义词最多的行;匹配≥3直接返回 */
+export function detectHeaderRow(aoa: unknown[][], maxScan = 15): number {
   const allWords = Object.values(SYNONYMS).flat();
   const scan = Math.min(maxScan, aoa.length);
   let bestRow = 0;
@@ -101,7 +102,7 @@ export function detectHeaderRow(aoa: unknown[][], maxScan = 10): number {
     for (const c of cells) {
       if (c && allWords.some((w) => c === w || c.includes(w))) score++;
     }
-    if (score > bestScore) { bestScore = score; bestRow = i; }
+    if (score > bestScore) { bestScore = score; bestRow = i; if (score >= 3) break; }
   }
   return bestRow;
 }
@@ -195,19 +196,30 @@ export async function parseAnyFile(file: File): Promise<ParsedFile> {
   return { format: "unknown", sheets: [], headerRow: 0, warning: "不支持的文件格式" };
 }
 
-/** 从 ParsedFile + 选中 sheet 提取 ImportRow[] */
-export function rowsFromSheet(parsed: ParsedFile, sheetIdx: number): { headers: string[]; rows: ImportRow[]; mapping: Record<string, number> } {
+/** 从 ParsedFile + 选中 sheet 提取 ImportRow[];未匹配的列自动存入 extra(对应 customer.custom) */
+export function rowsFromSheet(parsed: ParsedFile, sheetIdx: number): { headers: string[]; rows: ImportRow[]; mapping: Record<string, number>; unmatchedCols: string[] } {
   const sheet = parsed.sheets[sheetIdx];
   const { headers, rows: rawRows } = extractFromAoa(sheet.aoa, parsed.headerRow);
   const mapping = columnMatch(headers);
-  const rows: ImportRow[] = rawRows.map((r, i) => ({
-    row: i + parsed.headerRow + 2,
-    name: mapping.name !== undefined ? String(r[mapping.name] ?? "").trim() : "",
-    industry: mapping.industry !== undefined ? String(r[mapping.industry] ?? "").trim() : "",
-    grade: mapping.grade !== undefined ? String(r[mapping.grade] ?? "").trim().toUpperCase() : "",
-    phone: mapping.phone !== undefined ? String(r[mapping.phone] ?? "").trim() : "",
-    billingTitle: mapping.billingTitle !== undefined ? String(r[mapping.billingTitle] ?? "").trim() : "",
-    billingTaxNo: mapping.billingTaxNo !== undefined ? String(r[mapping.billingTaxNo] ?? "").trim() : "",
-  })).filter((r) => r.name !== "");
-  return { headers, rows, mapping };
+  const matchedIdx = new Set(Object.values(mapping));
+  const unmatchedCols = headers.map((h, i) => matchedIdx.has(i) ? null : h).filter((h): h is string => !!h && h.trim() !== "");
+  const rows: ImportRow[] = rawRows.map((r, i) => {
+    const extra: Record<string, unknown> = {};
+    for (const h of unmatchedCols) {
+      const ci = headers.indexOf(h);
+      const v = r[ci];
+      if (v !== undefined && v !== null && String(v).trim() !== "") extra[h] = v;
+    }
+    return {
+      row: i + parsed.headerRow + 2,
+      name: mapping.name !== undefined ? String(r[mapping.name] ?? "").trim() : "",
+      industry: mapping.industry !== undefined ? String(r[mapping.industry] ?? "").trim() : "",
+      grade: mapping.grade !== undefined ? String(r[mapping.grade] ?? "").trim().toUpperCase() : "",
+      phone: mapping.phone !== undefined ? String(r[mapping.phone] ?? "").trim() : "",
+      billingTitle: mapping.billingTitle !== undefined ? String(r[mapping.billingTitle] ?? "").trim() : "",
+      billingTaxNo: mapping.billingTaxNo !== undefined ? String(r[mapping.billingTaxNo] ?? "").trim() : "",
+      extra: Object.keys(extra).length > 0 ? extra : undefined,
+    };
+  }).filter((r) => r.name !== "");
+  return { headers, rows, mapping, unmatchedCols };
 }

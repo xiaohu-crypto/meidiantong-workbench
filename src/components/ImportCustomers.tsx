@@ -17,6 +17,8 @@ export default function ImportCustomers(props: Props) {
   const [mapping, setMapping] = useState<Record<string, number>>({});
   const [headers, setHeaders] = useState<string[]>([]);
   const [rows, setRows] = useState<ImportRow[]>([]);
+  const [unmatchedCols, setUnmatchedCols] = useState<string[]>([]);
+  const [importAllSheets, setImportAllSheets] = useState(false);
   const [fileName, setFileName] = useState("");
   const [result, setResult] = useState<{ ok: number; fail: number; ids: string[]; fails: { row: number; name: string; errors: Record<string, string> }[] } | null>(null);
   const { show, node } = useToast();
@@ -25,8 +27,8 @@ export default function ImportCustomers(props: Props) {
 
   function recompute(p: ParsedFile, sIdx: number, hRow: number) {
     const patched = { ...p, headerRow: hRow };
-    const { headers: hs, rows: rs, mapping: m } = rowsFromSheet(patched, sIdx);
-    setHeaders(hs); setRows(rs); setMapping(m);
+    const { headers: hs, rows: rs, mapping: m, unmatchedCols: uc } = rowsFromSheet(patched, sIdx);
+    setHeaders(hs); setRows(rs); setMapping(m); setUnmatchedCols(uc);
   }
 
   async function onFile(f: File) {
@@ -87,15 +89,31 @@ export default function ImportCustomers(props: Props) {
     props.onClose();
   }
 
+  function getAllRows(): ImportRow[] {
+    if (!parsed) return [];
+    if (!importAllSheets) return rows;
+    const all: ImportRow[] = [];
+    parsed.sheets.forEach((s, idx) => {
+      if (s.aoa.length < 2) return;
+      const hr = detectHeaderRow(s.aoa);
+      const patched = { ...parsed, headerRow: hr };
+      const { rows: rs } = rowsFromSheet(patched, idx);
+      all.push(...rs);
+    });
+    return all;
+  }
+
   async function confirmImport() {
-    const pre = parseRows(rows, props.existingNames);
+    const allRows = getAllRows();
+    const pre = parseRows(allRows, props.existingNames);
     const ids: string[] = [];
     for (let i = 0; i < pre.ok.length; i += 1000) {
-      const chunk = pre.ok.slice(i, i + 1000).map((r) => ({ id: uid("c"), name: r.name, industry: r.industry || "待补充", grade: (r.grade || "C") as "S" | "A" | "B" | "C", phone: r.phone || undefined, billingTitle: r.billingTitle || undefined, billingTaxNo: r.billingTaxNo || undefined }));
+      const chunk = pre.ok.slice(i, i + 1000).map((r) => ({ id: uid("c"), name: r.name, industry: r.industry || "待补充", grade: (r.grade || "C") as "S" | "A" | "B" | "C", phone: r.phone || undefined, billingTitle: r.billingTitle || undefined, billingTaxNo: r.billingTaxNo || undefined, custom: r.extra }));
       await db.putMany("customers", chunk);
       for (const c of chunk) ids.push(c.id);
     }
-    if (ids.length > 0) await db.logOp({ what: "批量导入 " + ids.length + " 条客户(" + fileName + ")", entityType: "customers", entityId: ids[0], before: null });
+    const scope = importAllSheets ? `全部${parsed?.sheets.length ?? 0}个Sheet` : "当前Sheet";
+    if (ids.length > 0) await db.logOp({ what: "批量导入 " + ids.length + " 条客户(" + fileName + "," + scope + ")", entityType: "customers", entityId: ids[0], before: null });
     setResult({ ok: pre.ok.length, fail: pre.fails.length, ids, fails: pre.fails });
     setPhase("done");
     await props.reload();
@@ -119,27 +137,38 @@ export default function ImportCustomers(props: Props) {
           )}
           {phase === "preview" && parsed && (
             <>
-              <div className="h-row" style={{ marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
+              <div className="h-row" style={{ marginBottom: 8, flexWrap: "wrap", gap: 8, alignItems: "center" }}>
                 <span className="chip data">{formatLabel[parsed.format]}</span>
                 <span className="muted" style={{ fontSize: "var(--text-xs)" }}>{fileName}</span>
                 {parsed.sheets.length > 1 ? (
-                  <label style={{ fontSize: "var(--text-sm)", display: "flex", alignItems: "center", gap: 6 }}>
-                    Sheet:
-                    <select className="sel" value={sheetIdx} onChange={(e) => onSheetChange(Number(e.target.value))} style={{ minHeight: 28 }}>
-                      {parsed.sheets.map((s, i) => <option key={s.name} value={i}>{s.name} ({s.aoa.length} 行)</option>)}
-                    </select>
-                  </label>
+                  <>
+                    <label style={{ fontSize: "var(--text-sm)", display: "flex", alignItems: "center", gap: 6 }}>
+                      Sheet:
+                      <select className="sel" value={sheetIdx} onChange={(e) => onSheetChange(Number(e.target.value))} style={{ minHeight: 28 }} disabled={importAllSheets}>
+                        {parsed.sheets.map((s, i) => <option key={s.name} value={i}>{s.name} ({s.aoa.length} 行)</option>)}
+                      </select>
+                    </label>
+                    <label style={{ fontSize: "var(--text-sm)", display: "flex", alignItems: "center", gap: 4, cursor: "pointer" }}>
+                      <input type="checkbox" checked={importAllSheets} onChange={(e) => setImportAllSheets(e.target.checked)} />
+                      合并导入全部 {parsed.sheets.length} 个 Sheet
+                    </label>
+                  </>
                 ) : null}
                 <label style={{ fontSize: "var(--text-sm)", display: "flex", alignItems: "center", gap: 6 }}>
                   表头行:
-                  <input type="number" min={0} max={9} value={headerRow} onChange={(e) => onHeaderRowChange(Number(e.target.value))} style={{ width: 56, minHeight: 28 }} className="inp num" />
+                  <input type="number" min={0} max={14} value={headerRow} onChange={(e) => onHeaderRowChange(Number(e.target.value))} style={{ width: 56, minHeight: 28 }} className="inp num" disabled={importAllSheets} />
                 </label>
-                <span className="muted" style={{ marginLeft: "auto", fontSize: "var(--text-xs)" }}>共识别 {rows.length} 行有效数据</span>
+                <span className="muted" style={{ marginLeft: "auto", fontSize: "var(--text-xs)" }}>共识别 {importAllSheets ? getAllRows().length : rows.length} 行有效数据</span>
               </div>
               {parsed.warning ? <p className="muted" style={{ fontSize: "var(--text-xs)", color: "var(--warning)", marginBottom: 8 }}>{parsed.warning}</p> : null}
+              {unmatchedCols.length > 0 && !importAllSheets ? (
+                <p className="muted" style={{ fontSize: "var(--text-xs)", color: "var(--data)", marginBottom: 8 }}>
+                  未匹配列(将存入自定义字段): {unmatchedCols.slice(0, 8).join("、")}{unmatchedCols.length > 8 ? " 等" + unmatchedCols.length + "列" : ""}
+                </p>
+              ) : null}
               <div className="h-row"><span className="h-title sm">列匹配预览</span></div>
               <table className="tgrid">
-                <thead><tr><th>工程字段</th><th>匹配到的表头</th></tr></thead>
+                <thead><tr><th>系统字段</th><th>匹配到的表头</th></tr></thead>
                 <tbody>
                   {Object.entries(mapping).map(([field, idx]) => (
                     <tr key={field} style={{ cursor: "default" }}><td><b>{field}</b></td><td>{headers[idx] ?? "—"}</td></tr>
@@ -161,8 +190,8 @@ export default function ImportCustomers(props: Props) {
                 </div>
               ) : null}
               <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                <Btn kind="primary" disabled={rows.length === 0} onClick={() => { void confirmImport(); }}>确认导入 {rows.length} 条</Btn>
-                <Btn kind="ghost" onClick={() => { setPhase("pick"); setParsed(null); }}>重选文件</Btn>
+                <Btn kind="primary" disabled={getAllRows().length === 0} onClick={() => { void confirmImport(); }}>确认导入 {getAllRows().length} 条</Btn>
+                <Btn kind="ghost" onClick={() => { setPhase("pick"); setParsed(null); setImportAllSheets(false); }}>重选文件</Btn>
               </div>
             </>
           )}
