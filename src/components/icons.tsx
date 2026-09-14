@@ -45,4 +45,6 @@ export function IconWallet(p: IconProps) { return base(p.size, p.className, <><r
 export function IconFlag(p: IconProps) { return base(p.size, p.className, <><path d="M6 21V4" /><path d="M6 5h11l-2.5 3.5L17 12H6" /></>); }
 export function IconHelp(p: IconProps) { return base(p.size, p.className, <><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 0 1 4.8 1c0 1.7-2.3 2-2.3 3.5" /><path d="M12 17.5h.01" /></>); }
 export function IconGrid(p: IconProps) { return base(p.size, p.className, <><rect x="3.5" y="3.5" width="7" height="7" rx="1.5" /><rect x="13.5" y="3.5" width="7" height="7" rx="1.5" /><rect x="3.5" y="13.5" width="7" height="7" rx="1.5" /><rect x="13.5" y="13.5" width="7" height="7" rx="1.5" /></>); }
+export function IconLayout(p: IconProps) { return base(p.size, p.className, <><rect x="3.5" y="4.5" width="17" height="15" rx="2" /><path d="M3.5 9.5h17M9 9.5v10" /></>); }
+export function IconBot(p: IconProps) { return base(p.size, p.className, <><rect x="4.5" y="7" width="15" height="11" rx="3" /><path d="M12 7V4M9 2.5h6M9 12h.01M15 12h.01M9 15.5h6" /></>); }
 export function IconClock(p: IconProps) { return base(p.size, p.className, <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></>); }

@@ -24,7 +24,7 @@ function ensureBuiltin() {
   }
 }
 
-export function Builder() {
+export function Builder({ initialPageUid }: { initialPageUid?: string | null }) {
   const t = useT();
   ensureBuiltin();
 
@@ -36,6 +36,21 @@ export function Builder() {
   const [dropIdx, setDropIdx] = useState<number | null>(null);
 
   useEffect(() => { void refreshPages(); }, []);
+
+  // 从外部（我的页面"编辑"）载入指定已保存页面
+  useEffect(() => {
+    if (!initialPageUid) return;
+    let cancelled = false;
+    void (async () => {
+      const m = await loadPage(initialPageUid);
+      if (!cancelled && m) {
+        setPage(m);
+        setSelected(null);
+        setSaved(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [initialPageUid]);
 
   async function refreshPages() {
     setSavedPages(await listPageSummaries());
