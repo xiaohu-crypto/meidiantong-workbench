@@ -55,3 +55,6 @@ release-check/
 
 # Electron
 electron-builder/
+
+# 构建产物误提取到根目录的保护
+/index-*.js
