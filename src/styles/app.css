@@ -110,6 +110,8 @@ html.focus-mode .brand{justify-content:center;padding-left:8px;padding-right:8px
 .filter-input input{flex:1;border:none;outline:none;background:transparent;font-size:var(--text-sm);color:var(--ink);min-width:0}
 select.sel,input.inp,textarea.inp{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:6px 10px;font-size:var(--text-sm);color:var(--ink);outline:none;min-height:36px}
 select.sel:focus,input.inp:focus,textarea.inp:focus{border-color:var(--data)}
+/* 弹窗/抽屉内 textarea 只允许垂直调整,防止水平拖拽触发遮罩关闭 */
+.modal textarea,.crm-detail textarea,.drawer textarea{resize:vertical}
 
 table.tgrid{width:100%;border-collapse:collapse}
 .tgrid-wrap{overflow-x:auto}

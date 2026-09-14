@@ -5,7 +5,7 @@ import { repos } from "../core/data/repository";
 import { funnel } from "../core/metrics";
 import { healthOf, latestTouch, customerStage, type CustomerStage } from "../core/derive";
 import { validateCustomer } from "../core/validators";
-import type { Contact, ContactPoint, Contract, Customer, Deal, Payment, Rel, Task } from "../types";
+import type { Contact, ContactPoint, Contract, Customer, Deal, Payment, Rel, RelRole, Task } from "../types";
 import { Btn, Chip, money, Modal, Field, useToast } from "../ui/common";
 import { IconClose, IconPlus, IconSearch, IconUsers } from "../components/icons";
 import ImportCustomers from "../components/ImportCustomers";
@@ -88,6 +88,8 @@ export default function CRM(props: Props) {
   const [industry, setIndustry] = useState("");
   const [sortKey, setSortKey] = useState<"name" | "health" | "deal">("name");
   const [stageFilter, setStageFilter] = useState<"" | CustomerStage>("");
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 50;
   const [openId, setOpenId] = useState<string | null>(props.focusCustomerId ?? null);
   const [timeline, setTimeline] = useState<{ ts: number; kind: string; title: string }[]>([]);
   useEffect(() => {
@@ -132,6 +134,18 @@ export default function CRM(props: Props) {
   const [strategyDraft, setStrategyDraft] = useState({ audience: "", budget: "", mix: "", resources: "", note: "" });
   const [cpOpen, setCpOpen] = useState(false);
   const [cpForm, setCpForm] = useState<{ channel: ContactPoint["channel"]; summary: string }>({ channel: "微信", summary: "" });
+
+  const [contactOpen, setContactOpen] = useState(false);
+  const [contactForm, setContactForm] = useState({ name: "", phone: "", title: "", role: "影响者" as RelRole, wechat: "" });
+  async function saveContact() {
+    if (!drawerC) return;
+    if (!contactForm.name.trim()) { show("联系人姓名必填"); return; }
+    const contact = await repos.contacts.create({ name: contactForm.name.trim(), phone: contactForm.phone || undefined, wechat: contactForm.wechat || undefined, title: contactForm.title || undefined, orgCustomerId: drawerC.id, employmentStatus: "在职" }, "添加联系人");
+    await repos.rels.create({ contactId: contact.id, customerId: drawerC.id, role: contactForm.role }, "关联联系人");
+    show("联系人已添加");
+    setContactOpen(false); setContactForm({ name: "", phone: "", title: "", role: "影响者", wechat: "" });
+    await props.reload();
+  }
   function openStrategyEdit() {
     if (!drawerC) return;
     const s = ((drawerC.custom ?? {}) as Record<string, Record<string, string>>).mediaStrategy ?? {};
@@ -204,6 +218,8 @@ export default function CRM(props: Props) {
     setAskInput("");
   }
   const [addOpen, setAddOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editCid, setEditCid] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [density, setDensity] = useState<Density>("舒适");
   const [vc, setVc] = useState<Record<string, boolean>>(DEFAULT_COLS);
@@ -260,6 +276,11 @@ export default function CRM(props: Props) {
     });
   }, [customers, industry, q, sortKey, stageFilter, props.cps, payments, deals, props.contracts]);
 
+  /* 筛选条件变化时重置分页 */
+  useEffect(() => { setPage(0); }, [q, industry, stageFilter, sortKey, groupBy]);
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const pagedRows = rows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
   const f = funnel(deals);
   const open = openId ? customers.find((c) => c.id === openId) ?? null : null;
 
@@ -274,14 +295,28 @@ export default function CRM(props: Props) {
     show("列显示已保存");
   }
 
+  function openEdit(c: Customer) {
+    const next: Record<string, string> = { name: c.name, industry: c.industry, grade: c.grade, billingTitle: c.billingTitle ?? "", billingTaxNo: c.billingTaxNo ?? "" };
+    for (const cf of custFields) next["cf_" + cf.key] = String((c.custom ?? {})[cf.key] ?? "");
+    setForm(next); setErrs({});
+    setEditMode(true); setEditCid(c.id); setAddOpen(true);
+  }
   async function submitAdd() {
-    const errs = validateCustomer({ name: form.name, industry: form.industry, grade: form.grade, billingTaxNo: form.billingTaxNo || undefined }, customers.map((c) => c.name));
+    const existingForCheck = editMode ? customers.filter((c) => c.id !== editCid).map((c) => c.name) : customers.map((c) => c.name);
+    const errs = validateCustomer({ name: form.name, industry: form.industry, grade: form.grade, billingTaxNo: form.billingTaxNo || undefined }, existingForCheck);
     if (Object.keys(errs).length) { setErrs(errs); return; }
     const custom: Record<string, unknown> = {};
     for (const cf of custFields) custom[cf.key] = form["cf_" + cf.key] ?? "";
-    await repos.customers.create({ name: form.name.trim(), industry: form.industry || "待补充", grade: form.grade as Customer["grade"], billingTitle: form.billingTitle || undefined, billingTaxNo: form.billingTaxNo || undefined, custom }, "新增客户");
-    show("客户已建档");
-    setAddOpen(false); setForm({ name: "", industry: "", grade: "C", billingTitle: "", billingTaxNo: "" }); setErrs({});
+    if (editMode && editCid) {
+      const orig = customers.find((c) => c.id === editCid);
+      const mergedCustom = { ...(orig?.custom ?? {}), ...custom };
+      await repos.customers.update(editCid, { name: form.name.trim(), industry: form.industry || "待补充", grade: form.grade as Customer["grade"], billingTitle: form.billingTitle || undefined, billingTaxNo: form.billingTaxNo || undefined, custom: mergedCustom }, "编辑客户「" + form.name + "」");
+      show("客户信息已更新");
+    } else {
+      await repos.customers.create({ name: form.name.trim(), industry: form.industry || "待补充", grade: form.grade as Customer["grade"], billingTitle: form.billingTitle || undefined, billingTaxNo: form.billingTaxNo || undefined, custom }, "新增客户");
+      show("客户已建档");
+    }
+    setAddOpen(false); setForm({ name: "", industry: "", grade: "C", billingTitle: "", billingTaxNo: "" }); setErrs({}); setEditMode(false); setEditCid(null);
     await props.reload();
   }
 
@@ -380,12 +415,15 @@ export default function CRM(props: Props) {
           { label: "在途商机", value: drawerDeals.filter((d) => !["输单", "流失"].includes(d.stage)).length + " 个" },
           { label: "累计商机额", value: money(drawerDeals.reduce((s, d) => s + d.value, 0)) },
           ...custFields.map((cf) => ({ label: cf.label, value: String((drawerC.custom ?? {})[cf.key] ?? "—") })),
+          ...Object.entries(drawerC.custom ?? {})
+            .filter(([k, v]) => k !== "mediaStrategy" && typeof v !== "object" && v !== null && v !== undefined && !custFields.some((cf) => cf.key === k))
+            .map(([k, v]) => ({ label: k, value: String(v) })),
         ]} editing={editingLayout} visibleFields={baseVisible} onVisibleFieldsChange={setBaseVisibleFields} />
       );
     }
     if (w.type === "related" && w.id === "contacts") {
       return (
-        <RelatedListWidget title="决策链联系人" emptyText="暂无联系人关联" items={drawerContacts.map(({ rel, contact }) => ({
+        <RelatedListWidget title="决策链联系人" emptyText="暂无联系人关联,点击右上角新增" onAdd={() => setContactOpen(true)} items={drawerContacts.map(({ rel, contact }) => ({
           id: rel.id,
           title: contact?.name ?? "未命名",
           sub: (contact?.title ?? "") + (contact?.phone ? " · " + contact.phone : ""),
@@ -623,7 +661,7 @@ export default function CRM(props: Props) {
                   return [headerRow, ...groupRows];
                 })
               ) : (
-                rows.map((c) => {
+                pagedRows.map((c) => {
                   const h = healthOf(c.id, props.cps, payments);
                   const activeDeals = deals.filter((d) => d.customerId === c.id && !["签约", "输单", "流失"].includes(d.stage));
                   const lt = latestTouch(c.id, props.cps);
@@ -664,6 +702,17 @@ export default function CRM(props: Props) {
               ) : null}
             </tbody>
           </table>
+          {rows.length > PAGE_SIZE ? (
+            <div className="h-row" style={{ padding: "10px 12px", borderTop: "1px solid var(--border)", justifyContent: "space-between" }}>
+              <span className="muted" style={{ fontSize: "var(--text-xs)" }}>共 {rows.length} 条 · 第 {page + 1}/{totalPages} 页</span>
+              <div style={{ display: "flex", gap: 6 }}>
+                <Btn kind="ghost" sm disabled={page === 0} onClick={() => setPage(0)}>首页</Btn>
+                <Btn kind="ghost" sm disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>上一页</Btn>
+                <Btn kind="ghost" sm disabled={page >= totalPages - 1} onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}>下一页</Btn>
+                <Btn kind="ghost" sm disabled={page >= totalPages - 1} onClick={() => setPage(totalPages - 1)}>末页</Btn>
+              </div>
+            </div>
+          ) : null}
         </div>
         )}
       </div>
@@ -681,7 +730,8 @@ export default function CRM(props: Props) {
                   {drawerC.parentId ? <Chip>属集团 {nameOf(drawerC.parentId)}</Chip> : null}
                 </div>
               </div>
-              <Btn kind={editingLayout ? "data" : "ghost"} sm style={{ marginLeft: "auto" }} onClick={() => { if (editingLayout) void finishEditLayout(); else setEditingLayout(true); }}>{editingLayout ? "完成" : "编辑布局"}</Btn>
+              <Btn kind="ghost" sm style={{ marginLeft: "auto" }} onClick={() => openEdit(drawerC)}>编辑</Btn>
+              <Btn kind={editingLayout ? "data" : "ghost"} sm onClick={() => { if (editingLayout) void finishEditLayout(); else setEditingLayout(true); }}>{editingLayout ? "完成" : "编辑布局"}</Btn>
               <button className="icon-btn" onClick={() => setOpenId(null)} aria-label="返回"><IconClose size={16} /></button>
               <Btn sm kind="ghost" onClick={() => setOpenId(null)}>← 返回</Btn>
             </div>
@@ -779,9 +829,9 @@ export default function CRM(props: Props) {
       </div>
 
       {addOpen ? (
-        <Modal title="新增客户" onClose={() => setAddOpen(false)} footer={
+        <Modal title={editMode ? "编辑客户" : "新增客户"} onClose={() => { setAddOpen(false); setEditMode(false); setEditCid(null); }} footer={
           <div className="grow">
-            <Btn kind="ghost" onClick={() => setAddOpen(false)}>取消</Btn>
+            <Btn kind="ghost" onClick={() => { setAddOpen(false); setEditMode(false); setEditCid(null); }}>取消</Btn>
             <Btn kind="primary" onClick={() => { void submitAdd(); }}>保存</Btn>
           </div>
         }>
@@ -828,6 +878,25 @@ export default function CRM(props: Props) {
             </select>
           </Field>
           <Field label="内容"><textarea className="inp" rows={3} style={{ width: "100%" }} value={cpForm.summary} onChange={(e) => setCpForm({ ...cpForm, summary: e.target.value })} placeholder="本次沟通要点…" /></Field>
+        </Modal>
+      ) : null}
+      {contactOpen && drawerC ? (
+        <Modal title={"添加联系人 · " + drawerC.name} onClose={() => setContactOpen(false)} footer={
+          <div className="grow"><Btn kind="ghost" onClick={() => setContactOpen(false)}>取消</Btn><Btn kind="primary" onClick={() => { void saveContact(); }}>保存</Btn></div>
+        }>
+          <Field label="姓名"><input className="inp" style={{ width: "100%" }} value={contactForm.name} onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })} placeholder="必填" /></Field>
+          <div className="field-row">
+            <Field label="职位"><input className="inp" style={{ width: "100%" }} value={contactForm.title} onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })} placeholder="如:市场总监" /></Field>
+            <Field label="角色">
+              <select className="sel" style={{ width: "100%" }} value={contactForm.role} onChange={(e) => setContactForm({ ...contactForm, role: e.target.value as RelRole })}>
+                {(["决策人DM", "影响者", "使用者", "把关人", "审批人"] as const).map((r) => <option key={r}>{r}</option>)}
+              </select>
+            </Field>
+          </div>
+          <div className="field-row">
+            <Field label="电话"><input className="inp" style={{ width: "100%" }} value={contactForm.phone} onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })} /></Field>
+            <Field label="微信"><input className="inp" style={{ width: "100%" }} value={contactForm.wechat} onChange={(e) => setContactForm({ ...contactForm, wechat: e.target.value })} /></Field>
+          </div>
         </Modal>
       ) : null}
       {colsOpen ? (
