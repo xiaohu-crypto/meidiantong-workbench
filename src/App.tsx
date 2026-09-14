@@ -22,6 +22,7 @@ import QuickCapture from "./components/QuickCapture";
 import TopSearch from "./components/TopSearch";
 import Onboarding from "./components/Onboarding";
 import NotificationPanel from "./components/NotificationPanel";
+import AIAssistant from "./components/AIAssistant";
 import { Btn, Modal } from "./ui/common";
 import {
   IconHome, IconUsers, IconTask, IconKb, IconFunnel, IconToday,
@@ -364,6 +365,7 @@ export default function App() {
           <p>已发现新版本 v{updateVer}，重启后将自动完成更新。</p>
         </Modal>
       ) : null}
+      <AIAssistant currentPage={NAV.find((n) => n.key === view)?.label ?? view} />
     </div>
   );
 }
