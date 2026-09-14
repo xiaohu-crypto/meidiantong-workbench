@@ -19,6 +19,12 @@ function str(props: Record<string, unknown> | undefined, key: string, fallback =
   return v === undefined || v === null ? fallback : String(v);
 }
 
+/** 从props安全取字段白名单（构建器"选择字段"配置） */
+function fieldsProp(model: FlowModel): string[] | undefined {
+  const f = model.props?.fields;
+  return Array.isArray(f) ? f.map(String) : undefined;
+}
+
 /** 注册内置BlockModel */
 export function registerBuiltinModels(): void {
   modelRegistry.register("PageModel", (model, ctx) => (
@@ -34,6 +40,7 @@ export function registerBuiltinModels(): void {
       title={str(model.props, "title")}
       pageSize={Number(model.props?.pageSize ?? 20)}
       editable={model.props?.editable !== false}
+      fields={fieldsProp(model)}
       notify={ctx.notify}
       onOpenDetail={(id) => ctx.openDetail(str(model.props, "store"), id)}
     />
@@ -43,6 +50,7 @@ export function registerBuiltinModels(): void {
     <FormBlock
       store={str(model.props, "store")}
       recordId={model.props?.recordId ? String(model.props.recordId) : null}
+      fields={fieldsProp(model)}
       notify={ctx.notify}
     />
   ));
@@ -64,6 +72,7 @@ export function registerBuiltinModels(): void {
     <DetailsBlock
       store={str(model.props, "store")}
       recordId={model.props?.recordId ? String(model.props.recordId) : null}
+      fields={fieldsProp(model)}
     />
   ));
 

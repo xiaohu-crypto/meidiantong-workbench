@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from "react";
 import { getCollection, listCollectionsAll, type CollectionDef } from "../../core/data/collections";
+import { onDataChanged } from "../../core/events";
 import { Btn, Field } from "../../ui/common";
 import { useT } from "../../core/i18n/useT";
 import type { FlowModel } from "../../core/model/model";
@@ -19,13 +20,15 @@ interface SettingsPanelProps {
   onDeleteBlock: (uid: string) => void;
 }
 
-/** 数据源列表（内置+自定义模型） */
+/** 数据源列表（内置+自定义模型；监听数据表变更实时刷新） */
 function useStores(): CollectionDef[] {
   const [stores, setStores] = useState<CollectionDef[]>([]);
   useEffect(() => {
     let cancelled = false;
-    void listCollectionsAll().then((cs) => { if (!cancelled) setStores(cs); }).catch(() => {});
-    return () => { cancelled = true; };
+    const load = () => { void listCollectionsAll().then((cs) => { if (!cancelled) setStores(cs); }).catch(() => {}); };
+    load();
+    const off = onDataChanged((src) => { if (src === "collections" || src === "records") load(); });
+    return () => { cancelled = true; off(); };
   }, []);
   return stores;
 }
@@ -63,11 +66,36 @@ export function SettingsPanel({ block, page, onUpdateBlock, onUpdatePage, onDele
         ) : null}
 
         {block.use === "TableBlock" || block.use === "FormBlock" || block.use === "DetailsBlock" ? (
-          <Field label={t("block.collection")}>
-            <select className="inp" value={String(block.props?.store ?? "")} onChange={(e) => onUpdateBlock(block.uid, { props: { ...block.props, store: e.target.value } })}>
-              {stores.map((c) => <option key={c.name} value={c.name}>{c.label}（{c.name}）</option>)}
-            </select>
-          </Field>
+          <>
+            <Field label={t("block.collection")}>
+              <select className="inp" value={String(block.props?.store ?? "")} onChange={(e) => onUpdateBlock(block.uid, { props: { ...block.props, store: e.target.value } })}>
+                {stores.map((c) => <option key={c.name} value={c.name}>{c.label}（{c.name}）</option>)}
+              </select>
+            </Field>
+            {(() => {
+              const selStore = String(block.props?.store ?? "");
+              const col = stores.find((c) => c.name === selStore);
+              if (!col) return null;
+              const keys = Object.keys(col.fields).filter((k) => k !== "id" && k !== "deletedAt" && k !== "custom");
+              const chosen: string[] = Array.isArray(block.props?.fields) ? (block.props.fields as string[]) : [];
+              return (
+                <Field label="显示/表单字段（留空=全部）">
+                  <div className="field-pick-list">
+                    {keys.map((k) => (
+                      <label key={k} className="switch-line">
+                        <input type="checkbox" checked={chosen.includes(k)}
+                          onChange={(e) => {
+                            const next = e.target.checked ? [...chosen, k] : chosen.filter((x) => x !== k);
+                            onUpdateBlock(block.uid, { props: { ...block.props, fields: next } });
+                          }} />
+                        <span>{col.fields[k].label}（{k}）</span>
+                      </label>
+                    ))}
+                  </div>
+                </Field>
+              );
+            })()}
+          </>
         ) : null}
 
         {block.use === "KanbanBlock" ? (

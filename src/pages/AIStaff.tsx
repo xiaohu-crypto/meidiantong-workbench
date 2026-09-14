@@ -9,6 +9,7 @@ import { BUILTIN_EMPLOYEE_IDS, EMPLOYEE_LIST, type Employee } from "../core/ai/e
 import { useT } from "../core/i18n/useT";
 import { Btn, Chip, Field, Modal } from "../ui/common";
 import { engine } from "../core/flow/engine";
+import { emitDataChanged, emitOpenAIStaff } from "../core/events";
 
 export default function AIStaffPage() {
   const t = useT();
@@ -28,6 +29,7 @@ export default function AIStaffPage() {
     next.push(emp);
     setCustom(next);
     await db.setSetting("aiEmployees", next);
+    emitDataChanged("aiEmployees");
     engine.emitEvent({ type: "notify", payload: { text: "员工已保存，AI助手面板已同步", kind: "ok" } });
   }
 
@@ -35,6 +37,7 @@ export default function AIStaffPage() {
     const next = custom.filter((e) => e.id !== id);
     setCustom(next);
     await db.setSetting("aiEmployees", next);
+    emitDataChanged("aiEmployees");
     engine.emitEvent({ type: "notify", payload: { text: "已删除自定义员工" } });
   }
 
@@ -47,13 +50,18 @@ export default function AIStaffPage() {
         <Btn sm kind="primary" onClick={() => setCreating(true)}>{t("aistaff.newEmployee")}</Btn>
       </div>
       <p className="muted" style={{ marginBottom: 16 }}>{t("aistaff.desc")}</p>
+      <div className="alert-strip" style={{ marginBottom: 14 }}>
+        <div className="card card-pad" style={{ padding: "10px 14px" }}>
+          <div className="alert-line"><span className="txt">配置角色 / 提示词 / 欢迎语，保存后 <b>AI 助手面板（右下角）实时同步</b>；点击员工卡片可直接在面板中打开对话。</span></div>
+        </div>
+      </div>
 
       <div className="aistaff-list">
         {all.map((e) => {
           const isBuiltin = BUILTIN_EMPLOYEE_IDS.includes(e.id);
           const isCustom = custom.some((c) => c.id === e.id);
           return (
-            <div key={e.id} className="aistaff-card">
+            <div key={e.id} className="aistaff-card" onClick={() => emitOpenAIStaff(e.id)} style={{ cursor: "pointer" }} title="点击在AI助手面板中打开对话">
               <div className="aistaff-head">
                 <span className="aistaff-emoji">{e.emoji}</span>
                 <span className="aistaff-name">{e.name}</span>
@@ -64,11 +72,11 @@ export default function AIStaffPage() {
               <div className="aistaff-actions">
                 {isCustom ? (
                   <>
-                    <Btn sm onClick={() => setEditing(e)}>{t("common.edit")}</Btn>
-                    <Btn sm kind="danger" onClick={() => void remove(e.id)}>{t("common.delete")}</Btn>
+                    <span onClick={(ev) => ev.stopPropagation()}><Btn sm onClick={() => setEditing(e)}>{t("common.edit")}</Btn></span>
+                    <span onClick={(ev) => ev.stopPropagation()}><Btn sm kind="danger" onClick={() => void remove(e.id)}>{t("common.delete")}</Btn></span>
                   </>
                 ) : (
-                  <Btn sm onClick={() => setEditing({ ...e, id: e.id + "-copy" })}>复制为自定义</Btn>
+                  <span onClick={(ev) => ev.stopPropagation()}><Btn sm onClick={() => setEditing({ ...e, id: e.id + "-copy" })}>复制为自定义</Btn></span>
                 )}
               </div>
             </div>

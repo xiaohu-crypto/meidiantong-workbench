@@ -12,18 +12,22 @@ import { useT } from "../../core/i18n/useT";
 interface DetailsBlockProps {
   store: string;
   recordId: string | null;
+  /** 展示字段白名单（留空=全部字段） */
+  fields?: string[];
   onEdit?: () => void;
 }
 
-export function DetailsBlock({ store, recordId, onEdit }: DetailsBlockProps) {
+export function DetailsBlock({ store, recordId, onEdit, fields: fieldsProp }: DetailsBlockProps) {
   const t = useT();
   const col = useCollection(store);
   const res = useStoreRecordSingle(store, recordId);
 
   const fields = useMemo(() => {
     if (!col) return [];
-    return Object.entries(col.fields).filter(([k, f]) => k !== "id" && k !== "deletedAt" && f.type !== "json");
-  }, [col]);
+    const all = Object.entries(col.fields).filter(([k, f]) => k !== "id" && k !== "deletedAt" && f.type !== "json");
+    if (Array.isArray(fieldsProp) && fieldsProp.length > 0) return all.filter(([k]) => fieldsProp.includes(k));
+    return all;
+  }, [col, fieldsProp]);
 
   if (!col) return <div className="block-empty">未找到数据模型：{store}</div>;
   if (res.loading) return <div className="block-empty">{t("common.loading")}</div>;

@@ -17,11 +17,13 @@ interface TableBlockProps {
   pageSize?: number;
   /** 允许行内操作（新增/编辑/删除） */
   editable?: boolean;
+  /** 列表展示字段白名单（留空=按list标记/默认前5个） */
+  fields?: string[];
   onOpenDetail?: (id: string) => void;
   notify?: (text: string, kind?: "ok" | "err" | "info") => void;
 }
 
-export function TableBlock({ store, title, pageSize = 20, editable = true, onOpenDetail, notify }: TableBlockProps) {
+export function TableBlock({ store, title, pageSize = 20, editable = true, onOpenDetail, notify, fields: fieldsProp }: TableBlockProps) {
   const t = useT();
   const col = useCollection(store);
   const res = useStoreRecordList(store);
@@ -38,9 +40,16 @@ export function TableBlock({ store, title, pageSize = 20, editable = true, onOpe
     return Object.entries(col.fields).filter(([, f]) => f.type !== "json");
   }, [col]);
 
-  /** 列表展示字段（list标记优先，否则取前5个非id字段） */
+  /** 列表展示字段（fields白名单优先；否则list标记优先，再取前5个非id字段） */
   const shownFields = useMemo(() => {
     if (!col) return [];
+    const override = Array.isArray(fieldsProp) && fieldsProp.length > 0 ? fieldsProp : null;
+    if (override) {
+      return override
+        .map((k) => [k, col.fields[k]] as const)
+        .filter(([, def]) => def && def.type !== "json")
+        .map(([key, def]) => ({ key, def }));
+    }
     const listed = Object.entries(col.fields)
       .filter(([k, f]) => k !== "id" && f.list && f.type !== "json")
       .map(([key, def]) => ({ key, def }));
@@ -49,7 +58,7 @@ export function TableBlock({ store, title, pageSize = 20, editable = true, onOpe
       .filter(([k, f]) => k !== "id" && f.type !== "json" && f.type !== "text")
       .slice(0, 5)
       .map(([key, def]) => ({ key, def }));
-  }, [col]);
+  }, [col, fieldsProp]);
 
   const filtered = useMemo(() => {
     let rows = res.data;

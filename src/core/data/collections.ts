@@ -364,3 +364,59 @@ export function listFields(name: string): { key: string; def: FieldDef }[] {
     .filter(([, def]) => def.list && def.type !== "json")
     .map(([key, def]) => ({ key, def }));
 }
+
+/* ===== 扩展字段（内置/自定义模型均可添加，settings.customFields 存储）===== */
+
+export const CUSTOM_FIELDS_KEY = "customFields";
+
+export interface CustomFieldDef {
+  id: string;
+  /** 所属模型名 */
+  entity: string;
+  key: string;
+  label: string;
+  type: FieldType;
+  required?: boolean;
+  list?: boolean;
+  options?: string[];
+}
+
+/** 读取全部扩展字段（可按模型过滤） */
+export async function loadCustomFields(entity?: string): Promise<CustomFieldDef[]> {
+  const { db } = await import("../../db/db");
+  const stored = await db.getSetting<CustomFieldDef[]>(CUSTOM_FIELDS_KEY, []);
+  const arr = Array.isArray(stored) ? stored : [];
+  return entity ? arr.filter((f) => f.entity === entity) : arr;
+}
+
+/** 将扩展字段合并进 Collection 副本（扩展字段覆盖同名内置字段，追加在后） */
+export function withExtFields(col: CollectionDef, ext: CustomFieldDef[]): CollectionDef {
+  if (!ext || ext.length === 0) return col;
+  const fields: Record<string, FieldDef> = { ...col.fields };
+  for (const f of ext) {
+    if (!f || !f.key || f.key === "id" || f.key === "deletedAt") continue;
+    fields[f.key] = {
+      type: f.type,
+      label: f.label || f.key,
+      required: f.required,
+      list: f.list,
+      options: f.options && f.options.length > 0 ? f.options : undefined,
+    };
+  }
+  return { ...col, fields };
+}
+
+/** 获取所有 Collection（内置+自定义+扩展字段，异步） */
+export async function listCollectionsAllWithExt(): Promise<CollectionDef[]> {
+  const all = await listCollectionsAll();
+  const ext = await loadCustomFields();
+  return all.map((c) => withExtFields(c, ext.filter((f) => f.entity === c.name)));
+}
+
+/** 按名称获取 Collection（内置+自定义+扩展字段，异步） */
+export async function getCollectionAllWithExt(name: string): Promise<CollectionDef | undefined> {
+  const col = await getCollectionAll(name);
+  if (!col) return undefined;
+  const ext = await loadCustomFields(name);
+  return withExtFields(col, ext);
+}

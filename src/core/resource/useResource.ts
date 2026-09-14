@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getRepo, getDynRepo, type HasId, type DynRow } from "../data/repository";
-import { getCollection, getCollectionAll, type CollectionDef } from "../data/collections";
+import { getCollection, getCollectionAllWithExt, type CollectionDef } from "../data/collections";
 import { STORES } from "../../db/db";
 import type { StoreName } from "../../db/db";
 
@@ -152,14 +152,13 @@ export function isBuiltinStore(store: string): boolean {
   return (STORES as readonly string[]).includes(store);
 }
 
-/** 获取 Collection 定义（内置同步返回；自定义异步读 settings） */
+/** 获取 Collection 定义（内置+自定义+扩展字段，异步合并） */
 export function useCollection(store: string): CollectionDef | undefined {
   const builtin = getCollection(store);
   const [col, setCol] = useState<CollectionDef | undefined>(builtin);
   useEffect(() => {
-    if (getCollection(store)) { setCol(getCollection(store)); return; }
     let cancelled = false;
-    void getCollectionAll(store).then((c) => { if (!cancelled) setCol(c); }).catch(() => {});
+    void getCollectionAllWithExt(store).then((c) => { if (!cancelled) setCol(c); }).catch(() => {});
     return () => { cancelled = true; };
   }, [store]);
   return col;

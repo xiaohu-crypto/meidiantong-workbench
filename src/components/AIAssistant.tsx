@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getAiConfig, loadAiKey } from "../core/ai/client";
 import { EMPLOYEE_LIST, mergeEmployees, type Employee, type EmployeeId, buildContext } from "../core/ai/employees";
+import { onDataChanged, onOpenAIStaff } from "../core/events";
 import { retrieveNotes } from "../core/ai/rag";
 import { Markdown } from "./Markdown";
 import { db } from "../db/db";
@@ -32,6 +33,34 @@ export default function AIAssistant({ currentPage }: { currentPage: string }) {
       setEmpList(mergeEmployees(custom));
     });
   }, []);
+
+  // 实时同步：AI员工页保存/删除后刷新员工列表；当前员工被删除时回退默认
+  useEffect(() => {
+    const offData = onDataChanged((src) => {
+      if (src !== "aiEmployees") return;
+      void db.getSetting<Employee[]>("aiEmployees", []).then((custom) => {
+        const next = mergeEmployees(custom);
+        setEmpList(next);
+        if (!next.some((e) => e.id === empId)) {
+          const fallback = next[0] ?? EMPLOYEE_LIST[0];
+          if (fallback) {
+            setEmpId(fallback.id);
+            setLoaded(false);
+            setMsgs([{ id: "welcome", role: "assistant", content: fallback.welcome, time: Date.now() }]);
+          }
+        }
+      });
+    });
+    // AI员工页卡片点击 → 打开面板并切到该员工（先显示欢迎语，等待用户提出需求）
+    const offOpen = onOpenAIStaff((targetId) => {
+      setOpen(true);
+      setLoaded(false);
+      setEmpId(targetId);
+      setInput("");
+      setLoading(false);
+    });
+    return () => { offData(); offOpen(); };
+  }, [empId]);
 
   // 停止生成
   function stopGeneration() {

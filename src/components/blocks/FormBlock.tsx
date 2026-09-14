@@ -12,6 +12,8 @@ import { useT } from "../../core/i18n/useT";
 
 interface FormBlockProps {
   store: string;
+  /** 表单字段白名单（留空=全部字段） */
+  fields?: string[];
   /** 编辑的记录id；缺省为新增 */
   recordId?: string | null;
   /** 保存后回调（返回新记录id） */
@@ -23,7 +25,7 @@ interface FormBlockProps {
   embedded?: boolean;
 }
 
-export function FormBlock({ store, recordId, onSaved, onClose, notify, embedded }: FormBlockProps) {
+export function FormBlock({ store, recordId, onSaved, onClose, notify, embedded, fields: fieldsProp }: FormBlockProps) {
   const t = useT();
   const col = useCollection(store);
   const res = useStoreRecordSingle(store, recordId ?? null);
@@ -39,8 +41,10 @@ export function FormBlock({ store, recordId, onSaved, onClose, notify, embedded 
 
   const fields = useMemo(() => {
     if (!col) return [];
-    return Object.entries(col.fields).filter(([k]) => k !== "id" && k !== "deletedAt" && k !== "custom");
-  }, [col]);
+    const all = Object.entries(col.fields).filter(([k]) => k !== "id" && k !== "deletedAt" && k !== "custom");
+    if (Array.isArray(fieldsProp) && fieldsProp.length > 0) return all.filter(([k]) => fieldsProp.includes(k));
+    return all;
+  }, [col, fieldsProp]);
 
   if (!col) return <div className="block-empty">未找到数据模型：{store}</div>;
 
@@ -51,8 +55,7 @@ export function FormBlock({ store, recordId, onSaved, onClose, notify, embedded 
     setSaving(true);
     try {
       const data: Record<string, unknown> = {};
-      for (const [key, def] of Object.entries(col.fields)) {
-        if (key === "id" || key === "deletedAt" || key === "custom") continue;
+      for (const [key, def] of fields) {
         data[key] = serializeValue(def, form[key]);
       }
       const saved = await res.save(data as never);
