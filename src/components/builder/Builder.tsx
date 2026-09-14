@@ -10,6 +10,7 @@ import { FlowModel, modelUid } from "../../core/model/model";
 import { modelRegistry, type ModelRenderCtx } from "../../core/model/registry";
 import { registerBuiltinModels } from "../../core/model/blocks";
 import { savePage, deletePage, loadPage, listPageSummaries } from "../../core/model/persist";
+import { emitDataChanged } from "../../core/events";
 import { getCollection } from "../../core/data/collections";
 import { Palette, PALETTE_ITEMS, type PaletteItem } from "./Palette";
 import { SettingsPanel } from "./SettingsPanel";
@@ -110,6 +111,7 @@ export function Builder({ initialPageUid }: { initialPageUid?: string | null }) 
     await savePage(page);
     setSaved(true);
     setSavedPages(await listPageSummaries());
+    emitDataChanged("pages");
   }
 
   function loadPageModel(m: FlowModel) {
@@ -125,6 +127,7 @@ export function Builder({ initialPageUid }: { initialPageUid?: string | null }) 
     }
     await deletePage(uid);
     await refreshPages();
+    emitDataChanged("pages");
   }
 
   function newPage() {

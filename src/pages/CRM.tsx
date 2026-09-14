@@ -695,7 +695,7 @@ export default function CRM(props: Props) {
                 onLayoutChange={handleLayoutChange}
               />
               {financeWarning && (
-                <div style={{ margin: "8px 18px", padding: "10px 14px", border: "1px solid var(--warning)", borderRadius: 8, background: "rgba(245,185,62,.10)", color: "var(--warning)", fontSize: 13 }}>
+                <div style={{ margin: "8px 18px", padding: "10px 14px", border: "1px solid var(--warning)", borderRadius: 8, background: "var(--warning-bg)", color: "var(--warning)", fontSize: 13 }}>
                   数据异常：回款 {money(totalReceived + totalUnpaid)} 超过累计商机额 {money(totalDealVal)}，请核对商机阶段与合同金额。
                 </div>
               )}

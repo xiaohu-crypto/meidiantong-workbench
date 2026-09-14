@@ -53,7 +53,7 @@ html.focus-mode .brand{justify-content:center;padding-left:8px;padding-right:8px
 .btn.ghost:hover:not(:disabled){border-color:var(--ink-4);color:var(--ink)}
 .btn.data{background:var(--data-soft);color:var(--data)}
 .btn.danger{background:var(--danger-bg);border-color:transparent;color:var(--danger)}
-.btn.danger:hover:not(:disabled){background:rgba(255,107,110,.18)}
+.btn.danger:hover:not(:disabled){background:var(--danger-bg)}
 .btn.draft{background:var(--brand-soft);color:var(--brand)}
 .btn.done{background:transparent;border-color:var(--border);color:var(--ink-3);font-size:var(--text-sm);min-height:28px;padding:4px 10px}
 .btn.sm{padding:4px 10px;min-height:28px;font-size:var(--text-xs)}
@@ -63,8 +63,8 @@ html.focus-mode .brand{justify-content:center;padding-left:8px;padding-right:8px
 .chip{display:inline-flex;align-items:center;gap:5px;font-size:var(--text-xs);font-weight:550;padding:2px 9px;border-radius:var(--r-full);border:1px solid var(--border);color:var(--ink-2);background:var(--surface)}
 .chip.brand{background:var(--brand-soft);border-color:transparent;color:var(--brand)}
 .chip.data{background:var(--data-soft);border-color:transparent;color:var(--data)}
-.chip.green{background:rgba(46,219,139,.12);border-color:transparent;color:var(--success)}
-.chip.warn{background:rgba(245,185,62,.14);border-color:transparent;color:var(--warning)}
+.chip.green{background:var(--success-bg);border-color:transparent;color:var(--success)}
+.chip.warn{background:var(--warning-bg);border-color:transparent;color:var(--warning)}
 .chip.danger{background:var(--danger-bg);border-color:transparent;color:var(--danger)}
 .chip.gray{background:var(--surface-2);color:var(--ink-3)}
 .dot-flag{width:7px;height:7px;border-radius:50%;display:inline-block;flex:none}
@@ -74,7 +74,7 @@ html.focus-mode .brand{justify-content:center;padding-left:8px;padding-right:8px
 .nbx-item:last-child{border-bottom:none}
 .prio{width:22px;height:22px;border-radius:var(--r-md);display:grid;place-items:center;font-size:var(--text-xs);font-weight:700;flex:none;margin-top:2px}
 .prio.hot{background:var(--brand);color:#fff}
-.prio.warm{background:rgba(245,185,62,.15);color:var(--warning)}
+.prio.warm{background:var(--warning-bg);color:var(--warning)}
 .prio.cool{background:var(--data-soft);color:var(--data)}
 .nbx-body{flex:1;min-width:0}
 .nbx-title{font-size:var(--text-sm);font-weight:600}

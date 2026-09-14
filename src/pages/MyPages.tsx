@@ -13,6 +13,7 @@ import type { ModelRenderCtx } from "../core/model/registry";
 import { engine } from "../core/flow/engine";
 import { getCollection } from "../core/data/collections";
 import { Btn } from "../ui/common";
+import { onDataChanged } from "../core/events";
 import { IconLayout } from "../components/icons";
 
 /** 确保内置模型已注册（幂等） */
@@ -36,6 +37,14 @@ export default function MyPages() {
   }, []);
 
   useEffect(() => { void refresh(); }, [refresh]);
+
+  // 数据变更实时刷新：构建器保存/删除页面后列表自动更新（无需重挂载/手动刷新）
+  useEffect(() => {
+    const off = onDataChanged((src) => {
+      if (src === "pages" || src === "collections") void refresh();
+    });
+    return off;
+  }, [refresh]);
 
   /** 运行视图的渲染上下文（与构建器预览一致，经 FlowEngine 桥接全局交互） */
   const renderCtx: ModelRenderCtx = {
