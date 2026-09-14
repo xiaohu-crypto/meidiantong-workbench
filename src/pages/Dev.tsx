@@ -249,9 +249,17 @@ export default function Dev(props: Props) {
           const col = deals.filter((d) => d.stage === stage);
           const STALE_MS = 14 * 24 * 60 * 60 * 1000;
           const staleCount = col.filter((d) => Date.now() - (d.lastTouchAt || 0) > STALE_MS).length;
+          const colTotal = col.reduce((s, d) => s + d.value * probOf(d.stage), 0);
           return (
             <div className="kcol" key={stage} style={{ minHeight: 200 }}>
-              <div className="kcol-head">{stage}{staleCount > 0 ? <span className="health-badge">{staleCount}</span> : null}<span className="chip gray" style={{ marginLeft: "auto" }}>{col.length}</span></div>
+              <div className="kcol-head">
+                <span>{stage}</span>
+                {staleCount > 0 ? <span className="health-badge">{staleCount}</span> : null}
+                <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
+                  <span className="num" style={{ fontSize: "var(--text-xs)", color: "var(--ink-2)" }}>{money(colTotal)}</span>
+                  <span className="chip gray">{col.length}</span>
+                </span>
+              </div>
               <div className="kcol-body">
                 {col.map((d) => (
                   <div className="kcard" key={d.id} onClick={() => setSelected(d.id)}
