@@ -142,7 +142,6 @@ export default function App() {
   const [kbFocus, setKbFocus] = useState<string | null>(null);
   const [updateVer, setUpdateVer] = useState<string | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [sysOpen, setSysOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [flowForm, setFlowForm] = useState<{ store: string; id?: string } | null>(null);
   const [flowDetail, setFlowDetail] = useState<{ store: string; id: string } | null>(null);
@@ -302,69 +301,56 @@ export default function App() {
 
   return (
     <div className="app">
-          <header className="topnav">
-      <div className="topnav-brand">
-        <div className="brand-mark"><IconHome size={17} /></div>
-        <div>
-          <div className="brand-name">媒电通工作台</div>
-          <div className="brand-sub">本地优先工作台</div>
-        </div>
-      </div>
-
-      <nav className="topnav-nav">
-        {NAV.filter((n) => n.group !== "系统").map((n) => (
-          <div key={n.key} className={"topnav-item" + (view === n.key ? " active" : "")}
-            onClick={() => { setView(n.key); if (n.key === "crm") setFocusCid(null); if (n.key === "kb") setKbFocus(null); }}>
-            <n.icon size={15} />
-            <span>{n.label}</span>
+          <aside className="sidebar">
+        <div className="brand">
+          <div className="brand-mark"><IconHome size={17} /></div>
+          <div>
+            <div className="brand-name">媒电通工作台</div>
+            <div className="brand-sub">本地优先工作台</div>
           </div>
-        ))}
-      </nav>
-
-      <div className="topnav-right">
-        <div className="sys-drop">
-          <button className={"topnav-sys-btn" + (sysOpen ? " open" : "")} onClick={() => setSysOpen(!sysOpen)}>
-            <IconGrid size={15} /> 系统 <span className="sys-caret">▾</span>
-          </button>
-          {sysOpen ? (
-            <div className="sys-drop-menu" onClick={(e) => e.stopPropagation()}>
-              {NAV.filter((n) => n.group === "系统").map((n) => (
-                <div key={n.key} className={"sys-drop-item" + (view === n.key ? " active" : "")}
-                  onClick={() => { setSysOpen(false); setView(n.key); if (n.key === "crm") setFocusCid(null); if (n.key === "kb") setKbFocus(null); }}>
-                  <n.icon size={15} />
-                  <span>{n.label}</span>
+        </div>
+        <nav className="nav">
+          {["常用", "业务", "系统"].map((group) => (
+            <div key={group} className={"nav-group" + (group === "系统" ? " nav-sys" : "")}>
+              <div className="nav-label">{group}</div>
+              {NAV.filter((n) => n.group === group).map((n) => (
+                <div key={n.key} className={"nav-item" + (view === n.key ? " active" : "")}
+                  onClick={() => { setView(n.key); setUserMenuOpen(false); if (n.key === "crm") setFocusCid(null); if (n.key === "kb") setKbFocus(null); }}>
+                  <n.icon size={16} />
+                  <span className="ni-label">{n.label}</span>
                 </div>
               ))}
             </div>
-          ) : null}
-        </div>
-
-        <div className="topnav-pop">
-          <button data-notification-trigger className="icon-btn sm" title="通知中心" onClick={(e) => { e.stopPropagation(); setNotifyOpen((v) => !v); }}>
-            <IconBell size={16} />
-            {unreadCount > 0 ? <span className="badge-dot">{unreadCount > 99 ? "99+" : unreadCount}</span> : null}
-          </button>
-          {notifyOpen && data ? (
-            <NotificationPanel
-              customers={data.customers}
-              payments={data.payments}
-              cps={data.cps}
-              notificationsReadAt={data.notificationsReadAt}
-              reload={reload}
-              onClose={closeNotify}
-              onViewAll={goAllNotifications}
-            />
-          ) : null}
-        </div>
-
-        <button className="icon-btn sm" title="切换主题" onClick={() => switchTheme(theme === "dark" ? "light" : "dark")}>
-          {theme === "dark" ? <IconSun size={16} /> : <IconMoon size={16} />}
-        </button>
-
-        <div className="topnav-pop">
-          <div className="user-avatar" onClick={() => setUserMenuOpen(!userMenuOpen)} style={{ cursor: "pointer" }}>媒</div>
+          ))}
+        </nav>
+        <div className="sidebar-user-menu">
+          <div className="user-menu-trigger">
+            <div className="user-avatar" onClick={() => setUserMenuOpen(!userMenuOpen)} style={{ cursor: "pointer" }}>媒</div>
+            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 2 }}>
+              <div style={{ position: "relative" }}>
+                <button data-notification-trigger className="icon-btn sm" title="通知中心" onClick={(e) => { e.stopPropagation(); setNotifyOpen((v) => !v); }}>
+                  <IconBell size={16} />
+                  {unreadCount > 0 ? <span className="badge-dot">{unreadCount > 99 ? "99+" : unreadCount}</span> : null}
+                </button>
+                {notifyOpen && data ? (
+                  <NotificationPanel
+                    customers={data.customers}
+                    payments={data.payments}
+                    cps={data.cps}
+                    notificationsReadAt={data.notificationsReadAt}
+                    reload={reload}
+                    onClose={closeNotify}
+                    onViewAll={goAllNotifications}
+                  />
+                ) : null}
+              </div>
+              <button className="icon-btn sm" title="切换主题" onClick={() => switchTheme(theme === "dark" ? "light" : "dark")}>
+                {theme === "dark" ? <IconSun size={16} /> : <IconMoon size={16} />}
+              </button>
+            </div>
+          </div>
           {userMenuOpen ? (
-            <div className="user-menu-dropdown down" onClick={(e) => e.stopPropagation()}>
+            <div className="user-menu-dropdown" onClick={(e) => e.stopPropagation()}>
               <div className="user-menu-header">
                 <div className="user-avatar lg">媒</div>
                 <div>
@@ -379,8 +365,7 @@ export default function App() {
             </div>
           ) : null}
         </div>
-      </div>
-    </header>
+      </aside>
 
       <div className="main">
         <header className="topbar">

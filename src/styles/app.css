@@ -24,7 +24,7 @@ html.focus-mode .brand{justify-content:center;padding-left:8px;padding-right:8px
 .crumb{font-size:var(--text-sm);color:var(--ink-4)}
 .crumb b{color:var(--ink-2);font-weight:550;margin-left:6px}
 .tb-right{margin-left:auto;display:flex;align-items:center;gap:8px}
-.content{flex:1;overflow-y:auto;padding:22px 26px 60px}
+.content{flex:1;overflow-y:auto;padding:22px 26px 60px;position:relative}
 
 .page-head{display:flex;align-items:flex-end;gap:14px;margin-bottom:18px;flex-wrap:wrap}
 .page-head h1{font-size:var(--text-3xl);font-weight:700;letter-spacing:-.02em}
@@ -667,7 +667,8 @@ html[data-titlebar="integrated"] .topbar .filter-input { -webkit-app-region: no-
 .mypages-runtime{display:flex;flex-direction:column;gap:var(--sp-3);overflow-y:auto;flex:1;min-height:0}
 /* ---- CRM 客户详情独立视图（去抽屉化） ---- */
 .page-crm{position:relative;min-height:100%}
-.crm-detail{position:fixed;inset:0;background:var(--surface);z-index:60;display:flex;flex-direction:column;overflow:hidden}
+.crm-detail{display:none;position:absolute;inset:0;background:var(--surface);z-index:60;flex-direction:column;overflow:hidden}
+.crm-detail.open{display:flex}
 .crm-detail .drawer-head{flex:none}
 .crm-detail .drawer-body{flex:1 1 auto;min-height:0;overflow-y:auto;padding-bottom:20px}
 .crm-detail .drawer-foot{flex:none}
@@ -695,9 +696,6 @@ html[data-titlebar="integrated"] .topbar .filter-input { -webkit-app-region: no-
 .sys-drop-item:hover{background:var(--surface-2);color:var(--ink-1)}
 .sys-drop-item.active{color:var(--brand);font-weight:600}
 .user-menu-dropdown.down{top:calc(100% + 6px);bottom:auto;left:auto;right:0;width:212px}
-/* ---- 顶栏布局：.app 容器改纵向 flex（覆盖原 grid 两列） ---- */
-.app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
-html.focus-mode .app{display:flex;flex-direction:column}
 /* ---- 顶栏紧凑化：保证系统聚合按钮可见 ---- */
 .topnav{padding:0 10px;gap:8px}
 .topnav-nav{gap:0}
