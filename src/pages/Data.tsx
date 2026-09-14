@@ -234,6 +234,7 @@ export default function Data(props: Props) {
           <div className="es-icon">&#128202;</div>
           <div className="es-title">暂无数据</div>
           <div className="es-desc">添加客户和商机后，这里会自动生成经营分析</div>
+          <Btn kind="primary" onClick={() => window.dispatchEvent(new CustomEvent("nav", { detail: "crm" }))}>去添加客户</Btn>
         </div>
       ) : (
 

@@ -21,8 +21,22 @@ export default function AIAssistant({ currentPage }: { currentPage: string }) {
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  const stoppedRef = useRef(false);
 
   const emp: Employee = EMPLOYEE_LIST.find((e) => e.id === empId) ?? EMPLOYEE_LIST[0];
+
+  // 停止生成
+  function stopGeneration() {
+    stoppedRef.current = true;
+    setLoading(false);
+    setMsgs((prev) => {
+      const last = prev[prev.length - 1];
+      if (last && last.role === "assistant" && !last.content.includes("已停止生成")) {
+        return [...prev.slice(0, -1), { ...last, content: last.content + "\n\n⏹ 已停止生成" }];
+      }
+      return prev;
+    });
+  }
 
   // 加载该角色的对话历史
   useEffect(() => {
@@ -82,6 +96,7 @@ export default function AIAssistant({ currentPage }: { currentPage: string }) {
   async function send(text?: string) {
     const q = (text ?? input).trim();
     if (!q || loading) return;
+    stoppedRef.current = false;
     setInput("");
     const userMsg: Msg = { id: `u-${Date.now()}`, role: "user", content: q, time: Date.now() };
     const replyId = `a-${Date.now()}`;
@@ -107,10 +122,12 @@ export default function AIAssistant({ currentPage }: { currentPage: string }) {
       // 流式输出
       let fullContent = "";
       const chunkHandler = (chunk: string) => {
+        if (stoppedRef.current) return;
         fullContent += chunk;
         setMsgs((prev) => prev.map((m) => m.id === replyId ? { ...m, content: fullContent } : m));
       };
       const doneHandler = () => {
+        if (stoppedRef.current) { cleanup(); return; }
         const refSuffix = rag.notes.length > 0 ? `\n\n📚 参考知识库：${rag.notes.map((n) => "《" + n.title + "》").join("、")}` : "";
         setMsgs((prev) => prev.map((m) => m.id === replyId ? { ...m, content: fullContent + refSuffix } : m));
         setLoading(false);
@@ -210,7 +227,11 @@ export default function AIAssistant({ currentPage }: { currentPage: string }) {
           onKeyDown={(e) => { if (e.key === "Enter") void send(); }}
           disabled={loading}
         />
-        <button className="ai-send" onClick={() => void send()} disabled={loading || !input.trim()}>发送</button>
+        {loading ? (
+          <button className="ai-send" onClick={stopGeneration} style={{ background: "var(--danger)" }}>停止</button>
+        ) : (
+          <button className="ai-send" onClick={() => void send()} disabled={!input.trim()}>发送</button>
+        )}
       </div>
     </div>
   );

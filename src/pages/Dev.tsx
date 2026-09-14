@@ -44,6 +44,7 @@ interface Props {
 export default function Dev(props: Props) {
   const { show, node } = useToast();
   const [selected, setSelected] = useState<string | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
   const [pitchOpen, setPitchOpen] = useState(false);
   const [extraStages, setExtraStages] = useState<string[]>([]);
   const [dealLayout, setDealLayout] = useState<RecordLayout>(DEFAULT_DEAL_LAYOUT);
@@ -251,7 +252,17 @@ export default function Dev(props: Props) {
           const staleCount = col.filter((d) => Date.now() - (d.lastTouchAt || 0) > STALE_MS).length;
           const colTotal = col.reduce((s, d) => s + d.value * probOf(d.stage), 0);
           return (
-            <div className="kcol" key={stage} style={{ minHeight: 200 }}>
+            <div className="kcol" key={stage} style={{ minHeight: 200, outline: dragId ? "2px dashed var(--brand)" : "none", outlineOffset: "-4px" }}
+              onDragOver={(e) => { e.preventDefault(); }}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (!dragId) return;
+                const d = deals.find((x) => x.id === dragId);
+                if (d && d.stage !== stage) {
+                  void db.put("deals", { ...d, stage, probability: probOf(stage) }, `拖拽商机「${d.title}」到 ${stage}`);
+                }
+                setDragId(null);
+              }}>
               <div className="kcol-head">
                 <span>{stage}</span>
                 {staleCount > 0 ? <span className="health-badge">{staleCount}</span> : null}
@@ -262,7 +273,7 @@ export default function Dev(props: Props) {
               </div>
               <div className="kcol-body">
                 {col.map((d) => (
-                  <div className="kcard" key={d.id} onClick={() => setSelected(d.id)}
+                  <div className="kcard" key={d.id} onClick={() => setSelected(d.id)} draggable onDragStart={() => setDragId(d.id)} onDragEnd={() => setDragId(null)}
                     style={selected === d.id ? { borderColor: "var(--brand)" } : undefined}>
                     <div className="t" style={{ fontSize: "var(--text-xs)" }}>{nameOf(d.customerId)}</div>
                     <div className="cell-sub">{d.title.startsWith(nameOf(d.customerId)) ? d.title.slice(nameOf(d.customerId).length).trim() : d.title}</div>
@@ -270,7 +281,7 @@ export default function Dev(props: Props) {
                       <span className="chip data" style={{ fontSize: 10, padding: "0 6px" }}>{Math.round(probOf(d.stage) * 100)}%</span></div>
                   </div>
                 ))}
-                {col.length === 0 ? <p className="muted" style={{ fontSize: "var(--text-xs)", textAlign: "center" }}>—</p> : null}
+                {col.length === 0 ? <p className="muted" style={{ fontSize: "var(--text-xs)", textAlign: "center" }}>拖拽商机到此处</p> : null}
               </div>
             </div>
           );
