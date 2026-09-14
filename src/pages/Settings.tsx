@@ -89,22 +89,19 @@ export default function SettingsPage(props: { theme: "dark" | "light"; setTheme:
         <div><h1>设置</h1><div className="date">设置 / 回收站(30 天) / 操作日志(可撤销)</div></div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "180px 1fr", gap: 16, alignItems: "start" }}>
-        <div className="card" style={{ padding: "8px 0", position: "sticky", top: 0 }}>
-          {TAB_GROUPS.map((g) => (
-            <div key={g.group} style={{ marginBottom: 8 }}>
-              <div style={{ padding: "8px 16px 4px", fontSize: 11, color: "var(--ink-4)", letterSpacing: ".06em", fontWeight: 700 }}>{g.group}</div>
-              {g.tabs.map((t) => (
-                <div key={t} onClick={() => setTab(t)}
-                  style={{ padding: "8px 16px", cursor: "pointer", fontSize: "var(--text-sm)",
-                    background: tab === t ? "var(--surface-2)" : "transparent",
-                    borderLeft: tab === t ? "3px solid var(--brand)" : "3px solid transparent",
-                    fontWeight: tab === t ? 600 : 400 }}>
-                  {t}
-                </div>
-              ))}
-            </div>
-          ))}
+      <div>
+        <div className="card" style={{ padding: "4px 12px 0", marginBottom: 16 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center" }}>
+            {TAB_GROUPS.map((g, gi) => (
+              <div key={g.group} style={{ display: "flex", alignItems: "center", flexWrap: "wrap" }}>
+                {gi > 0 ? <span style={{ width: 1, height: 18, background: "var(--border)", margin: "0 10px" }} /> : null}
+                <span style={{ fontSize: 11, color: "var(--ink-4)", fontWeight: 700, letterSpacing: ".06em", marginRight: 8 }}>{g.group}</span>
+                {g.tabs.map((t) => (
+                  <span key={t} className={"tab" + (tab === t ? " active" : "")} onClick={() => setTab(t)}>{t}</span>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
         <div style={{ minWidth: 0 }}>
       {tab === "外观" && (

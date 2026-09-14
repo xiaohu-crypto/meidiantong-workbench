@@ -4,6 +4,9 @@ import type { Note } from "../types";
 import { Btn, Chip, Field, uid, useToast } from "../ui/common";
 import { IconPlus } from "../components/icons";
 
+/** PARA 方法论分类显示映射(数据值保持英文,仅UI中文化) */
+const PARA_LABELS: Record<string, string> = { Projects: "项目", Areas: "领域", Resources: "资源", Archives: "归档" };
+
 interface Props { notes: Note[]; reload: () => Promise<void>; focusId?: string | null }
 
 export default function Kb(props: Props) {
@@ -190,7 +193,7 @@ async function askAi() {
               <button key={p || "all"} onClick={() => setParaFilter(p)}
                 style={{ padding: "2px 8px", fontSize: 11, borderRadius: 999, border: "1px solid var(--border)",
                   background: paraFilter === p ? "var(--brand)" : "transparent", color: paraFilter === p ? "#fff" : "var(--ink-2)", cursor: "pointer" }}>
-                {p || "全部"}
+                {p === "" ? "全部" : PARA_LABELS[p] ?? p}
               </button>
             ))}
           </div>
@@ -199,7 +202,7 @@ async function askAi() {
               <div key={n.id} onClick={() => { setSelId(n.id); setDraft(null); }}
                 style={{ padding: "9px 14px", cursor: "pointer", borderBottom: "1px solid var(--border-soft)", background: n.id === selId ? "var(--brand-soft)" : "transparent" }}>
                 <div style={{ fontWeight: 600, fontSize: "var(--text-sm)" }}>{n.title}</div>
-                <div className="cell-sub">{n.para} · {n.tags.map((t) => "#" + t).join(" ")}</div>
+                <div className="cell-sub">{PARA_LABELS[n.para] ?? n.para} · {n.tags.map((t) => "#" + t).join(" ")}</div>
               </div>
             ))}
             {notes.length === 0 ? (
@@ -225,7 +228,7 @@ async function askAi() {
               </div>
               <div className="h-row" style={{ marginBottom: 8 }}>
                 <select className="sel" value={draft.para} onChange={(e) => setDraft({ ...draft, para: e.target.value as Note["para"] })}>
-                  {["Projects", "Areas", "Resources", "Archives"].map((p) => <option key={p}>{p}</option>)}
+                  {["Projects", "Areas", "Resources", "Archives"].map((p) => <option key={p} value={p}>{PARA_LABELS[p] ?? p}</option>)}
                 </select>
                 <input className="inp" style={{ flex: 1 }} value={draft.tags} onChange={(e) => setDraft({ ...draft, tags: e.target.value })} placeholder="标签,逗号分隔" />
               </div>
