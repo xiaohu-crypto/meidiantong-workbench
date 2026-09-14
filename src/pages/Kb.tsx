@@ -21,6 +21,10 @@ export default function Kb(props: Props) {
   const notes = props.notes.filter((n) => !n.deletedAt);
   const sel = notes.find((n) => n.id === selId) ?? null;
 
+  /* 知识库统计（融自知识库管理） */
+  const kbTotalChars = useMemo(() => notes.reduce((s, n) => s + (n.content ?? "").length, 0), [notes]);
+  const kbTags = useMemo(() => Array.from(new Set(notes.flatMap((n) => n.tags ?? []))), [notes]);
+
   useEffect(() => {
     if (props.focusId) { setSelId(props.focusId); setDraft(null); }
   }, [props.focusId]);
@@ -128,6 +132,16 @@ async function askAi() {
           <Btn kind="data" onClick={() => setAiOpen(true)}>AI 问答</Btn>
           <Btn kind="primary" onClick={openNew}><IconPlus size={14} /> 新建笔记</Btn>
         </div>
+      </div>
+
+      {/* 知识库管理条（统计 + 重建AI索引） */}
+      <div className="kb-admin-bar">
+        <span className="kb-stat">笔记 {notes.length}</span>
+        <span className="kb-stat">字数 {(kbTotalChars / 1000).toFixed(1)}K</span>
+        <span className="kb-stat">标签 {kbTags.length}</span>
+        <span className="kb-stat kb-tags">{kbTags.slice(0, 6).join(" / ") || "未打标签"}</span>
+        <span style={{ flex: 1 }} />
+        <Btn sm kind="data" onClick={() => { void (async () => { await db.setSetting("ragIndexVersion", Date.now()); show("知识库已重建，笔记已纳入AI检索"); })(); }}>重建AI索引</Btn>
       </div>
 
       {mode === "graph" ? (

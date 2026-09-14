@@ -138,3 +138,18 @@ Phase 0 - 项目扫描（深度补充）
 - 模板解析永远返回字符串导致金额字段变字符串 → resolveValue 支持类型前缀 num/bool/str
 - 定时任务去重：settings.wfLastRun_<uid> 控制间隔
 - 异步fireAfterWrite用动态import避免repository↔triggers循环依赖
+
+---
+
+## 2026-09-14 复刻功能融入原有版本 · 消除双版本并列
+
+**问题**：复刻引擎（工作流/审计/Repository）与原有页面平行，原页面直接 db.put 写库不触发新引擎，界面呈现"两套功能并列"。
+
+**融合动作**：
+- 数据链路打通：Dev/CRM/Work 关键写点（商机阶段变更/拖拽/编辑/MEDDIC、客户新增/删除/批量删/策略保存/接触点、任务新建/拖拽）全部改为 Repository（create/update/destroy），保留原审计描述参数（logWhat），工作流对原有数据自动生效——商机拖到"签约"列自动生成合同+回款计划
+- Repository.create/update/destroy 新增可选 logWhat 参数（缺省"创建/更新/删除"，向后兼容）
+- 菜单去重：删除"知识库管理"独立入口，统计+重建AI索引入口融入知识库页顶部管理条
+- 菜单名称用户化：数据建模→数据表、操作日志→操作记录（呼应"左侧菜单太工程化"）
+- 移除 CRM/Work 未使用 uid 导入；Dev 拖拽自定义阶段类型断言兼容
+
+**验证**：typecheck 0错误；vitest 全量75通过；构建成功；asar已更新安装版；PrintWindow截图确认菜单去重+首页正常

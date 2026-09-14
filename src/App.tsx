@@ -24,7 +24,6 @@ const CollectionsPage = lazy(() => import("./pages/Collections"));
 const AuditPage = lazy(() => import("./pages/Audit"));
 const RolesPage = lazy(() => import("./pages/Roles"));
 const AIStaffPage = lazy(() => import("./pages/AIStaff"));
-const AIKbPage = lazy(() => import("./pages/AIKb"));
 import QuickCapture from "./components/QuickCapture";
 import TopSearch from "./components/TopSearch";
 import Onboarding from "./components/Onboarding";
@@ -80,7 +79,7 @@ interface DataSet {
   notificationsReadAt: number;
 }
 
-type View = "today" | "crm" | "work" | "dev" | "media" | "kb" | "data" | "growth" | "settings" | "help" | "notifications" | "builder" | "workflows" | "collections" | "audit" | "roles" | "aistaff" | "aikb";
+type View = "today" | "crm" | "work" | "dev" | "media" | "kb" | "data" | "growth" | "settings" | "help" | "notifications" | "builder" | "workflows" | "collections" | "audit" | "roles" | "aistaff";
 
 const NAV: { key: View; label: string; icon: (p: { size?: number }) => JSX.Element; group: string }[] = [
   { key: "today", label: "首页", icon: IconToday, group: "常用" },
@@ -93,11 +92,10 @@ const NAV: { key: View; label: string; icon: (p: { size?: number }) => JSX.Eleme
   { key: "growth", label: "成长规划", icon: IconGrowth, group: "业务" },
   { key: "builder", label: "页面构建器", icon: IconAI, group: "系统" },
   { key: "workflows", label: "工作流", icon: IconFunnel, group: "系统" },
-  { key: "collections", label: "数据建模", icon: IconGrid, group: "系统" },
-  { key: "audit", label: "操作日志", icon: IconClock, group: "系统" },
-  { key: "roles", label: "角色权限", icon: IconUsers, group: "系统" },
+  { key: "collections", label: "数据表", icon: IconGrid, group: "系统" },
+  { key: "audit", label: "操作记录", icon: IconClock, group: "系统" },
+  { key: "roles", label: "权限管理", icon: IconUsers, group: "系统" },
   { key: "aistaff", label: "AI员工", icon: IconAI, group: "系统" },
-  { key: "aikb", label: "知识库管理", icon: IconKb, group: "系统" },
   { key: "settings", label: "系统设置", icon: IconSettings, group: "系统" },
   { key: "help", label: "帮助中心", icon: IconHelp, group: "系统" },
 ];
@@ -404,7 +402,6 @@ export default function App() {
             {view === "audit" ? <AuditPage /> : null}
             {view === "roles" ? <RolesPage /> : null}
             {view === "aistaff" ? <AIStaffPage /> : null}
-            {view === "aikb" ? <AIKbPage /> : null}
             {view === "settings" ? (
               <SettingsPage theme={theme} setTheme={switchTheme} reload={reload}
                 customers={data?.customers ?? []} notes={data?.notes ?? []} customFields={data?.customFields ?? []} />

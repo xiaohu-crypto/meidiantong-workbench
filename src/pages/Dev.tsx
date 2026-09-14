@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { db } from "../db/db";
+import { repos } from "../core/data/repository";
 import { weightedValue } from "../core/metrics";
 import type { Customer, Deal, DealStage, Pitch } from "../types";
 import { Btn, Chip, Field, Modal, money, uid, useToast } from "../ui/common";
@@ -96,7 +97,7 @@ export default function Dev(props: Props) {
   async function submitDealEdit() {
     if (!sel) return;
     if (!ef.title.trim()) { show("商机标题必填"); return; }
-    await db.put("deals", { ...sel, title: ef.title.trim(), value: Number(ef.value) || 0, closeDate: ef.closeDate || undefined }, "编辑商机「" + ef.title.trim() + "」");
+    await repos.deals.update(sel.id, { title: ef.title.trim(), value: Number(ef.value) || 0, closeDate: ef.closeDate || undefined }, "编辑商机「" + ef.title.trim() + "」");
     show("商机已更新");
     setEfOpen(false);
     await props.reload();
@@ -118,14 +119,14 @@ export default function Dev(props: Props) {
   }
 
   async function setStage(d: Deal, stage: DealStage) {
-    await db.put("deals", { ...d, stage, probability: probOf(stage) }, `商机「${d.title}」阶段改为 ${stage}`);
+    await repos.deals.update(d.id, { stage, probability: probOf(stage) }, `商机「${d.title}」阶段改为 ${stage}`);
     await props.reload();
   }
 
   async function toggleTag(d: Deal, kind: "meddic" | "bant", tag: string) {
     const arr = d[kind] ?? [];
     const next = arr.includes(tag) ? arr.filter((x) => x !== tag) : [...arr, tag];
-    await db.put("deals", { ...d, [kind]: next }, `商机「${d.title}」更新${kind === "meddic" ? "MEDDIC" : "BANT"}`);
+    await repos.deals.update(d.id, { [kind]: next }, `商机「${d.title}」更新${kind === "meddic" ? "MEDDIC" : "BANT"}`);
     await props.reload();
   }
 
@@ -260,7 +261,7 @@ export default function Dev(props: Props) {
                 if (!dragId) return;
                 const d = deals.find((x) => x.id === dragId);
                 if (d && d.stage !== stage) {
-                  void db.put("deals", { ...d, stage, probability: probOf(stage) }, `拖拽商机「${d.title}」到 ${stage}`);
+                  void repos.deals.update(d.id, { stage: stage as Deal["stage"], probability: probOf(stage) }, `拖拽商机「${d.title}」到 ${stage}`);
                 }
                 setDragId(null);
               }}>

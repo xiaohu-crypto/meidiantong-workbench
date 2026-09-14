@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { db } from "../db/db";
+import { repos } from "../core/data/repository";
 import { funnel } from "../core/metrics";
 import { healthOf, latestTouch, customerStage, type CustomerStage } from "../core/derive";
 import { validateCustomer } from "../core/validators";
 import type { Contact, ContactPoint, Contract, Customer, Deal, Payment, Rel, Task } from "../types";
-import { Btn, Chip, money, Modal, Field, uid, useToast } from "../ui/common";
+import { Btn, Chip, money, Modal, Field, useToast } from "../ui/common";
 import { IconClose, IconPlus, IconSearch, IconUsers } from "../components/icons";
 import ImportCustomers from "../components/ImportCustomers";
 import { RecordPage, type WidgetDef, type RecordLayout } from "../ui/RecordPage";
@@ -139,7 +140,7 @@ export default function CRM(props: Props) {
   }
   async function saveStrategy() {
     if (!drawerC) return;
-    await db.put("customers", { ...drawerC, custom: { ...(drawerC.custom ?? {}), mediaStrategy: strategyDraft } }, "保存客户「" + drawerC.name + "」媒介策略");
+    await repos.customers.update(drawerC.id, { custom: { ...(drawerC.custom ?? {}), mediaStrategy: strategyDraft } }, "保存客户「" + drawerC.name + "」媒介策略");
     setStrategyEdit(false);
     show("客户媒介策略已保存");
     await props.reload();
@@ -148,7 +149,7 @@ export default function CRM(props: Props) {
   async function saveContactPoint() {
     if (!drawerC) return;
     if (!cpForm.summary.trim()) { show("跟进内容必填"); return; }
-    await db.put("contactPoints", { id: uid("cp"), customerId: drawerC.id, channel: cpForm.channel, time: Date.now(), summary: cpForm.summary.trim() }, "记录跟进「" + drawerC.name + "」");
+    await repos.cps.create({ customerId: drawerC.id, channel: cpForm.channel, time: Date.now(), summary: cpForm.summary.trim() }, "记录跟进「" + drawerC.name + "」");
     show("跟进已记录");
     setCpOpen(false); setCpForm({ channel: "微信", summary: "" });
     await props.reload();
@@ -278,7 +279,7 @@ export default function CRM(props: Props) {
     if (Object.keys(errs).length) { setErrs(errs); return; }
     const custom: Record<string, unknown> = {};
     for (const cf of custFields) custom[cf.key] = form["cf_" + cf.key] ?? "";
-    await db.put("customers", { id: uid("c"), name: form.name.trim(), industry: form.industry || "待补充", grade: form.grade as Customer["grade"], billingTitle: form.billingTitle || undefined, billingTaxNo: form.billingTaxNo || undefined, custom }, "新增客户");
+    await repos.customers.create({ name: form.name.trim(), industry: form.industry || "待补充", grade: form.grade as Customer["grade"], billingTitle: form.billingTitle || undefined, billingTaxNo: form.billingTaxNo || undefined, custom }, "新增客户");
     show("客户已建档");
     setAddOpen(false); setForm({ name: "", industry: "", grade: "C", billingTitle: "", billingTaxNo: "" }); setErrs({});
     await props.reload();
@@ -287,7 +288,7 @@ export default function CRM(props: Props) {
   async function tryDelete(c: Customer) {
     const linked = deals.filter((d) => d.customerId === c.id).length;
     if (linked > 0) { show(`删除被阻止:「${c.name}」存在 ${linked} 个关联商机;请先处理商机或改用归档`); return; }
-    await db.softDelete("customers", c.id, `删除客户「${c.name}」(入回收站)`);
+    await repos.customers.destroy(c.id, `删除客户「${c.name}」(入回收站)`);
     setOpenId(null);
     show("已移入回收站(30 天内可恢复)");
     await props.reload();
@@ -540,7 +541,7 @@ export default function CRM(props: Props) {
             <button className="btn danger sm" onClick={() => {
               void (async () => {
                 const victims = customers.filter((c) => selected.has(c.id));
-                for (const c of victims) await db.softDelete("customers", c.id, "批量删除客户");
+                for (const c of victims) await repos.customers.destroy(c.id, "批量删除客户");
                 setSelected(new Set());
                 show("已批量删除 " + victims.length + " 个客户", () => { void (async () => {
                   for (const c of victims) await db.put("customers", { ...c, deletedAt: undefined }, "撤销批量删除");

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { db } from "../db/db";
+import { repos } from "../core/data/repository";
 import type { Customer, KanbanCol, Objective, Task } from "../types";
-import { Btn, Chip, Modal, Field, uid, useToast } from "../ui/common";
+import { Btn, Chip, Modal, Field, useToast } from "../ui/common";
 import { IconPlus } from "../components/icons";
 
 const COLS: KanbanCol[] = ["待办", "进行中", "待审核", "完成"];
@@ -85,14 +86,14 @@ export default function Work(props: Props) {
     if (!dragId) return;
     const t = tasks.find((x) => x.id === dragId);
     if (!t || t.kanbanCol === col) return;
-    await db.put("tasks", { ...t, kanbanCol: col }, `任务「${t.title}」移动到 ${col}`);
+    await repos.tasks.update(t.id, { kanbanCol: col }, `任务「${t.title}」移动到 ${col}`);
     setDragId(null);
     await props.reload();
   }
 
   async function submitAdd() {
     if (!form.title.trim()) { show("任务标题必填"); return; }
-    await db.put("tasks", { id: uid("t"), title: form.title.trim(), type: form.type, priority: form.priority, due: form.due || undefined, kanbanCol: "待办", customerId: form.customerId || undefined }, "新建任务");
+    await repos.tasks.create({ title: form.title.trim(), type: form.type, priority: form.priority, due: form.due || undefined, kanbanCol: "待办", customerId: form.customerId || undefined }, "新建任务");
     show("任务已创建(待办)");
     setAddOpen(false);
     setForm({ title: "", priority: "中", type: "任务", due: "", customerId: "" });

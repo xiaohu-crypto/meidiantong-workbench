@@ -36,27 +36,27 @@ export class Repository<T extends HasId> {
     return db.get<T>(this.store, id);
   }
 
-  /** 新增记录（触发工作流recordCreated） */
-  async create(data: Omit<T, "id">): Promise<T> {
+  /** 新增记录（触发工作流recordCreated；logWhat可选，缺省"创建"） */
+  async create(data: Omit<T, "id">, logWhat?: string): Promise<T> {
     const rec = { ...data, id: uid(this.store) } as T;
-    await db.put(this.store, rec, "创建");
+    await db.put(this.store, rec, logWhat ?? "创建");
     void fireAfterWrite(this.store, rec, "recordCreated");
     return rec;
   }
 
-  /** 更新记录（合并字段，触发工作流recordUpdated） */
-  async update(id: string, data: Partial<Omit<T, "id">>): Promise<T | undefined> {
+  /** 更新记录（合并字段，触发工作流recordUpdated；logWhat可选，缺省"更新"） */
+  async update(id: string, data: Partial<Omit<T, "id">>, logWhat?: string): Promise<T | undefined> {
     const cur = await db.get<T>(this.store, id);
     if (!cur) return undefined;
     const rec = { ...cur, ...data, id } as T;
-    await db.put(this.store, rec, "更新");
+    await db.put(this.store, rec, logWhat ?? "更新");
     void fireAfterWrite(this.store, rec, "recordUpdated");
     return rec;
   }
 
-  /** 软删除（触发工作流recordDeleted） */
-  async destroy(id: string): Promise<void> {
-    await db.softDelete(this.store, id, "删除");
+  /** 软删除（触发工作流recordDeleted；logWhat可选，缺省"删除"） */
+  async destroy(id: string, logWhat?: string): Promise<void> {
+    await db.softDelete(this.store, id, logWhat ?? "删除");
     void fireAfterWrite(this.store, { id } as T, "recordDeleted");
   }
 

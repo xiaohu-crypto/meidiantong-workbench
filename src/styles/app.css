@@ -646,3 +646,9 @@ html[data-titlebar="integrated"] .topbar .filter-input { -webkit-app-region: no-
 .aikb-note-title{font-weight:600;font-size:var(--text-sm);margin-bottom:var(--sp-1)}
 .aikb-note-preview{font-size:var(--text-xs);color:var(--ink-3);margin-bottom:var(--sp-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .aikb-note-meta{display:flex;justify-content:space-between;font-size:var(--text-xs);color:var(--ink-3)}
+
+/* ---- 知识库管理条（融自知识库管理页） ---- */
+.kb-admin-bar{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;padding:var(--sp-2) var(--sp-3);background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);margin-bottom:var(--sp-3);font-size:var(--text-xs)}
+.kb-stat{color:var(--ink-3);white-space:nowrap}
+.kb-stat b{color:var(--brand);font-weight:650}
+.kb-tags{max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
