@@ -50,6 +50,7 @@ export default function Dev(props: Props) {
   const [selected, setSelected] = useState<string | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [pitchOpen, setPitchOpen] = useState(false);
+  const [editPitchId, setEditPitchId] = useState<string | null>(null);
   const [extraStages, setExtraStages] = useState<string[]>([]);
   const [dealLayout, setDealLayout] = useState<RecordLayout>(DEFAULT_DEAL_LAYOUT);
   /* P4 布局编辑模式 */
@@ -133,6 +134,10 @@ export default function Dev(props: Props) {
     await props.reload();
   }
 
+  function openEditPitch(p: Pitch) {
+    setPf({ name: p.name, customerId: p.customerId ?? "", date: p.date, investment: String(p.investment), competitors: p.competitors, result: p.result, lossReason: p.lossReason ?? "", reviewNote: p.reviewNote ?? "" });
+    setEditPitchId(p.id); setPitchOpen(true);
+  }
   async function submitPitch() {
     if (!pf.name.trim()) { show("比稿名称必填"); return; }
     await db.put("pitches", {
@@ -411,7 +416,7 @@ export default function Dev(props: Props) {
         <div className="h-row" style={{ padding: "12px 16px 0" }}><span className="h-title sm">比稿管理(投入/竞对/结果/复盘)</span></div>
         <div className="tgrid-wrap">
           <table className="tgrid">
-            <thead><tr><th>比稿</th><th>客户</th><th>日期</th><th>投入</th><th>竞对</th><th>结果</th><th>复盘</th></tr></thead>
+            <thead><tr><th>比稿</th><th>客户</th><th>日期</th><th>投入</th><th>竞对</th><th>结果</th><th>复盘</th><th style={{ width: 60 }}>操作</th></tr></thead>
             <tbody>
               {pitches.map((p) => (
                 <tr key={p.id} style={{ cursor: "default" }}>
@@ -422,6 +427,7 @@ export default function Dev(props: Props) {
                   <td>{p.competitors || "—"}</td>
                   <td><Chip kind={p.result === "胜" ? "green" : p.result === "败" ? "danger" : "warn"}>{p.result}</Chip></td>
                   <td className="cell-sub" style={{ maxWidth: 220 }}>{p.reviewNote || p.lossReason || "—"}</td>
+                  <td><Btn kind="ghost" sm onClick={() => openEditPitch(p)}>编辑</Btn></td>
                 </tr>
               ))}
               {pitches.length === 0 ? <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--ink-3)", padding: 20 }}>暂无比稿记录</td></tr> : null}
@@ -442,8 +448,8 @@ export default function Dev(props: Props) {
       </div>
 
       {pitchOpen ? (
-        <Modal title="登记比稿" onClose={() => setPitchOpen(false)} footer={
-          <div className="grow"><Btn kind="ghost" onClick={() => setPitchOpen(false)}>取消</Btn><Btn kind="primary" onClick={() => { void submitPitch(); }}>保存</Btn></div>
+        <Modal title={editPitchId ? "编辑比稿" : "登记比稿"} onClose={() => { setPitchOpen(false); setEditPitchId(null); }} footer={
+          <div className="grow"><Btn kind="ghost" onClick={() => { setPitchOpen(false); setEditPitchId(null); }}>取消</Btn><Btn kind="primary" onClick={() => { void submitPitch(); }}>保存</Btn></div>
         }>
           <Field label="比稿名称"><input className="inp" style={{ width: "100%" }} value={pf.name} onChange={(e) => setPf({ ...pf, name: e.target.value })} /></Field>
           <div className="field-row">
