@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   媒电通工作台 - 一键打包安装版脚本
 .DESCRIPTION

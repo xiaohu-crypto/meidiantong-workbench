@@ -49,6 +49,18 @@ function createWindow() {
     void win.loadFile(path.join(__dirname, "../dist/index.html"));
   }
   win.on("closed", () => { win = null; });
+
+  // ===== 渲染进程崩溃保护:记录原因并自动重建窗口 =====
+  win.webContents.on("render-process-gone", (_e, details) => {
+    console.error("[renderer-crash] reason:", details.reason, "exitCode:", details.exitCode);
+    // 延迟1秒重建窗口，避免连续崩溃循环
+    setTimeout(() => {
+      if (!win) {
+        console.log("[renderer-crash] 正在重建窗口...");
+        createWindow();
+      }
+    }, 1000);
+  });
 }
 
 /** 品牌托盘图标(开发版用 build/icon.png,打包后用 resources/icon.png;缩放至32x32适配系统托盘) */
@@ -89,14 +101,26 @@ app.whenReady().then(() => {
   tray.setToolTip("媒电通工作台");
   console.log("[tray] 托盘创建成功");
   tray.setContextMenu(Menu.buildFromTemplate([
-    { label: "显示主窗口", click: () => win?.show() },
-    { label: "快速采集 (Ctrl+K)", click: () => win?.webContents.send("open-quick-capture") },
+    { label: "显示主窗口", click: () => { if (win) { win.show(); win.focus(); } else { createWindow(); } } },
+    { label: "快速采集 (Ctrl+K)", click: () => { if (!win) createWindow(); setTimeout(() => win?.webContents.send("open-quick-capture"), 300); } },
     { type: "separator" },
     { label: "退出", click: () => app.quit() },
   ]));
 
+  // 点击托盘图标也显示/重建窗口
+  tray.on("click", () => {
+    if (win) { if (win.isMinimized()) win.restore(); win.show(); win.focus(); }
+    else createWindow();
+  });
+
   globalShortcut.register("CommandOrControl+K", () => {
-    if (win) { win.show(); win.webContents.send("open-quick-capture"); }
+    if (!win) createWindow();
+    setTimeout(() => { win?.show(); win?.webContents.send("open-quick-capture"); }, 300);
+  });
+
+  // GPU/子进程崩溃保护
+  app.on("child-process-gone", (_e, details) => {
+    console.error("[child-crash] type:", details.type, "reason:", details.reason, "exitCode:", details.exitCode);
   });
 
   ipcMain.handle("login-item:set", (_e, open: boolean) => {
