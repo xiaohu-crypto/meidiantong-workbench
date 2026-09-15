@@ -49,6 +49,16 @@ export default function Dev(props: Props) {
   const { show, node } = useToast();
   const [selected, setSelected] = useState<string | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
+  /* Pipeline 列折叠:超过10条默认折叠,点击展开 */
+  const COLLAPSE_THRESHOLD = 10;
+  const [expandedCols, setExpandedCols] = useState<Set<string>>(new Set());
+  function toggleCol(stage: string) {
+    setExpandedCols((prev) => {
+      const next = new Set(prev);
+      if (next.has(stage)) next.delete(stage); else next.add(stage);
+      return next;
+    });
+  }
   const [pitchOpen, setPitchOpen] = useState(false);
   const [editPitchId, setEditPitchId] = useState<string | null>(null);
   const [extraStages, setExtraStages] = useState<string[]>([]);
@@ -153,7 +163,8 @@ export default function Dev(props: Props) {
     setPitchOpen(false); setEditPitchId(null);
     setPf({ name: "", customerId: "", date: new Date().toISOString().slice(0, 10), investment: "", competitors: "", result: "待定", lossReason: "", reviewNote: "" });
     await props.reload();
-  }
+  }
+
   function openNewDeal() {
     if (props.customers.length === 0) { show("请先在客户管理中添加客户"); return; }
     setDf({ customerId: props.customers[0].id, title: "", stage: "线索", value: "" });
@@ -307,8 +318,8 @@ export default function Dev(props: Props) {
                   <span className="chip gray">{col.length}</span>
                 </span>
               </div>
-              <div className="kcol-body">
-                {col.map((d) => (
+              <div className="kcol-body" style={{ maxHeight: 420, overflowY: "auto" }}>
+                {(expandedCols.has(stage) ? col : col.slice(0, COLLAPSE_THRESHOLD)).map((d) => (
                   <div className="kcard" key={d.id} onClick={() => setSelected(d.id)} draggable onDragStart={() => setDragId(d.id)} onDragEnd={() => setDragId(null)}
                     style={selected === d.id ? { borderColor: "var(--brand)" } : undefined}>
                     <div className="t" style={{ fontSize: "var(--text-xs)" }}>{nameOf(d.customerId)}</div>
@@ -317,6 +328,13 @@ export default function Dev(props: Props) {
                       <span className="chip data" style={{ fontSize: 10, padding: "0 6px" }}>{Math.round(probOf(d.stage) * 100)}%</span></div>
                   </div>
                 ))}
+                {col.length > COLLAPSE_THRESHOLD ? (
+                  <div style={{ textAlign: "center", padding: "6px 0", borderTop: "1px solid var(--border-soft)" }}>
+                    <Btn kind="ghost" sm onClick={() => toggleCol(stage)}>
+                      {expandedCols.has(stage) ? `收起 (${col.length})` : `展开更多 (${col.length - COLLAPSE_THRESHOLD})`}
+                    </Btn>
+                  </div>
+                ) : null}
                 {col.length === 0 ? <p className="muted" style={{ fontSize: "var(--text-xs)", textAlign: "center" }}>拖拽商机到此处</p> : null}
               </div>
             </div>

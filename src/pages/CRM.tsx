@@ -77,6 +77,16 @@ function MediaStrategyView(props: { customer: Customer; onEdit: () => void }) {
           {s?.mix ? <div className="kv"><span className="k">建议配比</span><span className="v" style={{ fontSize: "var(--text-sm)" }}>{s.mix}</span></div> : null}
           {s?.resources ? <div className="kv"><span className="k">首选资源</span><span className="v" style={{ fontSize: "var(--text-sm)" }}>{s.resources}</span></div> : null}
           {s?.note ? <div className="kv"><span className="k">备注</span><span className="v" style={{ fontSize: "var(--text-sm)" }}>{s.note}</span></div> : null}
+          {Array.isArray((s as unknown as { attachments?: { name: string; path: string }[] }).attachments) && (s as unknown as { attachments?: { name: string; path: string }[] }).attachments!.length > 0 ? (
+            <div className="kv" style={{ gridColumn: "1 / -1" }}>
+              <span className="k">方案附件</span>
+              <span className="v" style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {(s as unknown as { attachments: { name: string; path: string }[] }).attachments.map((att, i) => (
+                  <Btn key={i} kind="ghost" sm onClick={() => { void (window as unknown as { mta?: { openPath?: (p: string) => Promise<string> } }).mta?.openPath?.(att.path); }} title={att.path}>📎 {att.name}</Btn>
+                ))}
+              </span>
+            </div>
+          ) : null}
         </div>
       )}
     </div>
@@ -90,32 +100,35 @@ export default function CRM(props: Props) {
   const [sortKey, setSortKey] = useState<"name" | "health" | "deal">("name");
   const [stageFilter, setStageFilter] = useState<"" | CustomerStage>("");
   const [page, setPage] = useState(0);
-  const PAGE_SIZE = 50;
+  const [pageSize, setPageSize] = useState(50);
+  const PAGE_SIZE = pageSize;
   const [openId, setOpenId] = useState<string | null>(props.focusCustomerId ?? null);
   const [timeline, setTimeline] = useState<{ ts: number; kind: string; title: string }[]>([]);
   useEffect(() => {
     void (async () => {
       if (!openId) { setTimeline([]); return; }
       const items: { ts: number; kind: string; title: string }[] = [];
-      const deals = (await db.getAll<Deal>("deals")).filter((d) => d.customerId === openId && !d.deletedAt);
-      const dealIds = new Set(deals.map((d) => d.id));
-      for (const cp of (await db.getAll<ContactPoint>("contactPoints"))) {
+      /* 性能优化:用 props 已加载的数据替代 db.getAll,减少 IndexedDB 查询 */
+      const custDeals = props.deals.filter((d) => d.customerId === openId && !d.deletedAt);
+      const dealIds = new Set(custDeals.map((d) => d.id));
+      for (const cp of props.cps) {
         if (!cp.deletedAt && cp.customerId === openId) items.push({ ts: cp.time, kind: "接触", title: cp.channel + " · " + cp.summary });
       }
-      for (const t of (await db.getAll<Task>("tasks"))) {
-        if (!t.deletedAt && t.customerId === openId) items.push({ ts: t.due ? new Date(t.due).getTime() : t.kanbanCol === "完成" ? Date.now() : Date.now(), kind: "任务", title: "[" + t.kanbanCol + "] " + t.title });
+      for (const t of props.tasks) {
+        if (!t.deletedAt && t.customerId === openId) items.push({ ts: t.due ? new Date(t.due).getTime() : Date.now(), kind: "任务", title: "[" + t.kanbanCol + "] " + t.title });
       }
+      /* operationLogs 未通过 props 传入,仅查询这一个 store */
       for (const lg of (await db.getAll<{ id: string; ts: number; what: string; entityType: string; entityId: string }>("operationLogs"))) {
         if (lg.entityType === "deals" && dealIds.has(lg.entityId)) items.push({ ts: lg.ts, kind: "商机", title: lg.what });
         else if (lg.entityType === "payments") {
-          const pay = (await db.get<Payment>("payments", lg.entityId));
+          const pay = props.payments.find((p) => p.id === lg.entityId);
           if (pay && pay.customerId === openId) items.push({ ts: lg.ts, kind: "回款", title: lg.what });
         }
       }
       items.sort((a, b) => b.ts - a.ts);
       setTimeline(items.slice(0, 80));
     })();
-  }, [openId]);
+  }, [openId, props.deals, props.cps, props.tasks, props.payments]);
   const [tab, setTab] = useState<"概览" | "跟进" | "决策链" | "媒介策略" | "AI建议" | "SOP话术">("概览");
   /* P1 记录布局:默认硬编码,从 settings.recordLayouts 合并(P4 再做拖拽) */
   const [customerLayout, setCustomerLayout] = useState<RecordLayout>(DEFAULT_CUSTOMER_LAYOUT);
@@ -135,6 +148,8 @@ export default function CRM(props: Props) {
   const [strategyDraft, setStrategyDraft] = useState<{ audience: string; budget: string; mix: string; resources: string; note: string; attachments: { name: string; path: string }[] }>({ audience: "", budget: "", mix: "", resources: "", note: "", attachments: [] });
   const [cpOpen, setCpOpen] = useState(false);
   const [cpForm, setCpForm] = useState<{ channel: ContactPoint["channel"]; summary: string }>({ channel: "微信", summary: "" });
+  const [taskOpen, setTaskOpen] = useState(false);
+  const [taskForm, setTaskForm] = useState({ title: "", priority: "中" as "高" | "中" | "低", due: "", kanbanCol: "待办" as "待办" | "进行中" | "待审核" | "完成" });
 
   const [contactOpen, setContactOpen] = useState(false);
   const [contactForm, setContactForm] = useState({ name: "", phone: "", title: "", role: "影响者" as RelRole, wechat: "" });
@@ -174,6 +189,14 @@ export default function CRM(props: Props) {
     await props.reload();
   }
   /* 快速记录接触点(ContactPoint):写库后随 360° 时间线/健康度/通知同步刷新 */
+  async function saveTask() {
+    if (!drawerC) return;
+    if (!taskForm.title.trim()) { show("任务标题必填"); return; }
+    await repos.tasks.create({ title: taskForm.title.trim(), type: "任务", priority: taskForm.priority, due: taskForm.due || undefined, kanbanCol: taskForm.kanbanCol, customerId: drawerC.id }, "新建关联任务「" + taskForm.title + "」");
+    show("关联任务已创建");
+    setTaskOpen(false); setTaskForm({ title: "", priority: "中", due: "", kanbanCol: "待办" });
+    await props.reload();
+  }
   async function saveContactPoint() {
     if (!drawerC) return;
     if (!cpForm.summary.trim()) { show("跟进内容必填"); return; }
@@ -189,11 +212,14 @@ export default function CRM(props: Props) {
   /* P3 本地问数:输入框 + 最近 3 条问答历史(纯本地,不调云端) */
   const [askInput, setAskInput] = useState("");
   interface AiMsg { role: "user" | "assistant"; content: string; ts: number; }
-  interface AiConv { id: string; title: string; createdAt: number; messages: AiMsg[]; }
+  interface AiConv { id: string; title: string; createdAt: number; messages: AiMsg[]; groupId?: string; }
+  interface AiGroup { id: string; title: string; collapsed: boolean; }
   const [aiConvs, setAiConvs] = useState<AiConv[]>([]);
+  const [aiGroups, setAiGroups] = useState<AiGroup[]>([]);
+  const [renamingGroup, setRenamingGroup] = useState<string | null>(null);
   const [curConvId, setCurConvId] = useState<string | null>(null);
   const [renamingConv, setRenamingConv] = useState<string | null>(null);
-  useEffect(() => { setAskInput(""); }, [openId]);
+  useEffect(() => { setAskInput(""); loadAiPersisted(); }, [openId]);
   useEffect(() => { void (async () => { setSopScripts(await getAllScripts()); })(); }, []);
 
   async function genAdvice() {
@@ -250,7 +276,50 @@ export default function CRM(props: Props) {
   }
   function newAiConv() { const c: AiConv = { id: "conv-" + Date.now(), title: "新对话", createdAt: Date.now(), messages: [] }; setAiConvs((cs) => [c, ...cs]); setCurConvId(c.id); }
   function renameAiConv(id: string, title: string) { setAiConvs((cs) => cs.map((x) => x.id === id ? { ...x, title } : x)); setRenamingConv(null); }
-  function deleteAiConv(id: string) { setAiConvs((cs) => cs.filter((x) => x.id !== id)); if (curConvId === id) setCurConvId(null); }
+  function deleteAiConv(id: string) { setAiConvs((cs) => cs.filter((x) => x.id !== id)); if (curConvId === id) setCurConvId(null); persistAi(); }
+  /* AI 分组操作 */
+  function newAiGroup() {
+    const title = prompt("分组名称", "新分组");
+    if (!title?.trim()) return;
+    const g: AiGroup = { id: "g_" + Date.now(), title: title.trim(), collapsed: false };
+    setAiGroups((gs) => [...gs, g]);
+    persistAi();
+  }
+  function renameAiGroup(id: string, title: string) {
+    setAiGroups((gs) => gs.map((g) => g.id === id ? { ...g, title } : g));
+    setRenamingGroup(null);
+    persistAi();
+  }
+  function deleteAiGroup(id: string) {
+    setAiGroups((gs) => gs.filter((g) => g.id !== id));
+    setAiConvs((cs) => cs.map((c) => c.groupId === id ? { ...c, groupId: undefined } : c));
+    persistAi();
+  }
+  function toggleAiGroup(id: string) {
+    setAiGroups((gs) => gs.map((g) => g.id === id ? { ...g, collapsed: !g.collapsed } : g));
+  }
+  function moveConvToGroup(convId: string, groupId: string | undefined) {
+    setAiConvs((cs) => cs.map((c) => c.id === convId ? { ...c, groupId } : c));
+    persistAi();
+  }
+  /* AI 对话/分组持久化到 customer.custom.aiConversations */
+  function persistAi() {
+    if (!drawerC) return;
+    const data = { convs: aiConvs, groups: aiGroups };
+    void repos.customers.update(drawerC.id, { custom: { ...(drawerC.custom ?? {}), aiConversations: data } }, "保存AI对话分组");
+  }
+  function loadAiPersisted() {
+    if (!drawerC) return;
+    const saved = ((drawerC.custom ?? {}) as Record<string, unknown>).aiConversations as { convs?: AiConv[]; groups?: AiGroup[] } | undefined;
+    if (saved) {
+      setAiConvs(saved.convs ?? []);
+      setAiGroups(saved.groups ?? []);
+    } else {
+      setAiConvs([]);
+      setAiGroups([]);
+    }
+    setCurConvId(null);
+  }
   function deleteMsg(convId: string, msgIdx: number) { setAiConvs((cs) => cs.map((x) => x.id === convId ? { ...x, messages: x.messages.filter((_, i) => i !== msgIdx) } : x)); }
   function copyText(text: string) { navigator.clipboard?.writeText(text).then(() => show("已复制")).catch(() => show("复制失败")); }
   const [addOpen, setAddOpen] = useState(false);
@@ -318,6 +387,22 @@ export default function CRM(props: Props) {
   useEffect(() => { setPage(0); }, [q, industry, stageFilter, sortKey, groupBy]);
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const pagedRows = rows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  /* 性能优化:预计算每个客户的派生数据(health/stage/activeDeals/latestTouch),一次遍历替代每行4次全量遍历 */
+  const derivedMap = useMemo(() => {
+    const m = new Map<string, { health: number; stage: CustomerStage; activeDeals: Deal[]; activeDealValue: number; latestTouch: number | null }>();
+    for (const c of customers) {
+      const ad = deals.filter((d) => d.customerId === c.id && !["签约", "输单", "流失"].includes(d.stage));
+      m.set(c.id, {
+        health: healthOf(c.id, props.cps, payments),
+        stage: customerStage(c.id, deals, props.contracts),
+        activeDeals: ad,
+        activeDealValue: ad.reduce((s, d) => s + d.value, 0),
+        latestTouch: latestTouch(c.id, props.cps),
+      });
+    }
+    return m;
+  }, [customers, deals, props.cps, payments, props.contracts]);
 
   const f = funnel(deals);
   const open = openId ? customers.find((c) => c.id === openId) ?? null : null;
@@ -542,7 +627,7 @@ export default function CRM(props: Props) {
     }
     if (w.type === "related" && w.id === "tasks") {
       return (
-        <RelatedListWidget title="关联任务" emptyText="暂无关联任务" items={drawerTasks.map((t) => ({
+        <RelatedListWidget title="关联任务" emptyText="暂无关联任务" onAdd={() => setTaskOpen(true)} items={drawerTasks.map((t) => ({
           id: t.id,
           title: t.title,
           sub: t.kanbanCol,
@@ -679,8 +764,9 @@ export default function CRM(props: Props) {
                   <div className="kcol-head">{stg}<span className="chip gray" style={{ marginLeft: "auto" }}>{col.length}</span></div>
                   <div className="kcol-body" style={{ overflowY: "auto", flex: 1 }}>
                     {col.map((c) => {
-                      const h = healthOf(c.id, props.cps, payments);
-                      const lt = latestTouch(c.id, props.cps);
+                      const dv = derivedMap.get(c.id);
+                      const h = dv?.health ?? 0;
+                      const lt = dv?.latestTouch;
                       return (
                         <div className="kcard" key={c.id} onClick={() => { setOpenId(c.id); setTab("概览"); }} style={{ cursor: "pointer" }}>
                           <div className="t" style={{ fontWeight: 650, marginBottom: 4 }}>{c.name}</div>
@@ -719,10 +805,11 @@ export default function CRM(props: Props) {
                   );
                   if (isCollapsed) return [headerRow];
                   const groupRows = groupCustomers.map((c) => {
-                    const h = healthOf(c.id, props.cps, payments);
-                    const activeDeals = deals.filter((d) => d.customerId === c.id && !["签约", "输单", "流失"].includes(d.stage));
-                    const lt = latestTouch(c.id, props.cps);
-                    const stg = customerStage(c.id, deals, props.contracts);
+                    const dv = derivedMap.get(c.id);
+                    const h = dv?.health ?? 0;
+                    const activeDeals = dv?.activeDeals ?? [];
+                    const lt = dv?.latestTouch;
+                    const stg = dv?.stage ?? "潜在";
                     const cls = h >= 80 ? "good" : h >= 60 ? "mid" : "low";
                     return (
                       <tr key={c.id} onClick={() => { setOpenId(c.id); setTab("概览"); }}>
@@ -741,10 +828,11 @@ export default function CRM(props: Props) {
                 })
               ) : (
                 pagedRows.map((c) => {
-                  const h = healthOf(c.id, props.cps, payments);
-                  const activeDeals = deals.filter((d) => d.customerId === c.id && !["签约", "输单", "流失"].includes(d.stage));
-                  const lt = latestTouch(c.id, props.cps);
-                  const stg = customerStage(c.id, deals, props.contracts);
+                  const dv = derivedMap.get(c.id);
+                  const h = dv?.health ?? 0;
+                  const activeDeals = dv?.activeDeals ?? [];
+                  const lt = dv?.latestTouch;
+                  const stg = dv?.stage ?? "潜在";
                   const cls = h >= 80 ? "good" : h >= 60 ? "mid" : "low";
                   return (
                     <tr key={c.id} onClick={() => { setOpenId(c.id); setTab("概览"); }}>
@@ -781,14 +869,23 @@ export default function CRM(props: Props) {
               ) : null}
             </tbody>
           </table>
-          {rows.length > PAGE_SIZE ? (
-            <div className="h-row" style={{ padding: "10px 12px", borderTop: "1px solid var(--border)", justifyContent: "space-between" }}>
+          {rows.length > 0 ? (
+            <div className="h-row" style={{ padding: "10px 12px", borderTop: "1px solid var(--border)", justifyContent: "space-between", alignItems: "center" }}>
               <span className="muted" style={{ fontSize: "var(--text-xs)" }}>共 {rows.length} 条 · 第 {page + 1}/{totalPages} 页</span>
-              <div style={{ display: "flex", gap: 6 }}>
-                <Btn kind="ghost" sm disabled={page === 0} onClick={() => setPage(0)}>首页</Btn>
-                <Btn kind="ghost" sm disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>上一页</Btn>
-                <Btn kind="ghost" sm disabled={page >= totalPages - 1} onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}>下一页</Btn>
-                <Btn kind="ghost" sm disabled={page >= totalPages - 1} onClick={() => setPage(totalPages - 1)}>末页</Btn>
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <Btn kind="ghost" sm disabled={page === 0} onClick={() => setPage(0)} title="首页">«</Btn>
+                <Btn kind="ghost" sm disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))} title="上一页">‹</Btn>
+                <select value={page} onChange={(e) => setPage(Number(e.target.value))} style={{ padding: "4px 8px", borderRadius: "var(--r-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--ink)", fontSize: "var(--text-xs)", cursor: "pointer" }}>
+                  {Array.from({ length: totalPages }, (_, i) => <option key={i} value={i}>第 {i + 1} 页</option>)}
+                </select>
+                <Btn kind="ghost" sm disabled={page >= totalPages - 1} onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))} title="下一页">›</Btn>
+                <Btn kind="ghost" sm disabled={page >= totalPages - 1} onClick={() => setPage(totalPages - 1)} title="末页">»</Btn>
+                <span style={{ width: 1, height: 16, background: "var(--border)", margin: "0 4px" }} />
+                <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(0); }} style={{ padding: "4px 8px", borderRadius: "var(--r-sm)", border: "1px solid var(--border)", background: "var(--surface)", color: "var(--ink)", fontSize: "var(--text-xs)", cursor: "pointer" }}>
+                  <option value={30}>30条/页</option>
+                  <option value={50}>50条/页</option>
+                  <option value={100}>100条/页</option>
+                </select>
               </div>
             </div>
           ) : null}
@@ -851,22 +948,69 @@ export default function CRM(props: Props) {
               ) : null}
               {tab === "AI建议" && (
                 <div style={{ display: "flex", gap: 12, height: "100%" }}>
-                  <div style={{ width: 180, flexShrink: 0, borderRight: "1px solid var(--border)", paddingRight: 10, overflowY: "auto" }}>
-                    <Btn kind="primary" sm style={{ width: "100%", marginBottom: 8 }} onClick={newAiConv}><IconPlus size={12} /> 新对话</Btn>
-                    {aiConvs.map((c) => (
-                      <div key={c.id} style={{ padding: "6px 8px", borderRadius: 6, background: curConvId === c.id ? "var(--surface-2)" : "transparent", cursor: "pointer", marginBottom: 2, fontSize: "var(--text-sm)" }} onClick={() => setCurConvId(c.id)}>
-                        {renamingConv === c.id ? (
-                          <input className="inp" style={{ width: "100%", fontSize: "var(--text-xs)" }} defaultValue={c.title} autoFocus onBlur={(e) => renameAiConv(c.id, e.target.value || c.title)} onKeyDown={(e) => { if (e.key === "Enter") renameAiConv(c.id, (e.target as HTMLInputElement).value || c.title); }} />
-                        ) : (
-                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                            <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} onDoubleClick={() => setRenamingConv(c.id)}>{c.title}</span>
-                            <span style={{ fontSize: 10, color: "var(--ink-3)", cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); setRenamingConv(c.id); }}>重命名</span>
-                            <span style={{ fontSize: 10, color: "var(--danger)", cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); deleteAiConv(c.id); }}>删除</span>
+                  <div style={{ width: 200, flexShrink: 0, borderRight: "1px solid var(--border)", paddingRight: 10, overflowY: "auto" }}>
+                    <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
+                      <Btn kind="primary" sm style={{ flex: 1 }} onClick={newAiConv}><IconPlus size={12} /> 新对话</Btn>
+                      <Btn kind="ghost" sm title="新建分组" onClick={newAiGroup}>📁</Btn>
+                    </div>
+                    {/* 分组列表 */}
+                    {aiGroups.map((g) => {
+                      const groupConvs = aiConvs.filter((c) => c.groupId === g.id);
+                      return (
+                        <div key={g.id} style={{ marginBottom: 4 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 6px", borderRadius: 4, cursor: "pointer", fontSize: "var(--text-xs)", color: "var(--ink-2)" }} onClick={() => toggleAiGroup(g.id)}>
+                            <span style={{ fontSize: 10 }}>{g.collapsed ? "▶" : "▼"}</span>
+                            {renamingGroup === g.id ? (
+                              <input className="inp" style={{ flex: 1, fontSize: "var(--text-xs)", padding: "2px 4px" }} defaultValue={g.title} autoFocus onBlur={(e) => renameAiGroup(g.id, e.target.value || g.title)} onKeyDown={(e) => { if (e.key === "Enter") renameAiGroup(g.id, (e.target as HTMLInputElement).value || g.title); }} />
+                            ) : (
+                              <span style={{ flex: 1, fontWeight: 600 }} onDoubleClick={() => setRenamingGroup(g.id)}>📁 {g.title}</span>
+                            )}
+                            <span style={{ fontSize: 9, color: "var(--ink-3)" }}>{groupConvs.length}</span>
+                            <span style={{ fontSize: 9, color: "var(--danger)", cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); deleteAiGroup(g.id); show("分组「" + g.title + "」已删除,对话移至未分组"); }}>×</span>
                           </div>
-                        )}
-                        <div style={{ fontSize: 10, color: "var(--ink-3)", marginTop: 2 }}>{new Date(c.createdAt).toLocaleDateString("zh-CN")} · {c.messages.length}条</div>
+                          {!g.collapsed && groupConvs.map((c) => (
+                            <div key={c.id} style={{ padding: "4px 8px 4px 20px", borderRadius: 6, background: curConvId === c.id ? "var(--surface-2)" : "transparent", cursor: "pointer", marginBottom: 1, fontSize: "var(--text-xs)" }} onClick={() => setCurConvId(c.id)}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+                                {renamingConv === c.id ? (
+                                  <input className="inp" style={{ flex: 1, fontSize: "var(--text-xs)", padding: "1px 4px" }} defaultValue={c.title} autoFocus onBlur={(e) => renameAiConv(c.id, e.target.value || c.title)} onKeyDown={(e) => { if (e.key === "Enter") renameAiConv(c.id, (e.target as HTMLInputElement).value || c.title); }} />
+                                ) : (
+                                  <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} onDoubleClick={() => setRenamingConv(c.id)}>{c.title}</span>
+                                )}
+                                <select style={{ fontSize: 9, padding: 0, border: "none", background: "transparent", color: "var(--ink-3)", cursor: "pointer", width: 14 }} value={c.groupId ?? ""} onChange={(e) => { e.stopPropagation(); moveConvToGroup(c.id, e.target.value || undefined); }} onClick={(e) => e.stopPropagation()} title="移动到分组">
+                                  <option value="">⊘</option>
+                                  {aiGroups.map((gg) => <option key={gg.id} value={gg.id}>→{gg.title.slice(0,4)}</option>)}
+                                </select>
+                                <span style={{ fontSize: 9, color: "var(--danger)", cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); deleteAiConv(c.id); }}>×</span>
+                              </div>
+                              <div style={{ fontSize: 9, color: "var(--ink-3)", marginTop: 1 }}>{c.messages.length}条</div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+                    {/* 未分组对话 */}
+                    {aiConvs.filter((c) => !c.groupId).length > 0 && (
+                      <div style={{ marginTop: 6, paddingTop: 6, borderTop: "1px solid var(--border-soft)" }}>
+                        <div style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)", padding: "2px 6px", marginBottom: 2 }}>未分组 ({aiConvs.filter((c) => !c.groupId).length})</div>
+                        {aiConvs.filter((c) => !c.groupId).map((c) => (
+                          <div key={c.id} style={{ padding: "4px 8px", borderRadius: 6, background: curConvId === c.id ? "var(--surface-2)" : "transparent", cursor: "pointer", marginBottom: 1, fontSize: "var(--text-xs)" }} onClick={() => setCurConvId(c.id)}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+                              {renamingConv === c.id ? (
+                                  <input className="inp" style={{ flex: 1, fontSize: "var(--text-xs)", padding: "1px 4px" }} defaultValue={c.title} autoFocus onBlur={(e) => renameAiConv(c.id, e.target.value || c.title)} onKeyDown={(e) => { if (e.key === "Enter") renameAiConv(c.id, (e.target as HTMLInputElement).value || c.title); }} />
+                                ) : (
+                                  <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} onDoubleClick={() => setRenamingConv(c.id)}>{c.title}</span>
+                                )}
+                              <select style={{ fontSize: 9, padding: 0, border: "none", background: "transparent", color: "var(--ink-3)", cursor: "pointer", width: 14 }} value="" onChange={(e) => { e.stopPropagation(); moveConvToGroup(c.id, e.target.value || undefined); }} onClick={(e) => e.stopPropagation()} title="移动到分组">
+                                <option value="">⊘</option>
+                                {aiGroups.map((gg) => <option key={gg.id} value={gg.id}>→{gg.title.slice(0,4)}</option>)}
+                              </select>
+                              <span style={{ fontSize: 9, color: "var(--danger)", cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); deleteAiConv(c.id); }}>×</span>
+                            </div>
+                            <div style={{ fontSize: 9, color: "var(--ink-3)", marginTop: 1 }}>{c.messages.length}条</div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                     {aiConvs.length === 0 ? <p className="muted" style={{ fontSize: "var(--text-xs)", textAlign: "center", padding: 10 }}>暂无对话</p> : null}
                   </div>
                   <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
@@ -962,7 +1106,8 @@ export default function CRM(props: Props) {
         </Modal>
       ) : null}
 
-      <ImportCustomers open={importOpen} onClose={() => setImportOpen(false)} existingNames={customers.map((c) => c.name)} reload={props.reload} />
+      <ImportCustomers open={importOpen} onClose={() => setImportOpen(false)} existingNames={customers.map((c) => c.name)} reload={props.reload} />
+
       {dupOpen ? (
         <Modal title="重复客户合并" onClose={() => setDupOpen(false)} footer={
           <div className="grow"><Btn kind="ghost" onClick={() => setDupOpen(false)}>关闭</Btn></div>
@@ -1028,6 +1173,26 @@ export default function CRM(props: Props) {
             </select>
           </Field>
           <Field label="内容"><textarea className="inp" rows={3} style={{ width: "100%" }} value={cpForm.summary} onChange={(e) => setCpForm({ ...cpForm, summary: e.target.value })} placeholder="本次沟通要点…" /></Field>
+        </Modal>
+      ) : null}
+      {taskOpen && drawerC ? (
+        <Modal title={"新建关联任务 · " + drawerC.name} onClose={() => setTaskOpen(false)} footer={
+          <div className="grow"><Btn kind="ghost" onClick={() => setTaskOpen(false)}>取消</Btn><Btn kind="primary" onClick={() => { void saveTask(); }}>创建</Btn></div>
+        }>
+          <Field label="任务标题"><input className="inp" style={{ width: "100%" }} value={taskForm.title} onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })} placeholder="必填" /></Field>
+          <div className="field-row">
+            <Field label="优先级">
+              <select className="sel" style={{ width: "100%" }} value={taskForm.priority} onChange={(e) => setTaskForm({ ...taskForm, priority: e.target.value as "高" | "中" | "低" })}>
+                {(["高", "中", "低"] as const).map((p) => <option key={p}>{p}</option>)}
+              </select>
+            </Field>
+            <Field label="状态">
+              <select className="sel" style={{ width: "100%" }} value={taskForm.kanbanCol} onChange={(e) => setTaskForm({ ...taskForm, kanbanCol: e.target.value as "待办" | "进行中" | "待审核" | "完成" })}>
+                {(["待办", "进行中", "待审核", "完成"] as const).map((c) => <option key={c}>{c}</option>)}
+              </select>
+            </Field>
+          </div>
+          <Field label="截止日期"><input type="date" className="inp" style={{ width: "100%" }} value={taskForm.due} onChange={(e) => setTaskForm({ ...taskForm, due: e.target.value })} /></Field>
         </Modal>
       ) : null}
       {contactOpen && drawerC ? (
