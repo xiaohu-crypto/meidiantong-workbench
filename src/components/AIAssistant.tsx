@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { getAiConfig, loadAiKey } from "../core/ai/client";
+import { getActiveAi } from "../core/ai/client";
 import { EMPLOYEE_LIST, mergeEmployees, type Employee, type EmployeeId, buildContext } from "../core/ai/employees";
 import { onDataChanged, onOpenAIStaff } from "../core/events";
 import { retrieveNotes } from "../core/ai/rag";
@@ -149,8 +149,8 @@ export default function AIAssistant({ currentPage }: { currentPage: string }) {
         { role: "user", content: q },
       ];
       // 获取AI配置
-      const cfg = await getAiConfig();
-      const { key } = await loadAiKey();
+      const active = await getActiveAi();
+      const key = active.key;
       if (!key) {
         setMsgs((prev) => prev.map((m) => m.id === replyId ? { ...m, content: "⚠️ 未配置 API Key（系统管理 → AI 设置）" } : m));
         setLoading(false);
@@ -183,7 +183,7 @@ export default function AIAssistant({ currentPage }: { currentPage: string }) {
       window.mta?.onStreamChunk?.(chunkHandler);
       window.mta?.onStreamDone?.(doneHandler);
       window.mta?.onStreamError?.(errorHandler);
-      await window.mta?.chatStream?.({ baseUrl: cfg.baseUrl, apiKey: key, model: cfg.model, messages });
+      await window.mta?.chatStream?.({ baseUrl: active.baseUrl, apiKey: key, model: active.model, messages });
     } catch (e) {
       setMsgs((prev) => [...prev, { id: `e-${Date.now()}`, role: "assistant", content: `⚠️ 异常：${String(e)}`, time: Date.now() }]);
       setLoading(false);

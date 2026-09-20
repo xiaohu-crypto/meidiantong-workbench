@@ -82,16 +82,16 @@ async function askAi() {
   if (!aiQ.trim() || !window.mta?.chatStream) return;
   setAiBusy(true); setAiA("");
   try {
-    const { getAiConfig, loadAiKey } = await import("../core/ai/client");
-    const cfg = await getAiConfig();
-    const { key } = await loadAiKey();
+    const { getActiveAi } = await import("../core/ai/client");
+    const active = await getActiveAi();
+    const key = active.key;
     if (!key) { setAiA("未配置 API Key"); setAiBusy(false); return; }
     const ctx = props.notes.filter((n) => !n.deletedAt).slice(0, 20).map((n) => "【" + n.title + "】\n" + n.content.slice(0, 800)).join("\n\n");
     window.mta.onStreamChunk((chunk) => setAiA((prev) => prev + chunk));
     window.mta.onStreamDone(() => setAiBusy(false));
     window.mta.onStreamError((err) => { setAiA("调用失败:" + err); setAiBusy(false); });
     await window.mta.chatStream({
-      baseUrl: cfg.baseUrl, apiKey: key, model: cfg.model,
+      baseUrl: active.baseUrl, apiKey: key, model: active.model,
       messages: [
         { role: "system", content: "你是知识库助手。基于以下笔记内容回答用户问题,引用来源笔记标题。若笔记中没有相关信息,直接说未找到。\n\n知识库:\n" + ctx },
         { role: "user", content: aiQ },

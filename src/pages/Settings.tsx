@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { db } from "../db/db";
 import { seedIfEmpty } from "../data/seed";
-import { AI_AGENTS, DEFAULT_AI_CONFIG, getAiConfig, loadAiKey, saveAiKey, saveAiConfig, type AiConfig } from "../core/ai/client";
+import { AI_AGENTS, DEFAULT_AI_CONFIG, getAiConfig, loadAiKey, saveAiKey, saveAiConfig, encryptKey, type AiConfig, type AiProvider } from "../core/ai/client";
 import { quotaState } from "../core/ai/quota";
 import { getDnd, type Dnd } from "../core/notify";
 import { ensureVault, getVaultStatus, type VaultStatus } from "../core/vault";
@@ -29,6 +29,10 @@ export default function SettingsPage(props: { theme: "dark" | "light"; setTheme:
   const [aiTesting, setAiTesting] = useState(false);
   const [aiResult, setAiResult] = useState<string | null>(null);
   const [usage, setUsage] = useState<{ month: string; calls: number; tokens: number } | null>(null);
+  // 多供应商预设管理
+  const [providerEdit, setProviderEdit] = useState<AiProvider | null>(null); // 正在编辑/新增的供应商草稿
+  const [providerKeyInput, setProviderKeyInput] = useState("");
+  const [providerSaving, setProviderSaving] = useState(false);
   const [ab, setAb] = useState<{ enabled: boolean; intervalHours: number; dir: string; keep: number; lastAt: number }>({ enabled: false, intervalHours: 24, dir: "", keep: 7, lastAt: 0 });
   const [dnd, setDnd] = useState<Dnd>({ enabled: false, start: "22:00", end: "08:00" });
   const [vs, setVs] = useState<VaultStatus>({ mode: "plain", reason: "检测中…" });
@@ -50,6 +54,74 @@ export default function SettingsPage(props: { theme: "dark" | "light"; setTheme:
       setDnd(await getDnd());
     })();
   }, [tab]);
+
+  // ===== 多供应商预设管理 =====
+  function openNewProvider() {
+    setProviderEdit({ id: "pv-" + Date.now(), name: "", baseUrl: "https://openrouter.ai/api/v1", model: "", keyRecord: undefined });
+    setProviderKeyInput("");
+  }
+  function openEditProvider(p: AiProvider) {
+    setProviderEdit({ ...p });
+    setProviderKeyInput("");
+  }
+  async function saveProvider() {
+    if (!providerEdit) return;
+    if (!providerEdit.name.trim()) { show("请填写供应商名称"); return; }
+    if (!providerEdit.baseUrl.trim()) { show("请填写接口地址"); return; }
+    if (!providerEdit.model.trim()) { show("请填写模型 ID"); return; }
+    setProviderSaving(true);
+    try {
+      let rec = providerEdit.keyRecord;
+      if (providerKeyInput.trim()) {
+        const { rec: enc } = await encryptKey(providerKeyInput.trim());
+        rec = enc;
+      }
+      const saved: AiProvider = { ...providerEdit, name: providerEdit.name.trim(), baseUrl: providerEdit.baseUrl.trim(), model: providerEdit.model.trim(), keyRecord: rec };
+      const exists = aiCfg.providers.some((p) => p.id === saved.id);
+      const providers = exists ? aiCfg.providers.map((p) => (p.id === saved.id ? saved : p)) : [...aiCfg.providers, saved];
+      // 第一个供应商自动设为当前
+      const activeProviderId = aiCfg.activeProviderId ?? (providers.length === 1 ? saved.id : aiCfg.activeProviderId);
+      const next = { ...aiCfg, providers, activeProviderId };
+      setAiCfg(next);
+      await saveAiConfig(next);
+      setProviderEdit(null);
+      setProviderKeyInput("");
+      show(exists ? "供应商已更新" : "供应商已添加");
+    } finally { setProviderSaving(false); }
+  }
+  async function deleteProvider(id: string) {
+    const providers = aiCfg.providers.filter((p) => p.id !== id);
+    const activeProviderId = aiCfg.activeProviderId === id ? (providers[0]?.id ?? null) : aiCfg.activeProviderId;
+    const next = { ...aiCfg, providers, activeProviderId };
+    setAiCfg(next);
+    await saveAiConfig(next);
+    show("供应商已删除");
+  }
+  async function setActiveProvider(id: string | null) {
+    const next = { ...aiCfg, activeProviderId: id };
+    setAiCfg(next);
+    await saveAiConfig(next);
+    show(id ? "已切换当前模型" : "已切换为默认配置");
+  }
+  async function testProvider(p: AiProvider) {
+    setAiTesting(true); setAiResult(null);
+    try {
+      let key = "";
+      if (providerKeyInput.trim() && providerEdit?.id === p.id) {
+        key = providerKeyInput.trim(); // 编辑中刚输入还没保存的 key
+      } else if (p.keyRecord?.enc && window.mta?.aiLoadKey) {
+        key = await window.mta.aiLoadKey(p.keyRecord);
+      } else if (p.keyRecord?.plain) {
+        key = p.keyRecord.plain;
+      } else {
+        const g = await loadAiKey(); key = g.key;
+      }
+      if (!key) { setAiResult("连接失败:该供应商未配置密钥"); return; }
+      if (!window.mta?.aiChat) { setAiResult("连接失败:需要 Electron 环境"); return; }
+      const r = await window.mta.aiChat({ baseUrl: p.baseUrl, apiKey: key, model: p.model, messages: [{ role: "user", content: "ping,请回复 pong" }] });
+      setAiResult(r.ok ? `连接成功 · ${p.name} · 模型 ${p.model}${r.usage?.total_tokens ? " · tokens " + r.usage.total_tokens : ""}` : "连接失败:" + (r.error ?? "未知"));
+    } finally { setAiTesting(false); }
+  }
 
   function applyTheme(t: "dark" | "light") {
     props.setTheme(t);
@@ -211,26 +283,94 @@ export default function SettingsPage(props: { theme: "dark" | "light"; setTheme:
           <div className="alert-line"><span className="txt">月度 tokens 限额(0=不限;≥80% 告警,≥100% 暂停云调用)</span>
             <input className="inp num" style={{ width: 120, minHeight: 28 }} value={String(aiCfg.monthlyTokenLimit ?? 0)} onChange={(e) => { const v = { ...aiCfg, monthlyTokenLimit: Math.max(0, Number(e.target.value) || 0) }; setAiCfg(v); void saveAiConfig(v); }} />
           </div>
-<div className="field-row">
-            <Field label="接口地址"><input className="inp" style={{ width: "100%" }} value={aiCfg.baseUrl} onChange={(e) => setAiCfg({ ...aiCfg, baseUrl: e.target.value })} onBlur={() => { void saveAiConfig(aiCfg); }} /></Field>
-            <Field label="模型 ID"><input className="inp" style={{ width: "100%" }} value={aiCfg.model} onChange={(e) => setAiCfg({ ...aiCfg, model: e.target.value })} onBlur={() => { void saveAiConfig(aiCfg); }} /></Field>
+          {/* ===== 多供应商预设 ===== */}
+          <div className="h-row" style={{ marginTop: 14, marginBottom: 8 }}>
+            <span className="h-title sm">模型供应商预设</span>
+            <Btn kind="primary" sm style={{ marginLeft: "auto" }} onClick={openNewProvider}>+ 添加供应商</Btn>
           </div>
-          <div className="alert-line"><span className="txt">接口密钥（当前：{keyState.has ? (keyState.encrypted ? (keyState.fromEnv ? "已加密存储(自 AGNES_KEY 环境变量导入)" : "已加密存储") : "明文(浏览器回退)") : "未配置"})</span></div>
+
+          {/* 默认配置(旧版全局配置,向后兼容) */}
+          {(() => {
+            const active = aiCfg.activeProviderId === null;
+            return (
+              <div onClick={() => { void setActiveProvider(null); }} style={{ border: "1px solid " + (active ? "var(--brand)" : "var(--border-soft)"), borderRadius: "var(--r-md)", padding: 12, marginBottom: 8, cursor: "pointer", background: active ? "var(--brand-soft)" : "transparent" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                  <strong style={{ fontSize: "var(--text-sm)" }}>默认配置</strong>
+                  {active ? <Chip kind="data">使用中</Chip> : <span className="muted" style={{ fontSize: "var(--text-xs)" }}>点击设为当前</span>}
+                </div>
+                <div className="muted" style={{ fontSize: "var(--text-xs)", display: "flex", gap: 14, flexWrap: "wrap" }}>
+                  <span>模型:{aiCfg.model || "未设置"}</span>
+                  <span>地址:{aiCfg.baseUrl || "未设置"}</span>
+                  <span>密钥:{keyState.has ? (keyState.encrypted ? "已加密" : "已配置") : "未配置"}</span>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* 供应商卡片列表 */}
+          {aiCfg.providers.map((p) => {
+            const active = aiCfg.activeProviderId === p.id;
+            const hasKey = !!(p.keyRecord?.enc || p.keyRecord?.plain);
+            return (
+              <div key={p.id} style={{ border: "1px solid " + (active ? "var(--brand)" : "var(--border-soft)"), borderRadius: "var(--r-md)", padding: 12, marginBottom: 8, background: active ? "var(--brand-soft)" : "transparent" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                  <strong style={{ fontSize: "var(--text-sm)" }}>{p.name}</strong>
+                  {active ? <Chip kind="data">使用中</Chip> : null}
+                  <span style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+                    {!active ? <Btn kind="data" sm onClick={() => { void setActiveProvider(p.id); }}>设为当前</Btn> : null}
+                    <Btn kind="ghost" sm disabled={aiTesting} onClick={() => { void testProvider(p); }}>测试</Btn>
+                    <Btn kind="ghost" sm onClick={() => openEditProvider(p)}>编辑</Btn>
+                    <Btn kind="danger" sm onClick={() => { void deleteProvider(p.id); }}>删除</Btn>
+                  </span>
+                </div>
+                <div className="muted" style={{ fontSize: "var(--text-xs)", display: "flex", gap: 14, flexWrap: "wrap" }}>
+                  <span>模型:{p.model || "未设置"}</span>
+                  <span>地址:{p.baseUrl || "未设置"}</span>
+                  <span>密钥:{hasKey ? "已配置(独立)" : "未配置(将用全局密钥)"}</span>
+                </div>
+              </div>
+            );
+          })}
+          {aiCfg.providers.length === 0 && aiCfg.activeProviderId !== null ? null : null}
+
+          {/* 新增/编辑供应商内联表单 */}
+          {providerEdit ? (
+            <div style={{ border: "1px solid var(--brand)", borderRadius: "var(--r-md)", padding: 14, marginBottom: 10, background: "var(--surface-2)" }}>
+              <div className="h-title sm" style={{ marginBottom: 8 }}>{aiCfg.providers.some((p) => p.id === providerEdit.id) ? "编辑供应商" : "新增供应商"}</div>
+              <div className="field-row">
+                <Field label="供应商名称"><input className="inp" style={{ width: "100%" }} value={providerEdit.name} onChange={(e) => setProviderEdit({ ...providerEdit, name: e.target.value })} placeholder="如 OpenRouter / DeepSeek / 通义千问" /></Field>
+                <Field label="模型 ID"><input className="inp" style={{ width: "100%" }} value={providerEdit.model} onChange={(e) => setProviderEdit({ ...providerEdit, model: e.target.value })} placeholder="如 deepseek-chat / gpt-4o-mini" /></Field>
+              </div>
+              <Field label="接口地址"><input className="inp" style={{ width: "100%" }} value={providerEdit.baseUrl} onChange={(e) => setProviderEdit({ ...providerEdit, baseUrl: e.target.value })} placeholder="https://…/v1" /></Field>
+              <Field label={providerEdit.keyRecord ? "更换独立密钥(留空则保持不变)" : "独立密钥(可选,留空则用全局密钥)"}>
+                <input className="inp" type="password" style={{ width: "100%" }} value={providerKeyInput} onChange={(e) => setProviderKeyInput(e.target.value)} placeholder="sk-…" />
+              </Field>
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <Btn kind="primary" sm disabled={providerSaving} onClick={() => { void saveProvider(); }}>{providerSaving ? "保存中…" : "保存供应商"}</Btn>
+                <Btn kind="data" sm disabled={aiTesting} onClick={() => { void testProvider(providerEdit); }}>{aiTesting ? "测试中…" : "测试连接"}</Btn>
+                <Btn kind="ghost" sm onClick={() => { setProviderEdit(null); setProviderKeyInput(""); }}>取消</Btn>
+              </div>
+            </div>
+          ) : null}
+
+          {/* 全局密钥(默认配置及未配独立密钥的供应商回退使用) */}
+          <div className="h-title sm" style={{ marginTop: 12, marginBottom: 6 }}>全局密钥(默认配置与回退)</div>
+          <div className="alert-line"><span className="txt">当前状态:{keyState.has ? (keyState.encrypted ? (keyState.fromEnv ? "已加密(自 AGNES_KEY 导入)" : "已加密存储") : "明文(浏览器回退)") : "未配置"}</span></div>
           <div className="field-row">
-            <Field label={keyState.has ? "更换 Key" : "填入 Key"}>
+            <Field label={keyState.has ? "更换全局 Key" : "填入全局 Key"}>
               <input className="inp" type="password" style={{ width: "100%" }} value={keyInput} onChange={(e) => setKeyInput(e.target.value)} placeholder="sk-…" />
             </Field>
             <Field label=" ">
               <div style={{ display: "flex", gap: 8 }}>
                 <Btn kind="primary" sm disabled={!keyInput.trim()} onClick={() => { void (async () => { const r = await saveAiKey(keyInput.trim()); setKeyState({ has: true, encrypted: r.encrypted }); setKeyInput(""); show(r.encrypted ? "密钥已通过系统凭据加密存储" : "密钥已保存(浏览器模式:明文本地)"); })(); }}>保存密钥</Btn>
-                <Btn kind="data" sm disabled={aiTesting || !keyState.has} onClick={() => { void (async () => {
+                <Btn kind="data" sm disabled={aiTesting} onClick={() => { void (async () => {
                   setAiTesting(true); setAiResult(null);
                   try {
                     const { aiChat } = await import("../core/ai/client");
                     const r = await aiChat([{ role: "user", content: "ping,请回复 pong" }]);
                     setAiResult(r.ok ? "连接成功 · 模型 " + (r.model ?? "") + (r.tokens ? " · tokens " + r.tokens : "") : "连接失败:" + (r.error ?? "未知"));
                   } finally { setAiTesting(false); }
-                })(); }}>{aiTesting ? "测试中…" : "测试连接"}</Btn>
+                })(); }}>{aiTesting ? "测试中…" : "测试当前模型"}</Btn>
               </div>
             </Field>
           </div>
