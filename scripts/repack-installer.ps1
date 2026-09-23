@@ -23,7 +23,11 @@ $ErrorActionPreference = "Stop"
 $PROJECT_DIR = "D:\HaLeMa\Documents\Obsidianku\原始资料\autoclaw\app"
 $INSTALL_DIR = "D:\软件安装\个人工作台\meidiantong-workbench"
 $RESOURCES_DIR = "$INSTALL_DIR\resources"
-$BACKUP_ASAR = "$RESOURCES_DIR\app.asar.bak-20260914-160204"  # 含完整 node_modules 的备份
+# 动态查找最新的含完整 node_modules 的备份 asar(>100MB),避免写死文件名
+$BACKUP_ASAR = Get-ChildItem "$RESOURCES_DIR\app.asar.bak-*" -ErrorAction SilentlyContinue |
+  Where-Object { -not $_.PSIsContainer -and $_.Length -gt 100MB } |
+  Sort-Object LastWriteTime -Descending |
+  Select-Object -First 1 -ExpandProperty FullName
 $EXTRACT_DIR = "$env:TEMP\mdt_repack_$(Get-Date -Format 'HHmmss')"
 $APP_DATA = "$env:APPDATA\meidiantong-workbench"
 

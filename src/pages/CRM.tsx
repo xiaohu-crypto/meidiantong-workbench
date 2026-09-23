@@ -7,7 +7,7 @@ import { healthOf, latestTouch, customerStage, type CustomerStage } from "../cor
 import { validateCustomer } from "../core/validators";
 import type { Contact, ContactPoint, Contract, Customer, Deal, Payment, Rel, RelRole, Task } from "../types";
 import { Btn, Chip, money, Modal, Field, useToast } from "../ui/common";
-import { IconClose, IconPlus, IconSearch, IconUsers } from "../components/icons";
+import { IconCheck, IconClose, IconLayout, IconPlus, IconSearch, IconUsers } from "../components/icons";
 import ImportCustomers from "../components/ImportCustomers";
 import { RecordPage, type WidgetDef, type RecordLayout } from "../ui/RecordPage";
 import { FieldsWidget } from "../ui/widgets/FieldsWidget";
@@ -205,7 +205,6 @@ export default function CRM(props: Props) {
     setCpOpen(false); setCpForm({ channel: "微信", summary: "" });
     await props.reload();
   }
-  const [aiBusy, setAiBusy] = useState(false);
   const [sopScripts, setSopScripts] = useState<SopScript[]>([]);
   const [sopOpen, setSopOpen] = useState(false);
   const [sopForm, setSopForm] = useState({ id: "", scene: "", text: "" });
@@ -221,31 +220,6 @@ export default function CRM(props: Props) {
   const [renamingConv, setRenamingConv] = useState<string | null>(null);
   useEffect(() => { setAskInput(""); loadAiPersisted(); }, [openId]);
   useEffect(() => { void (async () => { setSopScripts(await getAllScripts()); })(); }, []);
-
-  async function genAdvice() {
-    if (!drawerC) return;
-    setAiBusy(true);
-    try {
-      const { aiChat } = await import("../core/ai/client");
-      const recentCps = props.cps.filter((cp) => cp.customerId === drawerC.id && !cp.deletedAt).slice(-5);
-      const custDeals = props.deals.filter((d) => d.customerId === drawerC.id && !d.deletedAt);
-      const ctx = "客户:" + drawerC.name + "\n行业:" + drawerC.industry + "\n等级:" + drawerC.grade +
-        "\n最近接触:" + recentCps.map((cp) => new Date(cp.time).toLocaleDateString() + " " + cp.channel + " " + cp.summary).join("; ") +
-        "\n在途商机:" + custDeals.map((d) => d.title + "(" + d.stage + ")").join("; ");
-      const sys = "你是资深媒体广告销售教练。基于客户信息给出跟进建议,严格按以下格式输出:\n" +
-        "【总结】一句话概括客户现状和跟进重点\n" +
-        "【关键决策】1. ... 2. ...(需要客户方决策的事项,最多3条)\n" +
-        "【待办】1. ... 2. ...(我方需要执行的动作,最多3条)\n" +
-        "【风险】1. ... 2. ...(潜在风险,最多2条;无风险写\"无明显风险\")";
-      const r = await aiChat([
-        { role: "system", content: sys },
-        { role: "user", content: ctx },
-      ]);
-      const text = r.ok ? (r.content ?? "") : "调用失败:" + (r.error ?? "");
-      appendMsg("user", "生成跟进建议");
-      appendMsg("assistant", text);
-    } finally { setAiBusy(false); }
-  }
 
   /* P3 本地问数:纯规则匹配,即时响应 */
   function runAsk() {
@@ -906,10 +880,9 @@ export default function CRM(props: Props) {
                   {drawerC.parentId ? <Chip>属集团 {nameOf(drawerC.parentId)}</Chip> : null}
                 </div>
               </div>
-              <Btn kind="ghost" sm style={{ marginLeft: "auto" }} onClick={() => openEdit(drawerC)}>编辑</Btn>
-              <Btn kind={editingLayout ? "data" : "ghost"} sm onClick={() => { if (editingLayout) void finishEditLayout(); else setEditingLayout(true); }}>{editingLayout ? "完成" : "编辑布局"}</Btn>
-              <button className="icon-btn" onClick={() => setOpenId(null)} aria-label="返回"><IconClose size={16} /></button>
-              <Btn sm kind="ghost" onClick={() => setOpenId(null)}>← 返回</Btn>
+              <button className="icon-btn" style={{ marginLeft: "auto", color: editingLayout ? "var(--brand)" : undefined }} title={editingLayout ? "完成布局编辑" : "编辑布局"} onClick={() => { if (editingLayout) void finishEditLayout(); else setEditingLayout(true); }}>{editingLayout ? <IconCheck size={16} /> : <IconLayout size={16} />}</button>
+              <Btn kind="primary" sm onClick={() => openEdit(drawerC)}>编辑</Btn>
+              <button className="icon-btn" onClick={() => setOpenId(null)} aria-label="关闭" title="关闭"><IconClose size={16} /></button>
             </div>
             <div className="drawer-body">
               <RecordPage
@@ -947,7 +920,7 @@ export default function CRM(props: Props) {
                 <MediaStrategyView customer={drawerC} onEdit={openStrategyEdit} />
               ) : null}
               {tab === "AI建议" && (
-                <div style={{ display: "flex", gap: 12, height: "100%" }}>
+                <div style={{ display: "flex", gap: 12, height: "calc(100vh - 224px)", minHeight: 320 }}>
                   <div style={{ width: 200, flexShrink: 0, borderRight: "1px solid var(--border)", paddingRight: 10, overflowY: "auto" }}>
                     <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
                       <Btn kind="primary" sm style={{ flex: 1 }} onClick={newAiConv}><IconPlus size={12} /> 新对话</Btn>
@@ -1014,13 +987,11 @@ export default function CRM(props: Props) {
                     {aiConvs.length === 0 ? <p className="muted" style={{ fontSize: "var(--text-xs)", textAlign: "center", padding: 10 }}>暂无对话</p> : null}
                   </div>
                   <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-                    <div style={{ marginBottom: 8, display: "flex", gap: 6 }}>
-                      <Btn kind="primary" sm onClick={() => { void genAdvice(); }} disabled={aiBusy}>{aiBusy ? "思考中…" : "生成跟进建议"}</Btn>
-                    </div>
+
                     <div style={{ flex: 1, overflowY: "auto", paddingRight: 4 }}>
                       {curConvId ? (() => {
                         const conv = aiConvs.find((c) => c.id === curConvId);
-                        if (!conv || conv.messages.length === 0) return <p className="muted" style={{ textAlign: "center", padding: 30, fontSize: "var(--text-sm)" }}>点击上方"生成跟进建议"或在下方输入问题开始对话</p>;
+                        if (!conv || conv.messages.length === 0) return <p className="muted" style={{ textAlign: "center", padding: 30, fontSize: "var(--text-sm)" }}>在下方输入问题开始对话,可询问在途商机、最近跟进、回款等</p>;
                         return conv.messages.map((m, i) => (
                           <div key={i} style={{ marginBottom: 10, textAlign: m.role === "user" ? "right" : "left" }}>
                             <div style={{ display: "inline-block", maxWidth: "85%", textAlign: "left", padding: "8px 12px", borderRadius: 10, background: m.role === "user" ? "var(--brand)" : "var(--surface-2)", color: m.role === "user" ? "#fff" : "var(--ink)", fontSize: "var(--text-sm)", lineHeight: 1.6 }}>
