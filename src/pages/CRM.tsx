@@ -12,7 +12,8 @@ import ImportCustomers from "../components/ImportCustomers";
 import { type RecordLayout } from "../ui/RecordPage";
 import { FieldsWidget } from "../ui/widgets/FieldsWidget";
 import { RelatedListWidget } from "../ui/widgets/RelatedListWidget";
-import { getAllScripts, addScript, updateScript, deleteScript, type SopScript } from "../core/sop";
+import { InlineEditable } from "../ui/widgets/InlineEditable";
+import { addScript, updateScript } from "../core/sop";
 import { TimelineWidget } from "../ui/widgets/TimelineWidget";
 import { askCustomer, type AskContext } from "../core/ai/ask";
 
@@ -172,18 +173,14 @@ export default function CRM(props: Props) {
     setContactForm({ name: "", phone: "", title: "", role: "影响者", wechat: "" });
     setContactOpen(true);
   }
-  async function refreshSop() { setSopScripts(await getAllScripts()); }
   function openSopNew() { setSopForm({ id: "", scene: "", text: "" }); setSopOpen(true); }
-  function openSopEdit(sc: SopScript) { setSopForm({ id: sc.id, scene: sc.scene, text: sc.text }); setSopOpen(true); }
   async function saveSop() {
     if (!sopForm.scene.trim()) { show("场景名称必填"); return; }
     if (!sopForm.text.trim()) { show("话术内容必填"); return; }
     if (sopForm.id) { await updateScript(sopForm.id, sopForm.scene.trim(), sopForm.text.trim()); show("话术已更新"); }
     else { await addScript(sopForm.scene.trim(), sopForm.text.trim()); show("话术已添加"); }
-    setSopOpen(false); await refreshSop();
+    setSopOpen(false);
   }
-  async function removeSop(id: string) { await deleteScript(id); show("话术已删除"); await refreshSop(); }
-  function copySop(text: string) { navigator.clipboard?.writeText(text).then(() => show("已复制到剪贴板")).catch(() => show("复制失败,请手动复制")); }
 
   function openStrategyEdit() {
     if (!drawerC) return;
@@ -233,21 +230,18 @@ export default function CRM(props: Props) {
     setCpOpen(false); setCpForm({ channel: "微信", summary: "" });
     await props.reload();
   }
-  const [sopScripts, setSopScripts] = useState<SopScript[]>([]);
   const [sopOpen, setSopOpen] = useState(false);
   const [sopForm, setSopForm] = useState({ id: "", scene: "", text: "" });
   /* P3 本地问数:输入框 + 最近 3 条问答历史(纯本地,不调云端) */
   const [askInput, setAskInput] = useState("");
   interface AiMsg { role: "user" | "assistant"; content: string; ts: number; }
-  interface AiConv { id: string; title: string; createdAt: number; messages: AiMsg[]; groupId?: string; }
+  interface AiConv { id: string; title: string; createdAt: number; messages: AiMsg[]; groupId?: string; pinned?: boolean; lastActiveAt?: number; }
   interface AiGroup { id: string; title: string; collapsed: boolean; }
   const [aiConvs, setAiConvs] = useState<AiConv[]>([]);
   const [aiGroups, setAiGroups] = useState<AiGroup[]>([]);
-  const [renamingGroup, setRenamingGroup] = useState<string | null>(null);
   const [curConvId, setCurConvId] = useState<string | null>(null);
   const [renamingConv, setRenamingConv] = useState<string | null>(null);
   useEffect(() => { setAskInput(""); loadAiPersisted(); }, [openId]);
-  useEffect(() => { void (async () => { setSopScripts(await getAllScripts()); })(); }, []);
 
   /* P3 本地问数:纯规则匹配,即时响应 */
   function runAsk() {
@@ -274,34 +268,34 @@ export default function CRM(props: Props) {
   function appendMsg(role: AiMsg["role"], content: string) {
     const c = ensureConv();
     const msg: AiMsg = { role, content, ts: Date.now() };
-    setAiConvs((cs) => cs.map((x) => x.id === c.id ? { ...x, messages: [...x.messages, msg], title: x.messages.length === 0 && role === "user" ? content.slice(0, 20) : x.title } : x));
+    setAiConvs((cs) => cs.map((x) => x.id === c.id ? { ...x, messages: [...x.messages, msg], lastActiveAt: Date.now(), title: x.messages.length === 0 && role === "user" ? content.slice(0, 20) : x.title } : x));
   }
-  function newAiConv() { const c: AiConv = { id: "conv-" + Date.now(), title: "新对话", createdAt: Date.now(), messages: [] }; setAiConvs((cs) => [c, ...cs]); setCurConvId(c.id); }
+  function newAiConv() { const c: AiConv = { id: "conv-" + Date.now(), title: "新对话", createdAt: Date.now(), lastActiveAt: Date.now(), messages: [] }; setAiConvs((cs) => [c, ...cs]); setCurConvId(c.id); }
+  /* P1 右栏:对话置顶📌(同级置顶区按 lastActiveAt 降序,非置顶按 lastActiveAt 降序) */
+  function togglePinConv(id: string) { setAiConvs((cs) => cs.map((x) => x.id === id ? { ...x, pinned: !x.pinned, lastActiveAt: Date.now() } : x)); persistAi(); }
+  /* P1 右栏:拖拽把对话移入目标分组(HTML5 Drag API) */
+  function onDropConvToGroup(e: React.DragEvent, groupId: string | undefined) {
+    e.preventDefault();
+    const convId = e.dataTransfer.getData("text/conv-id");
+    if (convId) moveConvToGroup(convId, groupId);
+  }
+  /* P1 排序:置顶在前(按 lastActiveAt 降序),未置顶在后(按 lastActiveAt 降序),默认互动时间降序 */
+  function sortConvs(cs: AiConv[]): AiConv[] {
+    return [...cs].sort((a, b) => {
+      if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
+      return (b.lastActiveAt ?? b.createdAt) - (a.lastActiveAt ?? a.createdAt);
+    });
+  }
   function renameAiConv(id: string, title: string) { setAiConvs((cs) => cs.map((x) => x.id === id ? { ...x, title } : x)); setRenamingConv(null); }
   function deleteAiConv(id: string) { setAiConvs((cs) => cs.filter((x) => x.id !== id)); if (curConvId === id) setCurConvId(null); persistAi(); }
-  /* AI 分组操作 */
-  function newAiGroup() {
-    const title = prompt("分组名称", "新分组");
-    if (!title?.trim()) return;
-    const g: AiGroup = { id: "g_" + Date.now(), title: title.trim(), collapsed: false };
-    setAiGroups((gs) => [...gs, g]);
-    persistAi();
-  }
-  function renameAiGroup(id: string, title: string) {
-    setAiGroups((gs) => gs.map((g) => g.id === id ? { ...g, title } : g));
-    setRenamingGroup(null);
-    persistAi();
-  }
+  /* AI 分组操作(分组管理 Dropdown 用) */
   function deleteAiGroup(id: string) {
     setAiGroups((gs) => gs.filter((g) => g.id !== id));
     setAiConvs((cs) => cs.map((c) => c.groupId === id ? { ...c, groupId: undefined } : c));
     persistAi();
   }
-  function toggleAiGroup(id: string) {
-    setAiGroups((gs) => gs.map((g) => g.id === id ? { ...g, collapsed: !g.collapsed } : g));
-  }
   function moveConvToGroup(convId: string, groupId: string | undefined) {
-    setAiConvs((cs) => cs.map((c) => c.id === convId ? { ...c, groupId } : c));
+    setAiConvs((cs) => cs.map((c) => c.id === convId ? { ...c, groupId, lastActiveAt: Date.now() } : c));
     persistAi();
   }
   /* AI 对话/分组持久化到 customer.custom.aiConversations */
@@ -553,18 +547,30 @@ export default function CRM(props: Props) {
     if (!drawerC) return null;
     if (w.type === "fields" && w.id === "base") {
       const h = healthOf(drawerC.id, props.cps, payments);
-      const arc = 2 * Math.PI * 16;
+      /* P1 左栏:健康度失分原因(就地理性提示) */
+      const loss = drawerContacts.length === 0 ? "决策链不完整" : drawerCps.length === 0 ? "近 30 天无跟进" : drawerDeals.filter((d) => !["签约", "输单", "流失"].includes(d.stage)).length === 0 ? "无在途商机" : "健康度良好,保持跟进";
+      const statusBadge = h >= 80 ? { cls: "ok", label: "🟢 状态平稳" } : h >= 60 ? { cls: "warn", label: "🟡 需关注" } : { cls: "bad", label: "🔴 风险预警" };
       const baseVisible = w.config?.visibleFields as string[] | undefined;
       return (
         <FieldsWidget title="客户基本信息" fields={[
-          { label: "客户健康度(派生)", value: (
-            <div className="score-wrap" style={{ gridColumn: "auto", padding: 0, margin: 0, border: "none" }}>
-              <svg width="40" height="40" className="ring"><circle className="bg" cx="20" cy="20" r="16" /><circle className="fg" cx="20" cy="20" r="16" strokeDasharray={arc} strokeDashoffset={arc * (1 - h / 100)} /></svg>
-              <span className="score-num num" style={{ fontSize: 18 }}>{h}<span style={{ fontSize: "var(--text-sm)", color: "var(--ink-4)", fontWeight: 500 }}> / 100</span></span>
+          { label: "客户健康度", value: (
+            <div className="wb-health-wrap">
+              <svg width="52" height="52" className="ring"><circle className="bg" cx="26" cy="26" r="20" /><circle className="fg" cx="26" cy="26" r="20" strokeDasharray={2 * Math.PI * 20} strokeDashoffset={2 * Math.PI * 20 * (1 - h / 100)} /></svg>
+              <div className="wb-health-meta">
+                <div style={{ fontSize: 18, fontWeight: 750, fontFamily: "var(--mono)" }}>{h}<span style={{ fontSize: "var(--text-sm)", color: "var(--ink-4)", fontWeight: 500 }}> / 100</span></div>
+                <div className="wb-health-badges">
+                  <span className={"wb-health-badge " + statusBadge.cls}><span className="dot" />{statusBadge.label}</span>
+                </div>
+                <div className="wb-loss-reason">核心失分项：{loss}</div>
+              </div>
             </div>
           )},
-          { label: "开票抬头", value: drawerC.billingTitle ?? "未建档" },
-          { label: "税号", value: drawerC.billingTaxNo ?? "未建档" },
+          { label: "开票抬头", value: (
+            <InlineEditable value={drawerC.billingTitle ?? ""} placeholder="未建档" onCommit={async (v) => { await repos.customers.update(drawerC.id, { billingTitle: v || undefined }, "行内编辑「开票抬头」"); await props.reload(); show("开票抬头已更新"); }} />
+          )},
+          { label: "税号", value: (
+            <InlineEditable value={drawerC.billingTaxNo ?? ""} placeholder="未建档" onCommit={async (v) => { await repos.customers.update(drawerC.id, { billingTaxNo: v || undefined }, "行内编辑「税号」"); await props.reload(); show("税号已更新"); }} />
+          )},
           { label: "在途商机", value: drawerDeals.filter((d) => !["输单", "流失"].includes(d.stage)).length + " 个" },
           { label: "累计商机额", value: money(drawerDeals.reduce((s, d) => s + d.value, 0)) },
           ...custFields.map((cf) => ({ label: cf.label, value: String((drawerC.custom ?? {})[cf.key] ?? "—") })),
@@ -627,78 +633,88 @@ export default function CRM(props: Props) {
     return null;
   }
 
-  /* P1 右栏 AI 副驾驶对话面板(原「AI建议」Tab 内容,迁移为常驻) */
+  /* P1 右栏 AI 面板重构:顶部自动摘要 + 中部历史对话纵向抽屉(置顶/拖拽/分组 Dropdown) + 底部固定输入框 */
+  const [groupMenuOpen, setGroupMenuOpen] = useState(false);
+  const [groupNewName, setGroupNewName] = useState("");
+  function newAiGroupInline() {
+    const t = groupNewName.trim();
+    if (!t) return;
+    setAiGroups((gs) => [...gs, { id: "g_" + Date.now(), title: t, collapsed: false }]);
+    setGroupNewName(""); setGroupMenuOpen(false);
+    persistAi();
+  }
   function renderAiPanel(): ReactNode {
-    return (
-      <div style={{ display: "flex", gap: 12, height: "100%", minHeight: 0 }}>
-        <div style={{ width: 200, flexShrink: 0, borderRight: "1px solid var(--border)", paddingRight: 10, overflowY: "auto" }}>
-          <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
-            <Btn kind="primary" sm style={{ flex: 1 }} onClick={newAiConv}><IconPlus size={12} /> 新对话</Btn>
-            <Btn kind="ghost" sm title="新建分组" onClick={newAiGroup}>📁</Btn>
+    const pinned = sortConvs(aiConvs.filter((c) => c.pinned));
+    const unpinned = sortConvs(aiConvs.filter((c) => !c.pinned));
+    function convRow(c: AiConv) {
+      return (
+        <div key={c.id}
+          draggable
+          onDragStart={(e) => e.dataTransfer.setData("text/conv-id", c.id)}
+          style={{ padding: "4px 8px", borderRadius: 6, background: curConvId === c.id ? "var(--surface-2)" : "transparent", cursor: "grab", marginBottom: 2, fontSize: "var(--text-xs)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            {c.pinned ? <span style={{ fontSize: 10, color: "var(--warning)" }} title="已置顶">📌</span> : <span style={{ fontSize: 10, color: "var(--ink-4)", opacity: .5 }}>⋮⋮</span>}
+            {renamingConv === c.id ? (
+              <input className="inp" style={{ flex: 1, fontSize: "var(--text-xs)", padding: "2px 4px" }} defaultValue={c.title} autoFocus
+                onBlur={(e) => renameAiConv(c.id, e.target.value || c.title)}
+                onKeyDown={(e) => { if (e.key === "Enter") renameAiConv(c.id, (e.target as HTMLInputElement).value || c.title); }} />
+            ) : (
+              <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} onDoubleClick={() => setRenamingConv(c.id)} onClick={() => setCurConvId(c.id)} title={c.title}>{c.title}</span>
+            )}
+            <button style={{ background: "transparent", border: "none", color: "var(--ink-3)", cursor: "pointer", fontSize: 10, padding: 0, flex: "none" }} title="置顶/取消置顶" onClick={(e) => { e.stopPropagation(); togglePinConv(c.id); }}>{c.pinned ? "取消📌" : "📌"}</button>
+            <span style={{ fontSize: 9, color: "var(--danger)", cursor: "pointer", flex: "none" }} onClick={(e) => { e.stopPropagation(); deleteAiConv(c.id); }} title="删除">×</span>
           </div>
-          {aiGroups.map((g) => {
-            const groupConvs = aiConvs.filter((c) => c.groupId === g.id);
-            return (
-              <div key={g.id} style={{ marginBottom: 4 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 6px", borderRadius: 4, cursor: "pointer", fontSize: "var(--text-xs)", color: "var(--ink-2)" }} onClick={() => toggleAiGroup(g.id)}>
-                  <span style={{ fontSize: 10 }}>{g.collapsed ? "▶" : "▼"}</span>
-                  {renamingGroup === g.id ? (
-                    <input className="inp" style={{ flex: 1, fontSize: "var(--text-xs)", padding: "2px 4px" }} defaultValue={g.title} autoFocus onBlur={(e) => renameAiGroup(g.id, e.target.value || g.title)} onKeyDown={(e) => { if (e.key === "Enter") renameAiGroup(g.id, (e.target as HTMLInputElement).value || g.title); }} />
-                  ) : (
-                    <span style={{ flex: 1, fontWeight: 600 }} onDoubleClick={() => setRenamingGroup(g.id)}>📁 {g.title}</span>
-                  )}
-                  <span style={{ fontSize: 9, color: "var(--ink-3)" }}>{groupConvs.length}</span>
-                  <span style={{ fontSize: 9, color: "var(--danger)", cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); deleteAiGroup(g.id); show("分组「" + g.title + "」已删除,对话移至未分组"); }}>×</span>
-                </div>
-                {!g.collapsed && groupConvs.map((c) => (
-                  <div key={c.id} style={{ padding: "4px 8px 4px 20px", borderRadius: 6, background: curConvId === c.id ? "var(--surface-2)" : "transparent", cursor: "pointer", marginBottom: 1, fontSize: "var(--text-xs)" }} onClick={() => setCurConvId(c.id)}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
-                      {renamingConv === c.id ? (
-                        <input className="inp" style={{ flex: 1, fontSize: "var(--text-xs)", padding: "1px 4px" }} defaultValue={c.title} autoFocus onBlur={(e) => renameAiConv(c.id, e.target.value || c.title)} onKeyDown={(e) => { if (e.key === "Enter") renameAiConv(c.id, (e.target as HTMLInputElement).value || c.title); }} />
-                      ) : (
-                        <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} onDoubleClick={() => setRenamingConv(c.id)}>{c.title}</span>
-                      )}
-                      <select style={{ fontSize: 9, padding: 0, border: "none", background: "transparent", color: "var(--ink-3)", cursor: "pointer", width: 14 }} value={c.groupId ?? ""} onChange={(e) => { e.stopPropagation(); moveConvToGroup(c.id, e.target.value || undefined); }} onClick={(e) => e.stopPropagation()} title="移动到分组">
-                        <option value="">⊘</option>
-                        {aiGroups.map((gg) => <option key={gg.id} value={gg.id}>→{gg.title.slice(0,4)}</option>)}
-                      </select>
-                      <span style={{ fontSize: 9, color: "var(--danger)", cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); deleteAiConv(c.id); }}>×</span>
-                    </div>
-                    <div style={{ fontSize: 9, color: "var(--ink-3)", marginTop: 1 }}>{c.messages.length}条</div>
-                  </div>
-                ))}
-              </div>
-            );
-          })}
-          {aiConvs.filter((c) => !c.groupId).length > 0 && (
-            <div style={{ marginTop: 6, paddingTop: 6, borderTop: "1px solid var(--border-soft)" }}>
-              <div style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)", padding: "2px 6px", marginBottom: 2 }}>未分组 ({aiConvs.filter((c) => !c.groupId).length})</div>
-              {aiConvs.filter((c) => !c.groupId).map((c) => (
-                <div key={c.id} style={{ padding: "4px 8px", borderRadius: 6, background: curConvId === c.id ? "var(--surface-2)" : "transparent", cursor: "pointer", marginBottom: 1, fontSize: "var(--text-xs)" }} onClick={() => setCurConvId(c.id)}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
-                    {renamingConv === c.id ? (
-                      <input className="inp" style={{ flex: 1, fontSize: "var(--text-xs)", padding: "1px 4px" }} defaultValue={c.title} autoFocus onBlur={(e) => renameAiConv(c.id, e.target.value || c.title)} onKeyDown={(e) => { if (e.key === "Enter") renameAiConv(c.id, (e.target as HTMLInputElement).value || c.title); }} />
-                    ) : (
-                      <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} onDoubleClick={() => setRenamingConv(c.id)}>{c.title}</span>
-                    )}
-                    <select style={{ fontSize: 9, padding: 0, border: "none", background: "transparent", color: "var(--ink-3)", cursor: "pointer", width: 14 }} value="" onChange={(e) => { e.stopPropagation(); moveConvToGroup(c.id, e.target.value || undefined); }} onClick={(e) => e.stopPropagation()} title="移动到分组">
-                      <option value="">⊘</option>
-                      {aiGroups.map((gg) => <option key={gg.id} value={gg.id}>→{gg.title.slice(0,4)}</option>)}
-                    </select>
-                    <span style={{ fontSize: 9, color: "var(--danger)", cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); deleteAiConv(c.id); }}>×</span>
-                  </div>
-                  <div style={{ fontSize: 9, color: "var(--ink-3)", marginTop: 1 }}>{c.messages.length}条</div>
-                </div>
-              ))}
-            </div>
-          )}
-          {aiConvs.length === 0 ? <p className="muted" style={{ fontSize: "var(--text-xs)", textAlign: "center", padding: 10 }}>暂无对话</p> : null}
+          <div style={{ fontSize: 9, color: "var(--ink-3)", marginTop: 1, display: "flex", gap: 8 }}>
+            <span>{c.messages.length}条</span>
+            <span>分组:{c.groupId ? aiGroups.find((g) => g.id === c.groupId)?.title ?? "未分组" : "未分组"}</span>
+          </div>
         </div>
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-          <div style={{ flex: 1, overflowY: "auto", paddingRight: 4 }}>
+      );
+    }
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, height: "100%", minHeight: 0 }}>
+        {/* 中部历史对话纵向抽屉 */}
+        <div style={{ flex: 1, overflowY: "auto", minHeight: 0, borderRadius: 8, border: "1px solid var(--border-soft)", background: "var(--surface)" }}>
+          <div style={{ display: "flex", gap: 4, padding: 8, borderBottom: "1px solid var(--border-soft)", position: "sticky", top: 0, background: "var(--surface)", zIndex: 1 }}>
+            <Btn kind="primary" sm style={{ flex: 1 }} onClick={newAiConv}><IconPlus size={12} /> 新对话</Btn>
+            <div style={{ position: "relative" }}>
+              <Btn kind="ghost" sm onClick={() => setGroupMenuOpen((v) => !v)} title="分组管理">⊞ 分组</Btn>
+              {groupMenuOpen ? (
+                <div style={{ position: "absolute", right: 0, top: "100%", marginTop: 4, width: 180, maxHeight: 260, overflowY: "auto", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 8, boxShadow: "var(--shadow-md)", zIndex: 10, padding: 6 }}>
+                  <div style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)", padding: "2px 6px 6px", display: "flex", gap: 4 }}>
+                    <input className="inp" style={{ flex: 1, fontSize: "var(--text-xs)", padding: "2px 6px" }} placeholder="新分组名…" value={groupNewName} onChange={(e) => setGroupNewName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") newAiGroupInline(); }} />
+                    <Btn kind="draft" sm onClick={newAiGroupInline}>新建</Btn>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    {aiGroups.map((g) => (
+                      <div key={g.id} onDragOver={(e) => e.preventDefault()} onDrop={(e) => onDropConvToGroup(e, g.id)}
+                        style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 8px", borderRadius: 6, fontSize: "var(--text-xs)", border: "1px dashed transparent" }}>
+                        <span style={{ flex: 1, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>📁 {g.title}</span>
+                        <span style={{ fontSize: 9, color: "var(--ink-3)" }}>{aiConvs.filter((c) => c.groupId === g.id).length}</span>
+                        <span style={{ fontSize: 9, color: "var(--danger)", cursor: "pointer" }} onClick={() => deleteAiGroup(g.id)} title="删除分组">×</span>
+                      </div>
+                    ))}
+                    <div onDragOver={(e) => e.preventDefault()} onDrop={(e) => onDropConvToGroup(e, undefined)}
+                      style={{ padding: "4px 8px", borderRadius: 6, fontSize: "var(--text-xs)", color: "var(--ink-3)", border: "1px dashed var(--border)" }}>⊘ 未分组</div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+          <div style={{ padding: 6 }}>
+            {pinned.length > 0 ? <div style={{ fontSize: 9, color: "var(--warning)", padding: "4px 6px 2px", fontWeight: 600 }}>📌 已置顶</div> : null}
+            {pinned.map(convRow)}
+            {unpinned.map(convRow)}
+            {aiConvs.length === 0 ? <p className="muted" style={{ fontSize: "var(--text-xs)", textAlign: "center", padding: 14 }}>暂无对话,点击上方新建</p> : null}
+            <p className="muted" style={{ fontSize: 9, color: "var(--ink-4)", textAlign: "center", padding: "6px 6px 2px" }}>拖拽对话到分组行可移动 · 默认按互动时间降序</p>
+          </div>
+        </div>
+        {/* 底部对话流 + 固定输入框 */}
+        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <div style={{ flex: 1, overflowY: "auto", paddingRight: 4, minHeight: 0 }}>
             {curConvId ? (() => {
               const conv = aiConvs.find((c) => c.id === curConvId);
-              if (!conv || conv.messages.length === 0) return <p className="muted" style={{ textAlign: "center", padding: 30, fontSize: "var(--text-sm)" }}>在下方输入问题开始对话,可询问在途商机、最近跟进、回款等</p>;
+              if (!conv || conv.messages.length === 0) return <p className="muted" style={{ textAlign: "center", padding: 30, fontSize: "var(--text-sm)" }}>在下方输入问题开始对话</p>;
               return conv.messages.map((m, i) => (
                 <div key={i} style={{ marginBottom: 10, textAlign: m.role === "user" ? "right" : "left" }}>
                   <div style={{ display: "inline-block", maxWidth: "85%", textAlign: "left", padding: "8px 12px", borderRadius: 10, background: m.role === "user" ? "var(--brand)" : "var(--surface-2)", color: m.role === "user" ? "#fff" : "var(--ink)", fontSize: "var(--text-sm)", lineHeight: 1.6 }}>
@@ -716,7 +732,7 @@ export default function CRM(props: Props) {
           <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
             <div className="filter-input" style={{ flex: 1 }}>
               <IconSearch size={13} />
-              <input value={askInput} onChange={(e) => setAskInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") runAsk(); }} placeholder="问我:这个客户有多少在途商机?最近跟进是什么时候?" />
+              <input value={askInput} onChange={(e) => setAskInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") runAsk(); }} placeholder="问我:这个客户有多少在途商机?" />
             </div>
             <Btn kind="data" sm onClick={runAsk}>提问</Btn>
           </div>
@@ -1037,144 +1053,6 @@ export default function CRM(props: Props) {
               {financeWarning && (
                 <div style={{ margin: "8px 18px", padding: "10px 14px", border: "1px solid var(--warning)", borderRadius: 8, background: "var(--warning-bg)", color: "var(--warning)", fontSize: 13 }}>
                   数据异常：回款 {money(totalReceived + totalUnpaid)} 超过累计商机额 {money(totalDealVal)}，请核对商机阶段与合同金额。
-                </div>
-              )}
-              {false && (
-                <div style={{ paddingTop: 6 }}>
-                  <div className="dsec">角色徽章制(不画图谱)</div>
-                  {drawerContacts.map(({ rel, contact }) => (
-                    <div className="chain-row" key={rel.id}>
-                      <div className="chain-avatar">{contact?.name.slice(0, 1) ?? "?"}</div>
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: "var(--text-sm)" }}>{contact?.name}
-                          {contact && contact.employmentStatus !== "在职" ? <Chip kind="danger">关系风险:{contact.employmentStatus}</Chip> : null}
-                        </div>
-                        <div className="cell-sub">{contact?.title} · {contact?.phone ?? "无手机号"}</div>
-                      </div>
-                      <span className="chain-role"><Chip kind={rel.role === "决策人DM" ? "danger" : rel.role === "影响者" ? "data" : "gray"}>{rel.role}</Chip></span>
-                    </div>
-                  ))}
-                  {drawerContacts.length === 0 ? <p className="muted" style={{ padding: "12px 18px" }}>暂无联系人关联</p> : null}
-                </div>
-              )}
-              {false && (
-                <div style={{ display: "flex", gap: 12, height: "calc(100vh - 224px)", minHeight: 320 }}>
-                  <div style={{ width: 200, flexShrink: 0, borderRight: "1px solid var(--border)", paddingRight: 10, overflowY: "auto" }}>
-                    <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
-                      <Btn kind="primary" sm style={{ flex: 1 }} onClick={newAiConv}><IconPlus size={12} /> 新对话</Btn>
-                      <Btn kind="ghost" sm title="新建分组" onClick={newAiGroup}>📁</Btn>
-                    </div>
-                    {/* 分组列表 */}
-                    {aiGroups.map((g) => {
-                      const groupConvs = aiConvs.filter((c) => c.groupId === g.id);
-                      return (
-                        <div key={g.id} style={{ marginBottom: 4 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 6px", borderRadius: 4, cursor: "pointer", fontSize: "var(--text-xs)", color: "var(--ink-2)" }} onClick={() => toggleAiGroup(g.id)}>
-                            <span style={{ fontSize: 10 }}>{g.collapsed ? "▶" : "▼"}</span>
-                            {renamingGroup === g.id ? (
-                              <input className="inp" style={{ flex: 1, fontSize: "var(--text-xs)", padding: "2px 4px" }} defaultValue={g.title} autoFocus onBlur={(e) => renameAiGroup(g.id, e.target.value || g.title)} onKeyDown={(e) => { if (e.key === "Enter") renameAiGroup(g.id, (e.target as HTMLInputElement).value || g.title); }} />
-                            ) : (
-                              <span style={{ flex: 1, fontWeight: 600 }} onDoubleClick={() => setRenamingGroup(g.id)}>📁 {g.title}</span>
-                            )}
-                            <span style={{ fontSize: 9, color: "var(--ink-3)" }}>{groupConvs.length}</span>
-                            <span style={{ fontSize: 9, color: "var(--danger)", cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); deleteAiGroup(g.id); show("分组「" + g.title + "」已删除,对话移至未分组"); }}>×</span>
-                          </div>
-                          {!g.collapsed && groupConvs.map((c) => (
-                            <div key={c.id} style={{ padding: "4px 8px 4px 20px", borderRadius: 6, background: curConvId === c.id ? "var(--surface-2)" : "transparent", cursor: "pointer", marginBottom: 1, fontSize: "var(--text-xs)" }} onClick={() => setCurConvId(c.id)}>
-                              <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
-                                {renamingConv === c.id ? (
-                                  <input className="inp" style={{ flex: 1, fontSize: "var(--text-xs)", padding: "1px 4px" }} defaultValue={c.title} autoFocus onBlur={(e) => renameAiConv(c.id, e.target.value || c.title)} onKeyDown={(e) => { if (e.key === "Enter") renameAiConv(c.id, (e.target as HTMLInputElement).value || c.title); }} />
-                                ) : (
-                                  <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} onDoubleClick={() => setRenamingConv(c.id)}>{c.title}</span>
-                                )}
-                                <select style={{ fontSize: 9, padding: 0, border: "none", background: "transparent", color: "var(--ink-3)", cursor: "pointer", width: 14 }} value={c.groupId ?? ""} onChange={(e) => { e.stopPropagation(); moveConvToGroup(c.id, e.target.value || undefined); }} onClick={(e) => e.stopPropagation()} title="移动到分组">
-                                  <option value="">⊘</option>
-                                  {aiGroups.map((gg) => <option key={gg.id} value={gg.id}>→{gg.title.slice(0,4)}</option>)}
-                                </select>
-                                <span style={{ fontSize: 9, color: "var(--danger)", cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); deleteAiConv(c.id); }}>×</span>
-                              </div>
-                              <div style={{ fontSize: 9, color: "var(--ink-3)", marginTop: 1 }}>{c.messages.length}条</div>
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    })}
-                    {/* 未分组对话 */}
-                    {aiConvs.filter((c) => !c.groupId).length > 0 && (
-                      <div style={{ marginTop: 6, paddingTop: 6, borderTop: "1px solid var(--border-soft)" }}>
-                        <div style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)", padding: "2px 6px", marginBottom: 2 }}>未分组 ({aiConvs.filter((c) => !c.groupId).length})</div>
-                        {aiConvs.filter((c) => !c.groupId).map((c) => (
-                          <div key={c.id} style={{ padding: "4px 8px", borderRadius: 6, background: curConvId === c.id ? "var(--surface-2)" : "transparent", cursor: "pointer", marginBottom: 1, fontSize: "var(--text-xs)" }} onClick={() => setCurConvId(c.id)}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
-                              {renamingConv === c.id ? (
-                                  <input className="inp" style={{ flex: 1, fontSize: "var(--text-xs)", padding: "1px 4px" }} defaultValue={c.title} autoFocus onBlur={(e) => renameAiConv(c.id, e.target.value || c.title)} onKeyDown={(e) => { if (e.key === "Enter") renameAiConv(c.id, (e.target as HTMLInputElement).value || c.title); }} />
-                                ) : (
-                                  <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} onDoubleClick={() => setRenamingConv(c.id)}>{c.title}</span>
-                                )}
-                              <select style={{ fontSize: 9, padding: 0, border: "none", background: "transparent", color: "var(--ink-3)", cursor: "pointer", width: 14 }} value="" onChange={(e) => { e.stopPropagation(); moveConvToGroup(c.id, e.target.value || undefined); }} onClick={(e) => e.stopPropagation()} title="移动到分组">
-                                <option value="">⊘</option>
-                                {aiGroups.map((gg) => <option key={gg.id} value={gg.id}>→{gg.title.slice(0,4)}</option>)}
-                              </select>
-                              <span style={{ fontSize: 9, color: "var(--danger)", cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); deleteAiConv(c.id); }}>×</span>
-                            </div>
-                            <div style={{ fontSize: 9, color: "var(--ink-3)", marginTop: 1 }}>{c.messages.length}条</div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {aiConvs.length === 0 ? <p className="muted" style={{ fontSize: "var(--text-xs)", textAlign: "center", padding: 10 }}>暂无对话</p> : null}
-                  </div>
-                  <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-
-                    <div style={{ flex: 1, overflowY: "auto", paddingRight: 4 }}>
-                      {curConvId ? (() => {
-                        const conv = aiConvs.find((c) => c.id === curConvId)!;
-                        if (!conv || conv.messages.length === 0) return <p className="muted" style={{ textAlign: "center", padding: 30, fontSize: "var(--text-sm)" }}>在下方输入问题开始对话,可询问在途商机、最近跟进、回款等</p>;
-                        return conv.messages.map((m, i) => (
-                          <div key={i} style={{ marginBottom: 10, textAlign: m.role === "user" ? "right" : "left" }}>
-                            <div style={{ display: "inline-block", maxWidth: "85%", textAlign: "left", padding: "8px 12px", borderRadius: 10, background: m.role === "user" ? "var(--brand)" : "var(--surface-2)", color: m.role === "user" ? "#fff" : "var(--ink)", fontSize: "var(--text-sm)", lineHeight: 1.6 }}>
-                              <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.content}</div>
-                              <div style={{ fontSize: 10, color: m.role === "user" ? "rgba(255,255,255,0.7)" : "var(--ink-3)", marginTop: 4, display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                                <span>{new Date(m.ts).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}</span>
-                                <span style={{ cursor: "pointer" }} onClick={() => copyText(m.content)}>复制</span>
-                                <span style={{ cursor: "pointer" }} onClick={() => deleteMsg(conv.id, i)}>删除</span>
-                              </div>
-                            </div>
-                          </div>
-                        ));
-                      })() : <p className="muted" style={{ textAlign: "center", padding: 30, fontSize: "var(--text-sm)" }}>选择或新建一个对话</p>}
-                    </div>
-                    <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
-                      <div className="filter-input" style={{ flex: 1 }}>
-                        <IconSearch size={13} />
-                        <input value={askInput} onChange={(e) => setAskInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") runAsk(); }} placeholder="问我:这个客户有多少在途商机?最近跟进是什么时候?" />
-                      </div>
-                      <Btn kind="data" sm onClick={runAsk}>提问</Btn>
-                    </div>
-                  </div>
-                </div>
-              )}
-              {false && (
-                <div>
-                  <div className="h-row" style={{ marginBottom: 10 }}>
-                    <span className="h-title sm">SOP 话术库</span>
-                    <Btn kind="primary" sm style={{ marginLeft: "auto" }} onClick={openSopNew}><IconPlus size={12} /> 新增话术</Btn>
-                  </div>
-                  {sopScripts.map((sc) => (
-                    <div key={sc.id} className="card" style={{ marginBottom: 10, padding: 12 }}>
-                      <div className="h-row" style={{ marginBottom: 6 }}>
-                        <span style={{ fontWeight: 600, fontSize: "var(--text-sm)" }}>{sc.scene}</span>
-                        {sc.builtin ? <Chip gray>内置</Chip> : null}
-                        <div style={{ marginLeft: "auto", display: "flex", gap: 4 }}>
-                          <Btn kind="ghost" sm onClick={() => copySop(sc.text)}>复制</Btn>
-                          {!sc.builtin ? <Btn kind="ghost" sm onClick={() => openSopEdit(sc)}>编辑</Btn> : null}
-                          {!sc.builtin ? <Btn kind="ghost" sm onClick={() => { void removeSop(sc.id); }}>删除</Btn> : null}
-                        </div>
-                      </div>
-                      <p style={{ margin: 0, fontSize: "var(--text-sm)", lineHeight: 1.7, color: "var(--ink-2)", whiteSpace: "pre-wrap" }}>{sc.text}</p>
-                    </div>
-                  ))}
-                  {sopScripts.length === 0 ? <p className="muted" style={{ textAlign: "center", padding: 20 }}>暂无话术</p> : null}
                 </div>
               )}
             </div>

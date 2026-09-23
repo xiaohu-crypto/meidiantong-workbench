@@ -158,7 +158,23 @@ table.tgrid tbody tr:hover{background:var(--surface-2)}
 .score-wrap{display:flex;align-items:center;gap:12px;grid-column:1/-1;border-bottom:1px solid var(--border-soft);padding-bottom:12px;margin-bottom:2px}
 .ring{transform:rotate(-90deg)}
 .ring .bg{stroke:var(--surface-2);fill:none;stroke-width:5}
-.ring .fg{stroke:var(--success);fill:none;stroke-width:5;stroke-linecap:round}
+.ring .fg{stroke:var(--data);fill:none;stroke-width:5;stroke-linecap:round}
+/* P1 三栏工作台:左栏健康度圆环青色(#25F4EE=--data) + 状态徽章 + 失分原因 + 行内可编辑字段 + 右栏分组管理 */
+.wb-health-wrap{display:flex;align-items:center;gap:12px;grid-column:1/-1;border-bottom:1px solid var(--border-soft);padding-bottom:12px;margin-bottom:2px;flex-wrap:wrap}
+.wb-health-meta{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}
+.wb-health-badges{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.wb-health-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:2px 9px;border-radius:var(--r-full);line-height:1.5}
+.wb-health-badge.ok{background:var(--success-bg);color:var(--success)}
+.wb-health-badge.warn{background:var(--warning-bg);color:var(--warning)}
+.wb-health-badge.bad{background:var(--danger-bg);color:var(--danger)}
+.wb-health-badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+.wb-loss-reason{font-size:11px;color:var(--ink-4);line-height:1.5}
+.wb-editable{position:relative;display:inline-flex;align-items:center;gap:5px;cursor:text;min-width:0}
+.wb-editable .v{border-bottom:1px dashed transparent;transition:border-color var(--t-fast)}
+.wb-editable:hover .v{border-bottom-color:var(--data)}
+.wb-editable .pencil{color:var(--data);opacity:0;transition:opacity var(--t-fast);font-size:12px;flex:none}
+.wb-editable:hover .pencil{opacity:1}
+.wb-editable input{font:inherit;width:140px;min-width:0}
 .score-num{font-size:22px;font-weight:750}
 
 .kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:start}
