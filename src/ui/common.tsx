@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactNode, useCallback, useState } from "react";
+import { type CSSProperties, type ReactNode, useCallback, useEffect, useState } from "react";
 import { IconClose } from "../components/icons";
 
 export function money(n: number): string {
@@ -14,8 +14,14 @@ export function Btn(props: { kind?: "primary" | "ghost" | "data" | "draft" | "do
   return <button className={cls} style={props.style} onClick={props.onClick} disabled={props.disabled} title={props.title}>{props.children}</button>;
 }
 
-export function Chip(props: { kind?: "brand" | "data" | "green" | "warn" | "danger" | "gray"; gray?: boolean; children: ReactNode; style?: CSSProperties }) {
-  return <span className={"chip " + (props.gray ? "gray" : props.kind ?? "gray")} style={props.style}>{props.children}</span>;
+export function Chip(props: { kind?: "brand" | "data" | "green" | "warn" | "danger" | "gray"; gray?: boolean; dot?: boolean; children: ReactNode; style?: CSSProperties }) {
+  const dot = props.dot !== undefined ? props.dot : !!(props.kind && props.kind !== "gray");
+  return (
+    <span className={"chip " + (props.gray ? "gray" : props.kind ?? "gray") + (dot ? " with-dot" : "")} style={props.style}>
+      {dot ? <span className="chip-dot" /> : null}
+      {props.children}
+    </span>
+  );
 }
 
 export function Modal(props: { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode }) {
@@ -39,11 +45,21 @@ export function Modal(props: { title: string; onClose: () => void; children: Rea
  *  - level1: mask z=1000 / drawer z=1001 / 宽 520
  *  - level2: mask z=2000 / drawer z=2001 / 宽 480(叠在 level1 上方,左侧露边)
  * 关闭遵循后进先出:点击本级遮罩仅关本级。滑出动画 ≤250ms(220ms)。
+ * P1 §嵌套抽屉:多层同时打开时,ESC 仅关闭"最上层"(level 最高且先于更低层挂载)的那个;
+ * 二级抽屉提交成功后一级抽屉表单数据不被清空,一级关闭后由上层 reload() 热重载主页 + 右栏 AI。
  */
 export function Drawer(props: { open: boolean; title: string; onClose: () => void; level?: number; width?: number; children: ReactNode; footer?: ReactNode }) {
   const level = props.level ?? 1;
   const z = level * 1000 + 1;
   const maskZ = level * 1000;
+  /* P1 §嵌套:ESC 仅关最上层——通过 body 上登记的最大 level 判断本抽屉是否为顶层 */
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key !== "Escape" || !props.open) return;
+    const top = document.body.dataset["drawerTopLevel"];
+    const myLevel = String(level);
+    if (top && Number(top) > Number(myLevel)) return; /* 有更高层,ESC 交给它 */
+    props.onClose();
+  };
   return (
     <>
       <div
@@ -62,8 +78,35 @@ export function Drawer(props: { open: boolean; title: string; onClose: () => voi
         <div className="drawer-body">{props.children}</div>
         {props.footer ? <div className="drawer-foot">{props.footer}</div> : null}
       </div>
+      <DrawerLevelRegistry level={level} open={props.open} onKey={onKey} />
     </>
   );
+}
+
+/**
+ * P1 §嵌套抽屉:当前"最上层"level 的共享登记(模块级 Set)。
+ * 每个打开的抽屉按 level 登记;body[data-drawer-top-level] 始终=当前最大 level。
+ * ESC 时各抽屉 handler 读取该值,只有"当前最上层"的抽屉响应,其余 return,
+ * 保证「连续打开多层时 ESC 仅关最上层」,且关掉上层后下层自动重新成为最上层。
+ */
+const openDrawerLevels = new Set<number>();
+
+/** P1 §嵌套抽屉:登记/移除本抽屉 level,并同步 body 上的最上层标记 */
+function DrawerLevelRegistry({ level, open, onKey }: { level: number; open: boolean; onKey: (e: KeyboardEvent) => void }) {
+  useEffect(() => {
+    if (!open) return;
+    openDrawerLevels.add(level);
+    const top = Math.max(...Array.from(openDrawerLevels));
+    document.body.dataset["drawerTopLevel"] = String(top);
+    document.body.addEventListener("keydown", onKey);
+    return () => {
+      document.body.removeEventListener("keydown", onKey);
+      openDrawerLevels.delete(level);
+      const rest = openDrawerLevels.size ? Math.max(...Array.from(openDrawerLevels)) : 0;
+      document.body.dataset["drawerTopLevel"] = String(rest);
+    };
+  }, [level, open, onKey]);
+  return null;
 }
 
 export function Field(props: { label: string; error?: string; children: ReactNode }) {

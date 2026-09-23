@@ -23,14 +23,56 @@ const SYNONYMS: Record<string, string[]> = {
   billingTaxNo: ["税号", "纳税号", "纳税人识别号", "统一社会信用代码", "税务登记号", "税号/统一信用代码", "社会信用代码"],
 };
 
+/** P1 Finexy 表头归一化:每个系统字段 → 匹配到的表头索引 + 置信度(精确=100/包含=60/未匹配=0) */
+export interface ColumnMatchItem {
+  field: string;
+  /** 匹配到的表头列索引,-1 表示未匹配 */
+  index: number;
+  /** 匹配置信度 0-100 */
+  confidence: number;
+  /** 匹配到的原始表头文本(未匹配为 "") */
+  matchedHeader: string;
+}
+
+export function columnMatchConfidence(headers: string[]): ColumnMatchItem[] {
+  const fields = Object.keys(SYNONYMS);
+  const claimed = new Set<number>();
+  const items: ColumnMatchItem[] = [];
+  for (const field of fields) {
+    const words = SYNONYMS[field];
+    let bestIdx = -1;
+    let bestConf = 0;
+    headers.forEach((h, i) => {
+      if (claimed.has(i)) return;
+      const clean = String(h).trim();
+      if (clean === "") return;
+      for (const w of words) {
+        if (clean === w) {
+          // 精确匹配:100
+          if (bestConf < 100) { bestIdx = i; bestConf = 100; }
+          break;
+        } else if (clean.includes(w) || w.includes(clean)) {
+          // 包含匹配:60
+          if (bestConf < 60) { bestIdx = i; bestConf = 60; }
+        }
+      }
+    });
+    if (bestIdx >= 0) {
+      claimed.add(bestIdx);
+      items.push({ field, index: bestIdx, confidence: bestConf, matchedHeader: String(headers[bestIdx]).trim() });
+    } else {
+      items.push({ field, index: -1, confidence: 0, matchedHeader: "" });
+    }
+  }
+  return items;
+}
+
+/** 向后兼容:仅取"有匹配"的列(系统字段→表头索引) */
 export function columnMatch(headers: string[]): Record<string, number> {
   const map: Record<string, number> = {};
-  headers.forEach((h, i) => {
-    const clean = String(h).trim();
-    for (const [field, words] of Object.entries(SYNONYMS)) {
-      if (map[field] === undefined && words.some((w) => clean === w || clean.includes(w))) map[field] = i;
-    }
-  });
+  for (const it of columnMatchConfidence(headers)) {
+    if (it.index >= 0) map[it.field] = it.index;
+  }
   return map;
 }
 

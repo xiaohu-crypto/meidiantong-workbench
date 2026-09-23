@@ -37,9 +37,11 @@ interface RecordPageProps {
   editing?: boolean;
   /** P4 布局(当前 Tab widgets 顺序)变化回调 */
   onLayoutChange?: (layout: RecordLayout) => void;
+  /** P1 Finexy 低代码动态扩展字段密度自适应:紧凑/宽松,默认 relaxed */
+  density?: "compact" | "relaxed";
 }
 
-export function RecordPage({ layout, activeTab, onTabChange, renderWidget, className, editing, onLayoutChange }: RecordPageProps) {
+export function RecordPage({ layout, activeTab, onTabChange, renderWidget, className, editing, onLayoutChange, density = "relaxed" }: RecordPageProps) {
   const tab = layout.tabs.find((t) => t.id === activeTab) ?? layout.tabs[0];
   /* P4 拖拽状态:被拖拽 widget id + 放置指示位置(目标 widget 索引) */
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -81,7 +83,7 @@ export function RecordPage({ layout, activeTab, onTabChange, renderWidget, class
   }
 
   return (
-    <div className={"record-page" + (className ? " " + className : "")}>
+    <div className={"record-page" + (className ? " " + className : "") + " density-" + density}>
       <div className="dtabs">
         {layout.tabs.map((t) => (
           <span

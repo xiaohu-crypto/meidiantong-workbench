@@ -137,7 +137,7 @@ export default function App() {
   const [data, setData] = useState<DataSet | null>(null);
   const [showQuick, setShowQuick] = useState(false);
   const [showOnboard, setShowOnboard] = useState(false);
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [theme, setTheme] = useState<"dark" | "light">("light");
   const [focusCid, setFocusCid] = useState<string | null>(null);
   const [kbFocus, setKbFocus] = useState<string | null>(null);
   const [updateVer, setUpdateVer] = useState<string | null>(null);
@@ -213,7 +213,7 @@ export default function App() {
       await reload();
       const pays = (await db.getAll<Payment>("payments")).filter((p) => !p.deletedAt && p.status === "逾期");
       void startupCatchUp(pays.length);
-      const t = await db.getSetting<"dark" | "light">("theme", "dark");
+      const t = await db.getSetting<"dark" | "light">("theme", "light");
       setTheme(t);
       document.documentElement.setAttribute("data-theme", t);
       void window.mta?.titlebarSetTheme?.(t);
@@ -323,6 +323,13 @@ export default function App() {
             </div>
           ))}
         </nav>
+        <div className="ai-status-anchor" title="本地敏感数据安全盾">
+          <span className="ai-status" data-on="true">
+            <span className="ai-status-ping" />
+            <span className="ai-status-dot" />
+          </span>
+          <span className="ai-status-tip">本地敏感数据安全盾：已锁定 (AES-256-GCM)</span>
+        </div>
         <div className="sidebar-user-menu">
           <div className="user-menu-trigger">
             <div className="user-avatar" onClick={() => setUserMenuOpen(!userMenuOpen)} style={{ cursor: "pointer" }}>媒</div>

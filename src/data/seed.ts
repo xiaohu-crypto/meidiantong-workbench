@@ -142,6 +142,6 @@ export async function seedIfEmpty(): Promise<boolean> {
     { name: "双11 预热", date: dateStr(42) },
   ];
   await db.setSetting("milestones", milestones);
-  await db.setSetting("theme", "dark");
+  await db.setSetting("theme", "light");
   return true;
 }

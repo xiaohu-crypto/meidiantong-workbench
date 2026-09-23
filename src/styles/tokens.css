@@ -7,8 +7,12 @@
   --border:#272A31; --border-soft:#20222A;
   --ink:#F2F3F5; --ink-2:#D5D8DE; --ink-3:#9BA0AA; --ink-4:#6B7078;
   --chart-1:#25F4EE; --chart-2:#8B7CF6; --chart-3:#5AC8FA; --chart-4:#9BA0AA;
+  /* P1 §双模 Finexy 极简:双层极浅微阴影(对齐 --shadow-card 0 4px 20px + 0 2px 6px) */
   --shadow-sm:0 1px 2px rgba(0,0,0,.4);
   --shadow-md:0 6px 20px rgba(0,0,0,.45);
+  --shadow-card:0 4px 20px rgba(0,0,0,.02), 0 2px 6px rgba(0,0,0,.02);
+  /* P1 §双模主题切换平滑过渡曲线 */
+  --animate-theme-switch:all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   --text-xs:12px; --text-sm:13px; --text-base:14px; --text-lg:16px;
   --text-xl:18px; --text-2xl:20px; --text-3xl:24px; --text-4xl:30px;
   --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px;
@@ -27,8 +31,11 @@ html[data-theme="light"]{
   --border:#E4E6EB; --border-soft:#EEF0F3;
   --ink:#17181C; --ink-2:#3A3D44; --ink-3:#7A7F89; --ink-4:#A0A5AF;
   --chart-1:#0891A8; --chart-2:#8B7CF6; --chart-3:#5AC8FA; --chart-4:#A0A5AF;
+  /* P1 §双模 Finexy 极简:浅色模式双层极浅微阴影(几乎不可见,强呼吸感) */
   --shadow-sm:0 1px 2px rgba(16,18,24,.05);
   --shadow-md:0 6px 18px rgba(16,18,24,.08);
+  --shadow-card:0 4px 20px rgba(16,18,24,.02), 0 2px 6px rgba(16,18,24,.02);
+  --animate-theme-switch:all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}

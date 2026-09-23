@@ -65,6 +65,8 @@ export default function Dev(props: Props) {
   const [dealLayout, setDealLayout] = useState<RecordLayout>(DEFAULT_DEAL_LAYOUT);
   /* P4 布局编辑模式 */
   const [editingLayout, setEditingLayout] = useState(false);
+  /* P1 Finexy 低代码动态扩展字段密度自适应:紧凑/宽松切换,写 db.setSetting("dealRecordDensity") 持久化 */
+  const [recordDensity, setRecordDensity] = useState<"compact" | "relaxed">("relaxed");
   useEffect(() => { void (async () => setExtraStages(await db.getSetting<string[]>("customStages", [])))(); }, []);
   /* P1 记录布局预留:从 settings.recordLayouts 合并默认 */
   useEffect(() => {
@@ -76,6 +78,15 @@ export default function Dev(props: Props) {
       }
     })();
   }, []);
+  /* P1 密度自适应:从 settings.dealRecordDensity 读取 + 切换持久化 */
+  useEffect(() => {
+    void db.getSetting<"compact" | "relaxed">("dealRecordDensity", "relaxed").then(setRecordDensity);
+  }, []);
+  function toggleRecordDensity() {
+    const next = recordDensity === "compact" ? "relaxed" : "compact";
+    setRecordDensity(next);
+    void db.setSetting("dealRecordDensity", next);
+  }
   const [pf, setPf] = useState({ name: "", customerId: "", date: new Date().toISOString().slice(0, 10), investment: "", competitors: "", result: "待定", lossReason: "", reviewNote: "" });
   const [aiPitchBusy, setAiPitchBusy] = useState(false);
   const [dealOpen, setDealOpen] = useState(false);
@@ -367,6 +378,7 @@ export default function Dev(props: Props) {
               </div>
               <Btn kind="ghost" sm style={{ marginLeft: "auto" }} onClick={() => openEditDeal(sel)}>编辑</Btn>
               <Btn kind={editingLayout ? "data" : "ghost"} sm onClick={() => { if (editingLayout) void finishEditLayout(); else setEditingLayout(true); }}>{editingLayout ? "完成" : "编辑布局"}</Btn>
+              <Btn kind={recordDensity === "compact" ? "data" : "ghost"} sm onClick={toggleRecordDensity} title="切换字段密度(紧凑/宽松)">{recordDensity === "compact" ? "⊟ 紧凑" : "⊞ 宽松"}</Btn>
               <button className="icon-btn" onClick={() => setSelected(null)} aria-label="关闭"><IconClose size={16} /></button>
             </div>
             {/* Task3: deal path progress */}
@@ -406,6 +418,7 @@ export default function Dev(props: Props) {
                 renderWidget={renderDealWidget}
                 editing={editingLayout}
                 onLayoutChange={handleLayoutChange}
+                density={recordDensity}
               />
             </div>
             <div className="drawer-foot">

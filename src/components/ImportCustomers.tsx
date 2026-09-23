@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { db } from "../db/db";
-import { parseAnyFile, rowsFromSheet, parseRows, detectHeaderRow, type ImportRow, type ParsedFile } from "../core/importer";
+import { parseAnyFile, rowsFromSheet, parseRows, detectHeaderRow, columnMatchConfidence, type ColumnMatchItem, type ImportRow, type ParsedFile } from "../core/importer";
 import { uid, Btn, useToast } from "../ui/common";
 
 interface Props { open: boolean; onClose: () => void; existingNames: string[]; reload: () => Promise<void> }
@@ -14,8 +14,7 @@ export default function ImportCustomers(props: Props) {
   const [parsed, setParsed] = useState<ParsedFile | null>(null);
   const [sheetIdx, setSheetIdx] = useState(0);
   const [headerRow, setHeaderRow] = useState(0);
-  const [mapping, setMapping] = useState<Record<string, number>>({});
-  const [headers, setHeaders] = useState<string[]>([]);
+  const [mappingItems, setMappingItems] = useState<ColumnMatchItem[]>([]);
   const [rows, setRows] = useState<ImportRow[]>([]);
   const [unmatchedCols, setUnmatchedCols] = useState<string[]>([]);
   const [importAllSheets, setImportAllSheets] = useState(false);
@@ -27,8 +26,10 @@ export default function ImportCustomers(props: Props) {
 
   function recompute(p: ParsedFile, sIdx: number, hRow: number) {
     const patched = { ...p, headerRow: hRow };
-    const { headers: hs, rows: rs, mapping: m, unmatchedCols: uc } = rowsFromSheet(patched, sIdx);
-    setHeaders(hs); setRows(rs); setMapping(m); setUnmatchedCols(uc);
+    const { headers: hs, rows: rs, unmatchedCols: uc } = rowsFromSheet(patched, sIdx);
+    setRows(rs); setUnmatchedCols(uc);
+    /* P1 Finexy 表头归一化:重算带置信度的映射项(精确=100/包含=60/未匹配=0) */
+    setMappingItems(columnMatchConfidence(hs));
   }
 
   async function onFile(f: File) {
@@ -166,16 +167,29 @@ export default function ImportCustomers(props: Props) {
                   未匹配列(将存入自定义字段): {unmatchedCols.slice(0, 8).join("、")}{unmatchedCols.length > 8 ? " 等" + unmatchedCols.length + "列" : ""}
                 </p>
               ) : null}
-              <div className="h-row"><span className="h-title sm">列匹配预览</span></div>
-              <table className="tgrid">
-                <thead><tr><th>系统字段</th><th>匹配到的表头</th></tr></thead>
-                <tbody>
-                  {Object.entries(mapping).map(([field, idx]) => (
-                    <tr key={field} style={{ cursor: "default" }}><td><b>{field}</b></td><td>{headers[idx] ?? "—"}</td></tr>
-                  ))}
-                  {Object.keys(mapping).length === 0 ? <tr><td colSpan={2} className="muted" style={{ textAlign: "center" }}>未匹配到任何列,请调整表头行</td></tr> : null}
-                </tbody>
-              </table>
+              <div className="h-row"><span className="h-title sm">列匹配预览</span><span className="muted" style={{ fontSize: "var(--text-xs)" }}>文件表头 → 系统字段 · 含归一化对齐度</span></div>
+              {/* P1 Finexy 表头归一化:FILE → SYS 实时映射面板(对齐度 0% 红色高亮) */}
+              <div className="imp-map">
+                {mappingItems.map((it, idx) => {
+                  const low = it.confidence === 0;
+                  return (
+                    <div key={idx} className={"imp-map-row" + (low ? " low" : "")}>
+                      <div className="imp-map-file">
+                        <span className="imp-tag file">FILE</span>
+                        <span className="imp-file-h" title={it.matchedHeader || "未匹配"}>{it.matchedHeader || "—"}</span>
+                      </div>
+                      <div className="imp-map-arrow">───▶</div>
+                      <div className="imp-map-sys">
+                        <span className="imp-tag sys">SYS</span>
+                        <span className={"imp-sys-f" + (low ? " miss" : "")}>{it.field}</span>
+                        <span className={"imp-conf" + (low ? " miss" : it.confidence >= 100 ? " full" : " part")}>
+                          对齐度 {it.confidence}%
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
               {rows.length > 0 ? (
                 <div style={{ marginTop: 10, maxHeight: 160, overflowY: "auto" }}>
                   <table className="tgrid" style={{ fontSize: "var(--text-xs)" }}>

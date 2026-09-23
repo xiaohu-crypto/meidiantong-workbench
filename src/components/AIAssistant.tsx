@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { getActiveAi } from "../core/ai/client";
+import { getActiveAi, getAiConfig } from "../core/ai/client";
 import { EMPLOYEE_LIST, mergeEmployees, type Employee, type EmployeeId, buildContext } from "../core/ai/employees";
 import { onDataChanged, onOpenAIStaff } from "../core/events";
 import { retrieveNotes } from "../core/ai/rag";
 import { Markdown } from "./Markdown";
 import { db } from "../db/db";
+import AISecurityBadge from "./AISecurityBadge";
 
 interface Msg {
   id: string;
@@ -22,15 +23,21 @@ export default function AIAssistant({ currentPage }: { currentPage: string }) {
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [empList, setEmpList] = useState<Employee[]>(EMPLOYEE_LIST);
+  /* P1 Finexy AI 安全网关:敏感数据本地完全隔离状态(读 aiConfig.allowSensitiveCloud) */
+  const [isLocalOnlyRoute, setIsLocalOnlyRoute] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const stoppedRef = useRef(false);
 
   const emp: Employee = empList.find((e) => e.id === empId) ?? empList[0];
 
-  // 加载自定义员工配置
+  // 加载自定义员工配置 + P1 AI 安全网关状态(敏感数据本地隔离)
   useEffect(() => {
     void db.getSetting<Employee[]>("aiEmployees", []).then((custom) => {
       setEmpList(mergeEmployees(custom));
+    });
+    // P1 Finexy:读 aiConfig.allowSensitiveCloud 判断是否敏感数据本地完全隔离
+    void getAiConfig().then((cfg) => {
+      setIsLocalOnlyRoute(!cfg.allowSensitiveCloud);
     });
   }, []);
 
@@ -200,7 +207,7 @@ export default function AIAssistant({ currentPage }: { currentPage: string }) {
 
   return (
     <div className="ai-panel">
-      {/* 头部：角色切换 */}
+      {/* 头部：角色切换 + P1 AI 安全网关状态卡 */}
       <div className="ai-panel-head">
         <div className="ai-panel-title">
           <span className="ai-emp-emoji">{emp.emoji}</span>
@@ -211,6 +218,10 @@ export default function AIAssistant({ currentPage }: { currentPage: string }) {
           <button className="ai-close" onClick={clearChat} title="清空对话">🗑</button>
           <button className="ai-close" onClick={() => setOpen(false)} title="关闭">✕</button>
         </div>
+      </div>
+      {/* P1 Finexy AI 安全网关状态卡(本地绝对保密/脱敏云端协作 + 多供应商 Key 状态灯) */}
+      <div style={{ padding: "8px 12px", borderBottom: "1px solid var(--border)" }}>
+        <AISecurityBadge isLocalOnlyRoute={isLocalOnlyRoute} />
       </div>
       {/* 角色切换tab */}
       <div className="ai-emp-tabs">

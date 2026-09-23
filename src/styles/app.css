@@ -32,7 +32,11 @@ html.focus-mode .brand{justify-content:center;padding-left:8px;padding-right:8px
 .page-head .actions{margin-left:auto;display:flex;gap:8px}
 .greet{margin-top:2px;font-size:var(--text-base);color:var(--ink-3)}
 
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);box-shadow:var(--shadow-sm)}
+/* P1 §双模主题切换:根容器平滑过渡(对齐方案 --animate-theme-switch) */
+.app{transition:var(--animate-theme-switch)}
+
+/* P1 §Finexy 极简:双层极浅微阴影 + 强呼吸感 + 主题切换过渡 */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);box-shadow:var(--shadow-card);transition:var(--animate-theme-switch)}
 .card-pad{padding:16px 18px}
 .h-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 .h-title{font-size:var(--text-lg);font-weight:650}
@@ -45,28 +49,32 @@ html.focus-mode .brand{justify-content:center;padding-left:8px;padding-right:8px
 .alert-strip{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
 @media(max-width:900px){.alert-strip{grid-template-columns:1fr}}
 
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:var(--r-md);border:1px solid transparent;font-size:var(--text-sm);font-weight:550;padding:7px 14px;min-height:36px;transition:all var(--t-fast);white-space:nowrap}
+/* P1 §Finexy 极简:药丸大圆角 + 微阴影 + active:scale-95 平滑过渡 */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:var(--r-full);border:1px solid transparent;font-size:var(--text-sm);font-weight:550;padding:8px 18px;min-height:40px;box-shadow:var(--shadow-card);transition:all var(--t-fast);white-space:nowrap;transform:scale(1)}
+.btn:active:not(:disabled){transform:scale(.96)}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .btn.primary{background:var(--brand);color:#fff}
 .btn.primary:hover:not(:disabled){background:var(--brand-strong)}
-.btn.ghost{background:transparent;border-color:var(--border);color:var(--ink-2)}
-.btn.ghost:hover:not(:disabled){border-color:var(--ink-4);color:var(--ink)}
+.btn.ghost{background:var(--surface);border-color:var(--border);color:var(--ink-2)}
+.btn.ghost:hover:not(:disabled){border-color:var(--ink);color:var(--ink)}
 .btn.data{background:var(--data-soft);color:var(--data)}
 .btn.danger{background:var(--danger-bg);border-color:transparent;color:var(--danger)}
 .btn.danger:hover:not(:disabled){background:var(--danger-bg)}
 .btn.draft{background:var(--brand-soft);color:var(--brand)}
 .btn.done{background:transparent;border-color:var(--border);color:var(--ink-3);font-size:var(--text-sm);min-height:28px;padding:4px 10px}
-.btn.sm{padding:4px 10px;min-height:28px;font-size:var(--text-xs)}
+.btn.sm{padding:4px 10px;min-height:28px;font-size:var(--text-xs);box-shadow:none}
 .icon-btn{width:32px;height:32px;border-radius:var(--r-md);border:1px solid transparent;background:transparent;color:var(--ink-3);display:grid;place-items:center}
 .icon-btn:hover{background:var(--surface-2);color:var(--ink)}
 
-.chip{display:inline-flex;align-items:center;gap:5px;font-size:var(--text-xs);font-weight:550;padding:2px 9px;border-radius:var(--r-full);border:1px solid var(--border);color:var(--ink-2);background:var(--surface)}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:var(--text-xs);font-weight:550;padding:2px 10px;border-radius:var(--r-full);border:1px solid var(--border);color:var(--ink-2);background:var(--surface)}
 .chip.brand{background:var(--brand-soft);border-color:transparent;color:var(--brand)}
 .chip.data{background:var(--data-soft);border-color:transparent;color:var(--data)}
 .chip.green{background:var(--success-bg);border-color:transparent;color:var(--success)}
 .chip.warn{background:var(--warning-bg);border-color:transparent;color:var(--warning)}
 .chip.danger{background:var(--danger-bg);border-color:transparent;color:var(--danger)}
 .chip.gray{background:var(--surface-2);color:var(--ink-3)}
+/* P1 §Finexy:状态点(对齐方案 Badge 的 w-1.5 h-1.5 状态点) */
+.chip-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex:none;opacity:.85}
 .dot-flag{width:7px;height:7px;border-radius:50%;display:inline-block;flex:none}
 
 .nbxs{display:flex;flex-direction:column}
@@ -298,6 +306,14 @@ html[data-titlebar="integrated"] .topbar .filter-input { -webkit-app-region: no-
 @media(max-width:800px){.widget-grid{grid-template-columns:1fr}}
 .record-page .dtabs{position:sticky;top:0;background:var(--surface);z-index:2}
 
+/* P1 Finexy 低代码动态扩展字段密度自适应:紧凑/宽松切换(列跨度由 .span-2 控制,密度控制行高/间距) */
+.record-page.density-compact .widget-grid{gap:6px;padding:10px 14px}
+.record-page.density-compact .widget-grid > div{min-height:0}
+.record-page.density-compact .field{margin-bottom:8px}
+.record-page.density-compact .field label{font-size:11px}
+.record-page.density-relaxed .widget-grid{gap:16px;padding:18px 20px}
+.record-page.density-relaxed .field{margin-bottom:16px}
+
 /* === P2 仪表盘 Widget 网格 === */
 .dash-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:0 0 16px}
 .dash-grid .span-1{grid-column:span 1}
@@ -461,6 +477,52 @@ html[data-titlebar="integrated"] .topbar .filter-input { -webkit-app-region: no-
 .ai-copy-btn:hover{color:var(--ink-1);background:var(--surface-3)}
 .ai-msg{position:relative}
 .ai-msg-bubble{position:relative}
+/* P1 Finexy AI 安全网关状态卡:盾牌图标 + 双模呼吸灯 + 多供应商 Key 状态 */
+.ai-sec-badge{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface-2);transition:var(--animate-theme-switch)}
+.ai-sec-left{display:flex;align-items:center;gap:10px;min-width:0}
+.ai-sec-shield{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;flex:none;transition:background var(--t-fast),color var(--t-fast)}
+.ai-sec-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ai-sec-title{font-size:var(--text-xs);font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ai-sec-sub{font-size:10px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ai-sec-sub b{color:var(--ink-2);font-weight:600}
+.ai-sec-status{display:flex;align-items:center;gap:6px;flex:none}
+.ai-sec-pulse{width:8px;height:8px;border-radius:50%;animation:ai-sec-pulse 1.4s ease-in-out infinite}
+@keyframes ai-sec-pulse{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.25)}}
+.ai-sec-enc{font-size:10px;font-weight:700;color:var(--ink-2)}
+/* P1 Finexy 表头归一化:FILE→SYS 实时映射面板(对齐度 0% 红色高亮) */
+.imp-map{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.imp-map-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 11px;border-radius:var(--r-md);background:var(--surface-2);border:1px solid var(--border);transition:var(--animate-theme-switch)}
+.imp-map-row.low{border-color:var(--danger);background:var(--danger-bg)}
+.imp-map-file{display:flex;align-items:center;gap:7px;flex:1;min-width:0}
+.imp-tag{font-size:9px;font-weight:800;padding:2px 6px;border-radius:var(--r-sm);letter-spacing:.04em;flex:none}
+.imp-tag.file{background:var(--ink);color:var(--bg)}
+.imp-tag.sys{background:var(--brand-soft);color:var(--brand)}
+.imp-file-h{font-size:var(--text-sm);font-weight:550;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.imp-map-arrow{color:var(--ink-4);font-size:11px;flex:none;letter-spacing:1px}
+.imp-map-sys{display:flex;align-items:center;gap:7px;flex:1;justify-content:flex-end;min-width:0}
+.imp-sys-f{font-size:var(--text-sm);font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.imp-sys-f.miss{color:var(--ink-4);font-weight:500;font-style:italic}
+.imp-conf{font-size:10px;font-weight:800;padding:2px 8px;border-radius:var(--r-full);flex:none}
+.imp-conf.full{background:var(--success-bg);color:var(--success)}
+.imp-conf.part{background:var(--warning-bg);color:var(--warning)}
+.imp-conf.miss{background:var(--danger-bg);color:var(--danger)}
+.imp-map-row.low .imp-conf.miss{animation:imp-conf-blink 1.4s ease-in-out infinite}
+@keyframes imp-conf-blink{0%,100%{opacity:1}50%{opacity:.45}}
+
+/* P1 Finexy 工作流 SVG 连线画布:线性节点卡片 + 贝塞尔连线 + 双模自适应 + 触发流动动画 */
+.wf-canvas{overflow-x:auto;padding:8px 4px;margin-top:6px}
+.wf-canvas-inner{position:relative;min-height:100px}
+.wf-canvas-svg{position:absolute;left:0;top:0;pointer-events:none;z-index:0;overflow:visible}
+.wf-canvas-node{position:absolute;z-index:1;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:8px 10px;box-shadow:var(--shadow-sm);transition:var(--animate-theme-switch)}
+.wf-canvas-node.last{border-color:var(--success);box-shadow:0 0 0 2px var(--success-bg)}
+.wf-canvas-idx{width:22px;height:22px;border-radius:50%;background:var(--brand);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;flex:none}
+.wf-canvas-node.last .wf-canvas-idx{background:var(--success)}
+.wf-canvas-body{display:flex;flex-direction:column;gap:1px;min-width:0}
+.wf-canvas-body b{font-size:var(--text-sm);font-weight:650;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wf-canvas-body small{font-size:10px;color:var(--ink-4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 触发时连线流动动画(对齐方案 @keyframes workflow-flow-dash) */
+.wf-canvas-dash{animation:workflow-flow-dash 30s linear infinite}
+@keyframes workflow-flow-dash{to{stroke-dashoffset:-1000}}
 /* ============ 复刻NocoBase：Blocks/Builder/DataModel 样式 ============ */
 
 /* ---- 通用Block容器 ---- */
@@ -740,3 +802,89 @@ html[data-titlebar="integrated"] .topbar .filter-input { -webkit-app-region: no-
 .topnav-nav{flex:0 1 auto;max-width:calc(100% - 320px)}
 /* ---- 顶栏防溢出：容器允许收缩，内容横向裁剪 ---- */
 .topnav{min-width:0;overflow:hidden}
+/* =====================================================================
+   P1 现代化浅色 SaaS 极简工作台 视觉降噪与层级提炼
+   栅格 8/16,配色对齐 Ant Design 5.0 浅色语义
+   ===================================================================== */
+
+/* 页面容器:确保 .page 可填充高度,与 .page-crm 叠加 */
+.page{display:flex;flex-direction:column;min-height:0}
+.page .crm-workbench{flex:1;min-height:0}
+
+/* 中栏卡片轻量化:#E8E8E8 细边框 + 4-6px 小圆角 */
+.wb-lite-card{background:var(--surface);border:1px solid var(--border,#E8E8E8);border-radius:var(--r-md);padding:14px 16px;margin-bottom:12px;box-shadow:var(--shadow-sm)}
+.wb-lite-card:last-child{margin-bottom:0}
+.wb-lite-card > b{display:block;font-size:var(--text-base);font-weight:600;color:var(--ink);margin-bottom:2px}
+
+/* 优雅空状态:SVG 插画 + 文案 + 红色主 CTA */
+.wb-empty-state{display:flex;flex-direction:column;align-items:center;gap:12px;padding:26px 12px;text-align:center}
+.wb-empty-svg{width:56px;height:56px;flex:none;opacity:.9}
+.wb-empty-text{font-size:var(--text-sm);color:var(--ink-3);line-height:1.6;max-width:240px}
+.wb-kv-mini-cta{margin-top:6px}
+.wb-kv-mini-cta .btn{display:inline-flex}
+
+/* 左栏:无边框微型键值对网格(视觉降噪核心) */
+.wb-base-grid{display:flex;flex-direction:column;gap:10px}
+.wb-base-grid-head{display:flex;align-items:baseline;gap:8px;border-bottom:1px solid var(--border-soft);padding-bottom:8px}
+.wb-base-grid-head b{font-size:var(--text-base);font-weight:600;color:var(--ink)}
+.wb-kv-mini{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px}
+.wb-kv-mini-row{display:flex;flex-direction:column;gap:1px;min-width:0}
+.wb-kv-mini-k{font-size:var(--text-xs);color:var(--ink-4,#8C8C8C);font-weight:500;letter-spacing:.01em}
+.wb-kv-mini-v{font-size:var(--text-base);color:var(--ink,#262626);font-weight:550;text-align:left;min-width:0;overflow:hidden;text-overflow:ellipsis}
+/* 中栏策略卡片内键值单列,与双列布局区隔 */
+.wb-lite-card .wb-kv-mini{grid-template-columns:1fr;gap:6px}
+.wb-lite-card .wb-kv-mini-row{flex-direction:row;justify-content:space-between;gap:8px;align-items:baseline}
+.wb-lite-card .wb-kv-mini-v{text-align:right}
+
+/* 右栏:沉浸式侧边聊天室 */
+.wb-chat-room{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--surface)}
+.wb-chat-flow{flex:1;min-height:0;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.wb-chat-empty{margin:auto;text-align:center;font-size:var(--text-sm);color:var(--ink-4);line-height:1.7}
+.wb-msg{display:flex;flex-direction:column;gap:2px;max-width:92%}
+.wb-msg.user{align-self:flex-end}
+.wb-msg.assistant{align-self:flex-start}
+.wb-msg-bubble{padding:8px 12px;border-radius:var(--r-lg);font-size:var(--text-sm);line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.wb-msg-bubble.user{background:var(--surface-2);color:var(--ink);border:1px solid var(--border-soft)}
+.wb-msg-ai{display:flex;flex-direction:column;gap:4px}
+.wb-msg-ai-text{font-size:var(--text-sm);line-height:1.65;color:var(--ink);white-space:pre-wrap;word-break:break-word}
+.wb-msg-ai-actions{display:flex;gap:4px}
+.wb-msg-ai-actions button{font-size:11px;color:var(--ink-4);background:transparent;border:1px solid var(--border);border-radius:var(--r-sm);padding:1px 7px;cursor:pointer}
+.wb-msg-ai-actions button:hover{color:var(--ink);border-color:var(--ink-4)}
+.wb-msg-time{font-size:10px;color:var(--ink-4);font-family:var(--mono)}
+
+/* 底部常驻流线输入框 + 左侧微型图标按钮 */
+.wb-chat-input{flex:none;display:flex;align-items:flex-end;gap:8px;padding:10px 12px;border-top:1px solid var(--border-soft);position:relative}
+.wb-chat-tools{display:flex;flex-direction:column;gap:4px;flex:none}
+.wb-mini-ic{width:28px;height:28px;border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface-2);color:var(--ink-3);font-size:13px;display:grid;place-items:center;cursor:pointer}
+.wb-mini-ic:hover{color:var(--ink);border-color:var(--ink-4)}
+.wb-mini-popover{position:absolute;bottom:52px;left:10px;width:200px;max-height:240px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--shadow-md);z-index:30;padding:6px}
+.wb-mini-popover .grp{font-size:11px;color:var(--ink-4);font-weight:600;padding:6px 8px 4px;letter-spacing:.04em}
+.wb-mini-popover .item{display:flex;align-items:center;gap:6px;padding:7px 8px;border-radius:var(--r-md);font-size:var(--text-sm);color:var(--ink-2);cursor:pointer}
+.wb-mini-popover .item:hover{background:var(--surface-2);color:var(--ink)}
+.wb-chat-line{flex:1;border:none;outline:none;background:transparent;font-size:var(--text-base);color:var(--ink);min-width:0;line-height:1.5}
+.wb-chat-line::placeholder{color:var(--ink-4)}
+.wb-chat-send{flex:none;width:36px;height:36px;border-radius:var(--r-md);border:none;background:var(--brand);color:#fff;font-size:16px;display:grid;place-items:center;cursor:pointer}
+.wb-chat-send:disabled{opacity:.4;cursor:not-allowed}
+
+/* 策略表单:投放渠道多选芯片 */
+.wb-ch-chip{font-size:var(--text-sm);padding:4px 11px;border-radius:var(--r-full);border:1px solid var(--border);background:var(--surface);color:var(--ink-3);cursor:pointer;transition:all var(--t-fast)}
+.wb-ch-chip:hover{border-color:var(--ink-4);color:var(--ink)}
+.wb-ch-chip.on{background:var(--brand-soft);border-color:var(--brand);color:var(--brand);font-weight:600}
+
+/* 渠道预算分配行标签 */
+.wb-alloc-ch{font-size:var(--text-sm);color:var(--ink);font-weight:550}
+
+/* 渠道预算分配区:细边框容器,视觉降噪(对齐 #E8E8E8) */
+.budget-mix{display:flex;flex-direction:column;border:1px solid var(--border,#E8E8E8);border-radius:var(--r-md);padding:10px 12px}
+
+/* 抽屉内字段区节奏 */
+.drawer-body .field{margin-bottom:16px}
+/* P1 Finexy 本地 AI 状态灯 + 悬浮气泡(注入现有 Sidebar 底栏) */
+.ai-status-anchor{position:relative;display:flex;align-items:center;justify-content:center;padding:8px 10px 0;cursor:help}
+.ai-status{position:relative;width:12px;height:12px;display:inline-block;flex:none}
+.ai-status-dot{position:absolute;inset:0;border-radius:50%;background:var(--success)}
+.ai-status-ping{position:absolute;inset:0;border-radius:50%;background:var(--success);opacity:.7;animation:ai-ping 1.6s cubic-bezier(0,0,.2,1) infinite}
+@keyframes ai-ping{0%{transform:scale(1);opacity:.7}75%,100%{transform:scale(2.2);opacity:0}}
+.ai-status-tip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%) scale(.9);transform-origin:bottom center;background:var(--surface);border:1px solid var(--border);color:var(--ink-2);font-size:var(--text-xs);line-height:1.5;padding:6px 10px;border-radius:var(--r-md);box-shadow:var(--shadow-md);white-space:nowrap;opacity:0;pointer-events:none;transition:all var(--t-fast);z-index:60}
+.ai-status-anchor:hover .ai-status-tip{opacity:1;transform:translateX(-50%) scale(1)}
+

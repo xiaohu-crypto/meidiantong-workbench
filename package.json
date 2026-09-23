@@ -1,7 +1,7 @@
 {
     "name": "meidiantong-workbench",
     "private": true,
-    "version": "0.2.1",
+    "version": "0.2.2",
     "description": "Media Advertising Workbench (Electron + React 18 + TS)",
     "main": "dist-electron/main.js",
     "repository": {

@@ -144,14 +144,11 @@ export default function WorkflowsPage() {
           <div className="wf-detail">
             <div className="wf-detail-row"><span>触发：</span><b>{triggerLabel(detail)}</b></div>
             {detail.trigger?.store ? <div className="wf-detail-row"><span>监听：</span><b>{String(detail.trigger.store)}</b></div> : null}
-            <div className="wf-detail-title">步骤：</div>
-            {detail.steps.map((s, i) => (
-              <div key={i} className="wf-step">
-                <span className="wf-step-idx">{i + 1}</span>
-                <span className="wf-step-use">{stepRegistry.has(s.use) ? s.use : "未注册: " + s.use}</span>
-                {s.params ? <span className="wf-step-params">{JSON.stringify(s.params).slice(0, 80)}</span> : null}
-              </div>
-            ))}
+            <div className="wf-detail-title">步骤拓扑（双模自适应 SVG 连线）：</div>
+            {/* P1 Finexy 工作流 SVG 连线:贝塞尔曲线 + 双模变色 + 触发时流动高亮 */}
+            <div className="wf-canvas">
+              <WorkflowCanvasSteps steps={detail.steps} running={false} />
+            </div>
           </div>
         </Modal>
       ) : null}
@@ -230,5 +227,66 @@ function CreateWorkflowModal({ onClose, onCreated }: { onClose: () => void; onCr
         ) : null}
       </div>
     </Modal>
+  );
+}
+
+/**
+ * P1 Finexy 工作流 SVG 连线渲染器(方案四)。
+ * 把 FlowDef.steps 线性排成节点卡片,用 SVG 三次贝塞尔曲线连接相邻节点;
+ * 连线颜色绑定 var(--border) / var(--brand),切换深浅色自动变色;
+ * running=true 时连线叠加流动 dash 动画(对齐方案 @keyframes workflow-flow-dash)。
+ */
+function WorkflowCanvasSteps({ steps, running }: { steps: FlowDef["steps"]; running: boolean }) {
+  const W = 480; // 画布逻辑宽
+  const NODE_W = 200; // 节点卡片宽
+  const NODE_H = 54;  // 节点卡片高
+  const GAP = 60;     // 相邻节点水平间距
+  const topPad = 12;
+
+  const nodeX = (i: number) => topPad + i * (NODE_W + GAP);
+  const nodeY = topPad;
+  const cx = (i: number) => nodeX(i) + NODE_W; // 节点右侧锚点(水平居中连线)
+
+  return (
+    <div className="wf-canvas-inner" style={{ position: "relative" }}>
+      {/* 节点卡片(绝对定位,与 SVG 对齐) */}
+      {steps.map((s, i) => (
+        <div key={i} className={"wf-canvas-node" + (i === steps.length - 1 ? " last" : "")}
+          style={{ left: nodeX(i), top: nodeY, width: NODE_W }}>
+          <span className="wf-canvas-idx">{i + 1}</span>
+          <div className="wf-canvas-body">
+            <b>{stepRegistry.has(s.use) ? s.use : "未注册"}</b>
+            {s.params ? <small>{JSON.stringify(s.params).slice(0, 40)}</small> : null}
+          </div>
+        </div>
+      ))}
+      {/* SVG 连线层(双模自适应 + 触发流动) */}
+      {steps.length >= 2 ? (
+        <svg className="wf-canvas-svg" width={W} height={NODE_H + topPad * 2} viewBox={`0 0 ${W} ${NODE_H + topPad * 2}`}>
+          {Array.from({ length: steps.length - 1 }).map((_, i) => {
+            const x1 = cx(i);
+            const y1 = nodeY + NODE_H / 2;
+            const x2 = nodeX(i + 1);
+            const y2 = y1;
+            const cpx = (x1 + x2) / 2;
+            const d = `M ${x1} ${y1} C ${cpx} ${y1}, ${cpx} ${y2}, ${x2} ${y2}`;
+            return (
+              <g key={i}>
+                {/* 底层连线:绑定 var(--border),切换深浅色自动变色 */}
+                <path d={d} fill="none" stroke="var(--border)" strokeWidth={2}
+                  style={{ transition: "stroke .3s ease" }} />
+                {/* 触发流动上层:running 时亮 var(--brand) + dash 流动动画 */}
+                {running ? (
+                  <path d={d} fill="none" stroke="var(--brand)" strokeWidth={2.5}
+                    strokeDasharray="6 4" className="wf-canvas-dash" />
+                ) : null}
+                {/* 节点间箭头 */}
+                <circle cx={x2} cy={y2} r={3} fill={running ? "var(--brand)" : "var(--ink-3)"} />
+              </g>
+            );
+          })}
+        </svg>
+      ) : null}
+    </div>
   );
 }

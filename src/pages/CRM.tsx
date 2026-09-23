@@ -10,12 +10,12 @@ import { Btn, Chip, money, Modal, Field, useToast, Drawer } from "../ui/common";
 import { IconClose, IconPlus, IconSearch, IconUsers } from "../components/icons";
 import ImportCustomers from "../components/ImportCustomers";
 import { type RecordLayout } from "../ui/RecordPage";
-import { FieldsWidget } from "../ui/widgets/FieldsWidget";
 import { RelatedListWidget } from "../ui/widgets/RelatedListWidget";
 import { InlineEditable } from "../ui/widgets/InlineEditable";
 import { addScript, updateScript } from "../core/sop";
 import { TimelineWidget } from "../ui/widgets/TimelineWidget";
 import { askCustomer, type AskContext } from "../core/ai/ask";
+import { ALL_CHANNELS, computeEstimatedAmount, isStrategyValid, mixTotal, parseBudget, strategyError, syncAllocations, type ChannelAllocation, type MediaStrategyChannel, type MediaStrategyFormState } from "../core/mediaStrategy";
 
 interface Props {
   customers: Customer[]; contacts: Contact[]; rels: Rel[]; deals: Deal[];
@@ -63,31 +63,47 @@ const DEFAULT_CUSTOMER_LAYOUT: RecordLayout = {
 function MediaStrategyView(props: { customer: Customer; onEdit: () => void }) {
   const s = ((props.customer.custom ?? {}) as Record<string, Record<string, string>>).mediaStrategy;
   const empty = !s || (!s.audience && !s.budget && !s.mix && !s.resources && !s.note);
+  /* P1 §视觉 中栏:卡片轻量化(#E8E8E8 细边框 + 4-6px 小圆角),未配置时优雅空状态插画 + 红色主 CTA */
   return (
-    <div style={{ padding: "12px 18px" }}>
-      <div className="h-row" style={{ marginBottom: 8 }}>
-        <span className="h-title sm" style={{ fontSize: 13 }}>客户专属媒介策略(每客户独立,不共用)</span>
-        <Btn kind="primary" sm style={{ marginLeft: "auto" }} onClick={props.onEdit}>{empty ? "填写策略" : "编辑"}</Btn>
+    <div className="wb-lite-card">
+      <div className="h-row" style={{ marginBottom: 4 }}>
+        <span className="h-title sm" style={{ fontSize: 13 }}>客户专属媒介策略</span>
+        <span className="muted" style={{ fontSize: "var(--text-xs)" }}>每客户独立,不共用</span>
       </div>
       {empty ? (
-        <p className="muted" style={{ fontSize: "var(--text-sm)" }}>该客户尚未配置专属媒介策略。点"填写策略"记录目标受众、预算、建议配比、首选资源。</p>
+        <div className="wb-empty-state">
+          <svg width="72" height="56" viewBox="0 0 72 56" fill="none" aria-hidden>
+            <rect x="10" y="8" width="52" height="40" rx="4" stroke="var(--border)" strokeWidth="1.5" />
+            <path d="M22 20h28M22 30h20M22 40h14" stroke="var(--ink-4)" strokeWidth="2.5" strokeLinecap="round" />
+            <circle cx="52" cy="40" r="9" fill="var(--brand-soft)" />
+            <path d="M48.5 40h7M52 36.5v7" stroke="var(--brand)" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          <div className="wb-empty-text">
+            <div style={{ fontSize: "var(--text-sm)", color: "var(--ink-2)", fontWeight: 600 }}>该客户尚未配置专属媒介策略</div>
+            <div className="muted" style={{ fontSize: "var(--text-xs)", marginTop: 2 }}>记录目标受众、预算、建议配比与首选资源,AI 将据此做预算合理性评估</div>
+          </div>
+          <Btn kind="primary" style={{ marginTop: 10 }} onClick={props.onEdit}>✍️ 填写策略</Btn>
+        </div>
       ) : (
-        <div className="kv-grid" style={{ gap: 10 }}>
-          {s?.audience ? <div className="kv"><span className="k">目标受众</span><span className="v" style={{ fontSize: "var(--text-sm)" }}>{s.audience}</span></div> : null}
-          {s?.budget ? <div className="kv"><span className="k">预算区间</span><span className="v" style={{ fontSize: "var(--text-sm)" }}>{s.budget}</span></div> : null}
-          {s?.mix ? <div className="kv"><span className="k">建议配比</span><span className="v" style={{ fontSize: "var(--text-sm)" }}>{s.mix}</span></div> : null}
-          {s?.resources ? <div className="kv"><span className="k">首选资源</span><span className="v" style={{ fontSize: "var(--text-sm)" }}>{s.resources}</span></div> : null}
-          {s?.note ? <div className="kv"><span className="k">备注</span><span className="v" style={{ fontSize: "var(--text-sm)" }}>{s.note}</span></div> : null}
+        <div className="wb-kv-mini">
+          {s?.audience ? <div className="wb-kv-mini-row"><span className="wb-kv-mini-k">目标受众</span><span className="wb-kv-mini-v">{s.audience}</span></div> : null}
+          {s?.budget ? <div className="wb-kv-mini-row"><span className="wb-kv-mini-k">预算区间</span><span className="wb-kv-mini-v">{s.budget}</span></div> : null}
+          {s?.mix ? <div className="wb-kv-mini-row"><span className="wb-kv-mini-k">建议配比</span><span className="wb-kv-mini-v">{s.mix}</span></div> : null}
+          {s?.resources ? <div className="wb-kv-mini-row"><span className="wb-kv-mini-k">首选资源</span><span className="wb-kv-mini-v">{s.resources}</span></div> : null}
+          {s?.note ? <div className="wb-kv-mini-row"><span className="wb-kv-mini-k">备注</span><span className="wb-kv-mini-v">{s.note}</span></div> : null}
           {Array.isArray((s as unknown as { attachments?: { name: string; path: string }[] }).attachments) && (s as unknown as { attachments?: { name: string; path: string }[] }).attachments!.length > 0 ? (
-            <div className="kv" style={{ gridColumn: "1 / -1" }}>
-              <span className="k">方案附件</span>
-              <span className="v" style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            <div className="wb-kv-mini-row">
+              <span className="wb-kv-mini-k">方案附件</span>
+              <span className="wb-kv-mini-v" style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {(s as unknown as { attachments: { name: string; path: string }[] }).attachments.map((att, i) => (
                   <Btn key={i} kind="ghost" sm onClick={() => { void (window as unknown as { mta?: { openPath?: (p: string) => Promise<string> } }).mta?.openPath?.(att.path); }} title={att.path}>📎 {att.name}</Btn>
                 ))}
               </span>
             </div>
           ) : null}
+          <div className="wb-kv-mini-cta">
+            <Btn kind="primary" sm onClick={props.onEdit}>编辑策略</Btn>
+          </div>
         </div>
       )}
     </div>
@@ -132,6 +148,16 @@ export default function CRM(props: Props) {
   }, [openId, props.deals, props.cps, props.tasks, props.payments]);
   /* P1 记录布局:默认硬编码,从 settings.recordLayouts 合并(P4 再做拖拽) */
   const [customerLayout, setCustomerLayout] = useState<RecordLayout>(DEFAULT_CUSTOMER_LAYOUT);
+  /* P1 Finexy 低代码动态扩展字段密度自适应:紧凑/宽松切换,写 db.setSetting("recordDensity") 持久化 */
+  const [recordDensity, setRecordDensity] = useState<"compact" | "relaxed">("relaxed");
+  useEffect(() => {
+    void db.getSetting<"compact" | "relaxed">("recordDensity", "relaxed").then((d) => setRecordDensity(d));
+  }, []);
+  function toggleRecordDensity() {
+    const next = recordDensity === "compact" ? "relaxed" : "compact";
+    setRecordDensity(next);
+    void db.setSetting("recordDensity", next);
+  }
   useEffect(() => { void (async () => { const all = await db.getSetting<Record<string, RecordLayout>>("recordLayouts", {}); await db.setSetting("recordLayouts", { ...all, customer: customerLayout }); })(); }, [customerLayout]);
   useEffect(() => {
     void (async () => {
@@ -144,7 +170,20 @@ export default function CRM(props: Props) {
   }, []);
   /* 客户级媒介策略(存于 customer.custom.mediaStrategy) */
   const [strategyEdit, setStrategyEdit] = useState(false);
-  const [strategyDraft, setStrategyDraft] = useState<{ audience: string; budget: string; mix: string; resources: string; note: string; attachments: { name: string; path: string }[]; mixList?: { channel: string; pct: number }[]; totalBudget?: string }>({ audience: "", budget: "", mix: "", resources: "", note: "", attachments: [], mixList: [{ channel: "信息流", pct: 50 }, { channel: "种草", pct: 30 }, { channel: "品牌", pct: 20 }], totalBudget: "" });
+  /* P1 §权威契约:MediaStrategyFormState 为策略表单 UI 单一真源(selectedChannels 驱动 channelAllocations,estimatedAmount 自动计算,validationStatus 实时校验) */
+  /* P1 §权威契约:MediaStrategyFormState 为策略表单 UI 单一真源(selectedChannels 驱动 channelAllocations,estimatedAmount 自动计算,validationStatus 实时校验,errors 标红 #FF6B6E) */
+  const [strategyDraft, setStrategyDraft] = useState<MediaStrategyFormState>({
+    selectedChannels: ["信息流", "种草", "品牌"],
+    audience: "",
+    totalBudget: "",
+    channelAllocations: [{ channel: "信息流", pct: 50 }, { channel: "种草", pct: 30 }, { channel: "品牌", pct: 20 }],
+    preferredResources: "",
+    note: "",
+    attachments: [],
+    estimatedAmount: 0,
+    validationStatus: "valid",
+    errors: {},
+  });
   /* P1 三栏工作台:AI 副驾驶收折 / 媒介策略 100% 合理性评估 / 预算配比校验 / 联系人抽屉层级 */
   const [aiCollapsed, setAiCollapsed] = useState(false);
   const [strategyEvaluated, setStrategyEvaluated] = useState(false);
@@ -173,7 +212,6 @@ export default function CRM(props: Props) {
     setContactForm({ name: "", phone: "", title: "", role: "影响者", wechat: "" });
     setContactOpen(true);
   }
-  function openSopNew() { setSopForm({ id: "", scene: "", text: "" }); setSopOpen(true); }
   async function saveSop() {
     if (!sopForm.scene.trim()) { show("场景名称必填"); return; }
     if (!sopForm.text.trim()) { show("话术内容必填"); return; }
@@ -185,29 +223,54 @@ export default function CRM(props: Props) {
   function openStrategyEdit() {
     if (!drawerC) return;
     const s = ((drawerC.custom ?? {}) as Record<string, Record<string, string>>).mediaStrategy ?? {};
-    const storedMix = ((s as unknown) as { mixList?: { channel: string; pct: number }[] }).mixList;
-    setStrategyDraft({ audience: s.audience ?? "", budget: s.budget ?? "", mix: s.mix ?? "", resources: s.resources ?? "", note: s.note ?? "", attachments: ((s.attachments as unknown) as { name: string; path: string }[]) ?? [], mixList: storedMix && storedMix.length ? storedMix : [{ channel: "信息流", pct: 50 }, { channel: "种草", pct: 30 }, { channel: "品牌", pct: 20 }], totalBudget: ((s as unknown) as { totalBudget?: string }).totalBudget ?? "" });
+    const stored = s as unknown as { audience?: string; totalBudget?: string; channelAllocations?: ChannelAllocation[]; mixList?: ChannelAllocation[]; selectedChannels?: MediaStrategyChannel[]; preferredResources?: string; note?: string; attachments?: { name: string; path: string }[] };
+    /* P1 §权威契约:MediaStrategyFormState —— channelAllocations 为真源(兼容旧 mixList),selectedChannels 默认取其渠道集合 */
+    const allocs = (stored.channelAllocations ?? stored.mixList)?.length
+      ? (stored.channelAllocations ?? stored.mixList)!
+      : [{ channel: "信息流", pct: 50 }, { channel: "种草", pct: 30 }, { channel: "品牌", pct: 20 }];
+    const sel = stored.selectedChannels?.length
+      ? stored.selectedChannels
+      : (allocs.map((a) => a.channel).filter(Boolean) as MediaStrategyChannel[]);
+    setStrategyDraft({
+      selectedChannels: sel,
+      audience: stored.audience ?? "",
+      totalBudget: stored.totalBudget ?? "",
+      channelAllocations: allocs,
+      preferredResources: stored.preferredResources ?? "",
+      note: stored.note ?? "",
+      attachments: stored.attachments ?? [],
+      estimatedAmount: 0,
+      validationStatus: "valid",
+      errors: {},
+    });
     setStrategyEvaluated(false);
+    setMixErr(null);
     setStrategyEdit(true);
   }
   async function saveStrategy() {
     if (!drawerC) return;
-    const list = strategyDraft.mixList ?? [];
-    const total = list.reduce((s, x) => s + (Number(x.pct) || 0), 0);
-    /* P1 §3.3 预算配比动态校验:各渠道占比之和必须等于 100%,否则标红拦截不关闭 */
-    if (list.length > 0 && total !== 100) {
-      setMixErr("❌ 各媒体渠道的预算配比相加必须等于 100%（当前总计为 " + total + "%），请修正后再提交。");
+    const allocs = strategyDraft.channelAllocations ?? [];
+    /* P1 §权威契约:MediaStrategyFormState.validationStatus —— 渠道占比合计须=100%,否则 errors[total] 标红(#FF6B6E)拦截不关闭 */
+    if (!isStrategyValid(allocs)) {
+      setMixErr(strategyError(allocs));
+      strategyDraft.validationStatus = "invalid";
+      strategyDraft.errors = { total: strategyError(allocs) };
       firstPctRef.current?.focus();
       return;
     }
     setMixErr(null);
-    const mixSummary = list.length ? list.map((x) => x.channel + " " + x.pct + "%").join(" / ") : strategyDraft.mix;
-    await repos.customers.update(drawerC.id, { custom: { ...(drawerC.custom ?? {}), mediaStrategy: { ...strategyDraft, mix: mixSummary } } }, "保存客户「" + drawerC.name + "」媒介策略");
+    strategyDraft.validationStatus = "valid";
+    strategyDraft.errors = {};
+    const mixSummary = allocs.length ? allocs.map((x) => x.channel + " " + x.pct + "%").join(" / ") : "";
+    /* P1 §权威契约:MediaStrategyFormState.estimatedAmount —— totalBudget × Σ(pct)/100 自动计算(纯函数),不可手填 */
+    const estimatedAmount = computeEstimatedAmount(strategyDraft.totalBudget ?? "", allocs);
+    strategyDraft.estimatedAmount = estimatedAmount;
+    await repos.customers.update(drawerC.id, { custom: { ...(drawerC.custom ?? {}), mediaStrategy: { ...strategyDraft, audience: strategyDraft.audience, totalBudget: strategyDraft.totalBudget, channelAllocations: allocs, preferredResources: strategyDraft.preferredResources, note: strategyDraft.note, attachments: strategyDraft.attachments, estimatedAmount: String(estimatedAmount), mix: mixSummary, selectedChannels: strategyDraft.selectedChannels } } }, "保存客户「" + drawerC.name + "」媒介策略");
     setStrategyEdit(false);
     show("客户媒介策略已保存");
     /* P1 §4 100% 成功回填后触发右栏 AI 预算合理性评估 */
-    if (list.length > 0 && total === 100) {
-      const max = Math.max(...list.map((x) => Number(x.pct) || 0), 0);
+    if (allocs.length > 0 && mixTotal(allocs) === 100) {
+      const max = Math.max(...allocs.map((x) => Number(x.pct) || 0), 0);
       setEvalMsg(max > 80 ? "🤖 AI 风险预警：检测到您将 80% 以上预算集中在单一触点，容易导致线索流流失，建议调低 20% 以分散风险。" : "🤖 AI 预算评估：当前预算配比极其合理。信息流主导线索获取（占比 50%），预计能让商机转化率提升 15%。");
       setStrategyEvaluated(true);
     }
@@ -531,18 +594,6 @@ export default function CRM(props: Props) {
   }
 
   /** P1:根据 WidgetDef 渲染客户详情具体 Widget(数据由页面侧提供) */
-  /* P4 base 字段可见性:写入 widget.config.visibleFields */
-  function setBaseVisibleFields(visible: string[]) {
-    setCustomerLayout((prev) => ({
-      ...prev,
-      tabs: prev.tabs.map((t) => ({
-        ...t,
-        widgets: t.widgets.map((w) =>
-          w.id === "base" ? { ...w, config: { ...(w.config ?? {}), visibleFields: visible } } : w
-        ),
-      })),
-    }));
-  }
   function renderCustomerWidget(w: { type: "fields" | "related" | "timeline" | "custom"; id: string; config?: Record<string, unknown> }): ReactNode {
     if (!drawerC) return null;
     if (w.type === "fields" && w.id === "base") {
@@ -551,33 +602,47 @@ export default function CRM(props: Props) {
       const loss = drawerContacts.length === 0 ? "决策链不完整" : drawerCps.length === 0 ? "近 30 天无跟进" : drawerDeals.filter((d) => !["签约", "输单", "流失"].includes(d.stage)).length === 0 ? "无在途商机" : "健康度良好,保持跟进";
       const statusBadge = h >= 80 ? { cls: "ok", label: "🟢 状态平稳" } : h >= 60 ? { cls: "warn", label: "🟡 需关注" } : { cls: "bad", label: "🔴 风险预警" };
       const baseVisible = w.config?.visibleFields as string[] | undefined;
+      /* P1 §视觉 左栏:消除「—」破折号拉伸,空值统一为可编辑打底标签(悬浮青色铅笔→行内编辑) */
+      const emptyCell = (commit: (v: string) => Promise<void>) => (
+        <InlineEditable value="" placeholder="未建档" onCommit={commit} />
+      );
+      const customBaseFields = [
+        ...custFields.map((cf) => {
+          const raw = (drawerC.custom ?? {})[cf.key];
+          return { label: cf.label, value: raw == null || raw === "" ? emptyCell(async (v) => {
+            await repos.customers.update(drawerC.id, { custom: { ...(drawerC.custom ?? {}), [cf.key]: v || undefined } }, "行内编辑「" + cf.label + "」");
+            await props.reload(); show(cf.label + "已更新");
+          }) : String(raw) };
+        }),
+        ...Object.entries(drawerC.custom ?? {})
+          .filter(([k, v]) => k !== "mediaStrategy" && typeof v !== "object" && v !== null && v !== undefined && !custFields.some((cf) => cf.key === k))
+          .map(([k, v]) => ({ label: k, value: String(v) })),
+      ];
       return (
-        <FieldsWidget title="客户基本信息" fields={[
-          { label: "客户健康度", value: (
-            <div className="wb-health-wrap">
-              <svg width="52" height="52" className="ring"><circle className="bg" cx="26" cy="26" r="20" /><circle className="fg" cx="26" cy="26" r="20" strokeDasharray={2 * Math.PI * 20} strokeDashoffset={2 * Math.PI * 20 * (1 - h / 100)} /></svg>
-              <div className="wb-health-meta">
-                <div style={{ fontSize: 18, fontWeight: 750, fontFamily: "var(--mono)" }}>{h}<span style={{ fontSize: "var(--text-sm)", color: "var(--ink-4)", fontWeight: 500 }}> / 100</span></div>
-                <div className="wb-health-badges">
-                  <span className={"wb-health-badge " + statusBadge.cls}><span className="dot" />{statusBadge.label}</span>
-                </div>
-                <div className="wb-loss-reason">核心失分项：{loss}</div>
+        <div className="wb-base-grid">
+          <div className="wb-base-grid-head"><b>客户基本信息</b><span className="muted" style={{ fontSize: "var(--text-xs)" }}>{baseVisible ? baseVisible.length + " 字段" : "全部字段"} · 悬浮可就地编辑</span></div>
+          {/* 健康度保留顶部环形,独立成块 */}
+          <div className="wb-health-wrap">
+            <svg width="48" height="48" className="ring"><circle className="bg" cx="24" cy="24" r="18" /><circle className="fg" cx="24" cy="24" r="18" strokeDasharray={2 * Math.PI * 18} strokeDashoffset={2 * Math.PI * 18 * (1 - h / 100)} /></svg>
+            <div className="wb-health-meta">
+              <div style={{ fontSize: 16, fontWeight: 700, fontFamily: "var(--mono)" }}>{h}<span style={{ fontSize: "var(--text-xs)", color: "var(--ink-4)", fontWeight: 500 }}> / 100</span></div>
+              <div className="wb-health-badges">
+                <span className={"wb-health-badge " + statusBadge.cls}><span className="dot" />{statusBadge.label}</span>
               </div>
+              <div className="wb-loss-reason">核心失分：{loss}</div>
             </div>
-          )},
-          { label: "开票抬头", value: (
-            <InlineEditable value={drawerC.billingTitle ?? ""} placeholder="未建档" onCommit={async (v) => { await repos.customers.update(drawerC.id, { billingTitle: v || undefined }, "行内编辑「开票抬头」"); await props.reload(); show("开票抬头已更新"); }} />
-          )},
-          { label: "税号", value: (
-            <InlineEditable value={drawerC.billingTaxNo ?? ""} placeholder="未建档" onCommit={async (v) => { await repos.customers.update(drawerC.id, { billingTaxNo: v || undefined }, "行内编辑「税号」"); await props.reload(); show("税号已更新"); }} />
-          )},
-          { label: "在途商机", value: drawerDeals.filter((d) => !["输单", "流失"].includes(d.stage)).length + " 个" },
-          { label: "累计商机额", value: money(drawerDeals.reduce((s, d) => s + d.value, 0)) },
-          ...custFields.map((cf) => ({ label: cf.label, value: String((drawerC.custom ?? {})[cf.key] ?? "—") })),
-          ...Object.entries(drawerC.custom ?? {})
-            .filter(([k, v]) => k !== "mediaStrategy" && typeof v !== "object" && v !== null && v !== undefined && !custFields.some((cf) => cf.key === k))
-            .map(([k, v]) => ({ label: k, value: String(v) })),
-        ]} editing={false} visibleFields={baseVisible} onVisibleFieldsChange={setBaseVisibleFields} />
+          </div>
+          {/* 无边框微型键值对网格:标签 12px #8C8C8C 弱化,数据 14px #262626 坚挺左对齐 */}
+          <div className="wb-kv-mini">
+            <div className="wb-kv-mini-row"><span className="wb-kv-mini-k">在途商机</span><span className="wb-kv-mini-v">{drawerDeals.filter((d) => !["输单", "流失"].includes(d.stage)).length} 个</span></div>
+            <div className="wb-kv-mini-row"><span className="wb-kv-mini-k">累计商机额</span><span className="wb-kv-mini-v">{money(drawerDeals.reduce((s, d) => s + d.value, 0))}</span></div>
+            {customBaseFields.map((f, i) => (
+              <div className="wb-kv-mini-row" key={i}><span className="wb-kv-mini-k">{f.label}</span><span className="wb-kv-mini-v">{f.value}</span></div>
+            ))}
+            <div className="wb-kv-mini-row"><span className="wb-kv-mini-k">开票抬头</span><span className="wb-kv-mini-v">{emptyCell(async (v) => { await repos.customers.update(drawerC.id, { billingTitle: v || undefined }, "行内编辑「开票抬头」"); await props.reload(); show("开票抬头已更新"); })}</span></div>
+            <div className="wb-kv-mini-row"><span className="wb-kv-mini-k">税号</span><span className="wb-kv-mini-v">{emptyCell(async (v) => { await repos.customers.update(drawerC.id, { billingTaxNo: v || undefined }, "行内编辑「税号」"); await props.reload(); show("税号已更新"); })}</span></div>
+          </div>
+        </div>
       );
     }
     if (w.type === "related" && w.id === "contacts") {
@@ -633,9 +698,10 @@ export default function CRM(props: Props) {
     return null;
   }
 
-  /* P1 右栏 AI 面板重构:顶部自动摘要 + 中部历史对话纵向抽屉(置顶/拖拽/分组 Dropdown) + 底部固定输入框 */
+  /* P1 §视觉 右栏:沉浸式侧边聊天室——顶部 AI 摘要 + 中部纯净聊天流 + 底部输入框(左侧微型 分组/历史 图标),对齐主流 Copilot 侧栏 */
   const [groupMenuOpen, setGroupMenuOpen] = useState(false);
   const [groupNewName, setGroupNewName] = useState("");
+  const [historyOpen, setHistoryOpen] = useState(false);
   function newAiGroupInline() {
     const t = groupNewName.trim();
     if (!t) return;
@@ -671,71 +737,79 @@ export default function CRM(props: Props) {
         </div>
       );
     }
+    /* 当前会话纯聊天流 */
+    const curConv = curConvId ? aiConvs.find((c) => c.id === curConvId) : null;
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, height: "100%", minHeight: 0 }}>
-        {/* 中部历史对话纵向抽屉 */}
-        <div style={{ flex: 1, overflowY: "auto", minHeight: 0, borderRadius: 8, border: "1px solid var(--border-soft)", background: "var(--surface)" }}>
-          <div style={{ display: "flex", gap: 4, padding: 8, borderBottom: "1px solid var(--border-soft)", position: "sticky", top: 0, background: "var(--surface)", zIndex: 1 }}>
-            <Btn kind="primary" sm style={{ flex: 1 }} onClick={newAiConv}><IconPlus size={12} /> 新对话</Btn>
-            <div style={{ position: "relative" }}>
-              <Btn kind="ghost" sm onClick={() => setGroupMenuOpen((v) => !v)} title="分组管理">⊞ 分组</Btn>
-              {groupMenuOpen ? (
-                <div style={{ position: "absolute", right: 0, top: "100%", marginTop: 4, width: 180, maxHeight: 260, overflowY: "auto", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 8, boxShadow: "var(--shadow-md)", zIndex: 10, padding: 6 }}>
-                  <div style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)", padding: "2px 6px 6px", display: "flex", gap: 4 }}>
-                    <input className="inp" style={{ flex: 1, fontSize: "var(--text-xs)", padding: "2px 6px" }} placeholder="新分组名…" value={groupNewName} onChange={(e) => setGroupNewName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") newAiGroupInline(); }} />
-                    <Btn kind="draft" sm onClick={newAiGroupInline}>新建</Btn>
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                    {aiGroups.map((g) => (
-                      <div key={g.id} onDragOver={(e) => e.preventDefault()} onDrop={(e) => onDropConvToGroup(e, g.id)}
-                        style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 8px", borderRadius: 6, fontSize: "var(--text-xs)", border: "1px dashed transparent" }}>
-                        <span style={{ flex: 1, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>📁 {g.title}</span>
-                        <span style={{ fontSize: 9, color: "var(--ink-3)" }}>{aiConvs.filter((c) => c.groupId === g.id).length}</span>
-                        <span style={{ fontSize: 9, color: "var(--danger)", cursor: "pointer" }} onClick={() => deleteAiGroup(g.id)} title="删除分组">×</span>
-                      </div>
-                    ))}
-                    <div onDragOver={(e) => e.preventDefault()} onDrop={(e) => onDropConvToGroup(e, undefined)}
-                      style={{ padding: "4px 8px", borderRadius: 6, fontSize: "var(--text-xs)", color: "var(--ink-3)", border: "1px dashed var(--border)" }}>⊘ 未分组</div>
+      <div className="wb-chat-room">
+        {/* 中部:纯净聊天对话流(用户浅灰气泡 / AI 平铺 + 一键复制/润色) */}
+        <div className="wb-chat-flow">
+          {curConv && curConv.messages.length > 0 ? curConv.messages.map((m, i) => (
+            <div key={i} className={"wb-msg " + m.role}>
+              {m.role === "user" ? (
+                <div className="wb-msg-bubble user">{m.content}</div>
+              ) : (
+                <div className="wb-msg-ai">
+                  <div className="wb-msg-ai-text">{m.content}</div>
+                  <div className="wb-msg-ai-actions">
+                    <button onClick={() => copyText(m.content)} title="复制">📋 复制</button>
+                    <button onClick={() => { void (async () => {
+                      const refined = "🪄 润色：" + m.content;
+                      appendMsg("assistant", refined);
+                    })(); }} title="润色">✨ 润色</button>
+                    <button onClick={() => deleteMsg(curConv.id, i)} title="删除">✕</button>
                   </div>
                 </div>
-              ) : null}
+              )}
+              <span className="wb-msg-time">{new Date(m.ts).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}</span>
             </div>
-          </div>
-          <div style={{ padding: 6 }}>
-            {pinned.length > 0 ? <div style={{ fontSize: 9, color: "var(--warning)", padding: "4px 6px 2px", fontWeight: 600 }}>📌 已置顶</div> : null}
-            {pinned.map(convRow)}
-            {unpinned.map(convRow)}
-            {aiConvs.length === 0 ? <p className="muted" style={{ fontSize: "var(--text-xs)", textAlign: "center", padding: 14 }}>暂无对话,点击上方新建</p> : null}
-            <p className="muted" style={{ fontSize: 9, color: "var(--ink-4)", textAlign: "center", padding: "6px 6px 2px" }}>拖拽对话到分组行可移动 · 默认按互动时间降序</p>
-          </div>
+          )) : (
+            <div className="wb-chat-empty">
+              <div>🪄</div>
+              <div>问我关于这个客户的问题</div>
+              <div className="muted" style={{ fontSize: "var(--text-xs)" }}>例如「这个客户有多少在途商机?」「帮我规划下一次跟进话术」</div>
+            </div>
+          )}
         </div>
-        {/* 底部对话流 + 固定输入框 */}
-        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-          <div style={{ flex: 1, overflowY: "auto", paddingRight: 4, minHeight: 0 }}>
-            {curConvId ? (() => {
-              const conv = aiConvs.find((c) => c.id === curConvId);
-              if (!conv || conv.messages.length === 0) return <p className="muted" style={{ textAlign: "center", padding: 30, fontSize: "var(--text-sm)" }}>在下方输入问题开始对话</p>;
-              return conv.messages.map((m, i) => (
-                <div key={i} style={{ marginBottom: 10, textAlign: m.role === "user" ? "right" : "left" }}>
-                  <div style={{ display: "inline-block", maxWidth: "85%", textAlign: "left", padding: "8px 12px", borderRadius: 10, background: m.role === "user" ? "var(--brand)" : "var(--surface-2)", color: m.role === "user" ? "#fff" : "var(--ink)", fontSize: "var(--text-sm)", lineHeight: 1.6 }}>
-                    <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.content}</div>
-                    <div style={{ fontSize: 10, color: m.role === "user" ? "rgba(255,255,255,0.7)" : "var(--ink-3)", marginTop: 4, display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                      <span>{new Date(m.ts).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}</span>
-                      <span style={{ cursor: "pointer" }} onClick={() => copyText(m.content)}>复制</span>
-                      <span style={{ cursor: "pointer" }} onClick={() => deleteMsg(conv.id, i)}>删除</span>
-                    </div>
-                  </div>
+        {/* 底部:流线型输入框 + 左侧微型 [分组] [历史] 图标按钮 */}
+        <div className="wb-chat-input">
+          <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 4 }}>
+            <button className="wb-mini-ic" onClick={() => { setGroupMenuOpen((v) => !v); setHistoryOpen(false); }} title="分组管理">⊞</button>
+            <button className="wb-mini-ic" onClick={() => { setHistoryOpen((v) => !v); setGroupMenuOpen(false); }} title="历史对话">🗂</button>
+            {groupMenuOpen ? (
+              <div className="wb-mini-popover">
+                <div style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)", padding: "2px 6px 6px", display: "flex", gap: 4 }}>
+                  <input className="inp" style={{ flex: 1, fontSize: "var(--text-xs)", padding: "2px 6px" }} placeholder="新分组名…" value={groupNewName} onChange={(e) => setGroupNewName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") newAiGroupInline(); }} />
+                  <Btn kind="draft" sm onClick={newAiGroupInline}>新建</Btn>
                 </div>
-              ));
-            })() : <p className="muted" style={{ textAlign: "center", padding: 30, fontSize: "var(--text-sm)" }}>选择或新建一个对话</p>}
+                <div style={{ display: "flex", flexDirection: "column", gap: 2, maxHeight: 180, overflowY: "auto" }}>
+                  {aiGroups.map((g) => (
+                    <div key={g.id} onDragOver={(e) => e.preventDefault()} onDrop={(e) => onDropConvToGroup(e, g.id)}
+                      style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 8px", borderRadius: 6, fontSize: "var(--text-xs)", border: "1px dashed transparent" }}>
+                      <span style={{ flex: 1, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>📁 {g.title}</span>
+                      <span style={{ fontSize: 9, color: "var(--ink-3)" }}>{aiConvs.filter((c) => c.groupId === g.id).length}</span>
+                      <span style={{ fontSize: 9, color: "var(--danger)", cursor: "pointer" }} onClick={() => deleteAiGroup(g.id)} title="删除分组">×</span>
+                    </div>
+                  ))}
+                  <div onDragOver={(e) => e.preventDefault()} onDrop={(e) => onDropConvToGroup(e, undefined)}
+                    style={{ padding: "4px 8px", borderRadius: 6, fontSize: "var(--text-xs)", color: "var(--ink-3)", border: "1px dashed var(--border)" }}>⊘ 未分组</div>
+                </div>
+              </div>
+            ) : null}
+            {historyOpen ? (
+              <div className="wb-mini-popover">
+                <div style={{ display: "flex", flexDirection: "column", gap: 2, maxHeight: 220, overflowY: "auto" }}>
+                  {pinned.length > 0 ? <div style={{ fontSize: 9, color: "var(--warning)", padding: "4px 6px 2px", fontWeight: 600 }}>📌 已置顶</div> : null}
+                  {[...pinned, ...unpinned].map(convRow)}
+                  {aiConvs.length === 0 ? <p className="muted" style={{ fontSize: "var(--text-xs)", textAlign: "center", padding: 10 }}>暂无历史对话</p> : null}
+                  <Btn kind="draft" sm style={{ marginTop: 4 }} onClick={() => { newAiConv(); setHistoryOpen(false); }}>+ 新对话</Btn>
+                </div>
+              </div>
+            ) : null}
           </div>
-          <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
-            <div className="filter-input" style={{ flex: 1 }}>
-              <IconSearch size={13} />
-              <input value={askInput} onChange={(e) => setAskInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") runAsk(); }} placeholder="问我:这个客户有多少在途商机?" />
-            </div>
-            <Btn kind="data" sm onClick={runAsk}>提问</Btn>
-          </div>
+          <input className="wb-chat-line" value={askInput} onChange={(e) => setAskInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") runAsk(); }}
+            placeholder={curConv ? "继续对话…" : "问我:这个客户有多少在途商机?"} />
+          <button className="wb-chat-send" onClick={runAsk} title="发送" disabled={!askInput.trim()}>↗</button>
         </div>
       </div>
     );
@@ -1019,6 +1093,7 @@ export default function CRM(props: Props) {
                 </div>
               </div>
               <Btn kind="primary" sm onClick={() => openEdit(drawerC)}>编辑</Btn>
+              <Btn kind={recordDensity === "compact" ? "data" : "ghost"} sm onClick={toggleRecordDensity} title="切换字段密度(紧凑/宽松)">{recordDensity === "compact" ? "⊟ 紧凑" : "⊞ 宽松"}</Btn>
               <button className="icon-btn" onClick={() => setOpenId(null)} aria-label="关闭" title="关闭"><IconClose size={16} /></button>
             </div>
             <div className="drawer-body">
@@ -1038,12 +1113,7 @@ export default function CRM(props: Props) {
                 <aside className={"wb-right" + (aiCollapsed ? " collapsed" : "")}>
                   <button className="wb-ai-toggle" onClick={() => setAiCollapsed((v) => !v)} title={aiCollapsed ? "展开 AI 副驾驶" : "收起 AI 副驾驶"}>🪄</button>
                   <div className="wb-ai-head"><b>AI 副驾驶</b><span className="muted" style={{ fontSize: "var(--text-xs)" }}>实时读取左右栏</span></div>
-                  <div className="wb-ai-summary muted" style={{ fontSize: "var(--text-xs)", padding: "8px 10px", background: "var(--surface)", borderRadius: 8 }}>{aiSummary()}</div>
-                  <div className="wb-ai-quick" style={{ display: "flex", flexWrap: "wrap", gap: 6, margin: "8px 14px" }}>
-                    <Btn kind="ghost" sm onClick={() => setAskInput("帮我规划下一次跟进话术")}>💡 规划跟进话术</Btn>
-                    <Btn kind="ghost" sm onClick={() => setAskInput("生成一封回访邮件")}>📝 生成邮件</Btn>
-                    <Btn kind="ghost" sm onClick={openSopNew}>📚 话术库</Btn>
-                  </div>
+                  <div className="wb-ai-summary">{aiSummary()}</div>
                   <div className="wb-ai-chat">
                     {renderAiPanel()}
                   </div>
@@ -1124,24 +1194,82 @@ export default function CRM(props: Props) {
             <Btn kind="primary" onClick={() => { void saveStrategy(); }}>保存</Btn>
           </div>
         }>
+          <Field label="总预算(自动计算分配金额)"><input className="inp" style={{ width: "100%" }} value={strategyDraft.totalBudget ?? ""} onChange={(e) => setStrategyDraft({ ...strategyDraft, totalBudget: e.target.value })} placeholder="如:800万 / 年" /></Field>
           <Field label="目标受众"><input className="inp" style={{ width: "100%" }} value={strategyDraft.audience} onChange={(e) => setStrategyDraft({ ...strategyDraft, audience: e.target.value })} placeholder="如:25-35岁新一线女性,美妆护肤" /></Field>
-          <Field label="总预算(可选)"><input className="inp" style={{ width: "100%" }} value={strategyDraft.totalBudget ?? ""} onChange={(e) => setStrategyDraft({ ...strategyDraft, totalBudget: e.target.value })} placeholder="如:年度 800 万" /></Field>
-          <Field label="预算区间(可选)"><input className="inp" style={{ width: "100%" }} value={strategyDraft.budget} onChange={(e) => setStrategyDraft({ ...strategyDraft, budget: e.target.value })} placeholder="如:月度 30-80 万" /></Field>
-          <Field label="媒体预算配比">
-            <div className="budget-mix">
-              {(strategyDraft.mixList ?? []).map((m, i) => (
-                <div className="budget-mix-row" key={i}>
-                  <input className="inp" style={{ flex: 1 }} value={m.channel} onChange={(e) => setStrategyDraft({ ...strategyDraft, mixList: (strategyDraft.mixList ?? []).map((x, j) => j === i ? { ...x, channel: e.target.value } : x) })} placeholder="渠道" />
-                  <input className="inp" type="number" min={0} max={100} style={{ width: 88 }} value={m.pct} ref={i === 0 ? firstPctRef : undefined} onChange={(e) => setStrategyDraft({ ...strategyDraft, mixList: (strategyDraft.mixList ?? []).map((x, j) => j === i ? { ...x, pct: Number(e.target.value) } : x) })} />
-                  <span style={{ color: "var(--muted)", fontSize: "var(--text-sm)" }}>%</span>
-                  <Btn kind="ghost" sm onClick={() => setStrategyDraft({ ...strategyDraft, mixList: (strategyDraft.mixList ?? []).filter((_, j) => j !== i) })}>删</Btn>
-                </div>
-              ))}
-              <Btn kind="ghost" sm onClick={() => setStrategyDraft({ ...strategyDraft, mixList: [...(strategyDraft.mixList ?? []), { channel: "", pct: 0 }] })}>+ 添加渠道</Btn>
-              {(() => { const t = (strategyDraft.mixList ?? []).reduce((s, x) => s + (Number(x.pct) || 0), 0); return (<><div className={"budget-total" + (t !== 100 ? " error" : "")}><span>配比合计</span><span>{t}%</span></div>{mixErr ? <div className="budget-err">{mixErr}</div> : null}</>); })()}
+          {/* P1 §权威契约:MediaStrategyFormState.selectedChannels 多选芯片 → 驱动 channelAllocations 行(经 syncAllocations 纯函数) */}
+          <Field label="投放渠道(多选)">
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {ALL_CHANNELS.map((ch) => {
+                const on = (strategyDraft.selectedChannels ?? []).includes(ch);
+                return (
+                  <button key={ch} type="button"
+                    className={"wb-ch-chip" + (on ? " on" : "")}
+                    onClick={() => {
+                      const sel = new Set(strategyDraft.selectedChannels ?? []);
+                      if (sel.has(ch)) sel.delete(ch); else sel.add(ch);
+                      /* P1 §权威契约:选择变化即经 syncAllocations 同步生成/移除对应分配行,保留已有 pct,写回 channelAllocations(单一真源) */
+                      const nextAllocs = syncAllocations(sel, strategyDraft.channelAllocations ?? []);
+                      const valid = isStrategyValid(nextAllocs);
+                      setStrategyDraft({
+                        ...strategyDraft,
+                        selectedChannels: Array.from(sel),
+                        channelAllocations: nextAllocs,
+                        estimatedAmount: computeEstimatedAmount(strategyDraft.totalBudget ?? "", nextAllocs),
+                        validationStatus: valid ? "valid" : "invalid",
+                        errors: valid ? {} : { total: strategyError(nextAllocs) },
+                      });
+                    }}>
+                    {on ? "✓ " : ""}{ch}
+                  </button>
+                );
+              })}
             </div>
           </Field>
-          <Field label="首选资源"><input className="inp" style={{ width: "100%" }} value={strategyDraft.resources} onChange={(e) => setStrategyDraft({ ...strategyDraft, resources: e.target.value })} placeholder="如:抖音信息流+小红书达人+分众电梯" /></Field>
+          <Field label="渠道预算分配(占比合计须=100%)">
+            <div className="budget-mix">
+              {(strategyDraft.channelAllocations ?? []).map((m, i) => (
+                <div className="budget-mix-row" key={i}>
+                  <span className="wb-alloc-ch" style={{ flex: 1, fontSize: "var(--text-sm)", color: "var(--ink)" }}>{m.channel}</span>
+                  <input className="inp" type="number" min={0} max={100} style={{ width: 88 }} value={m.pct} ref={i === 0 ? firstPctRef : undefined}
+                    onChange={(e) => {
+                      /* P1 §权威契约:逐行占比写回 channelAllocations,合计/金额/校验全部走纯函数实时重算 */
+                      const nextAllocs = (strategyDraft.channelAllocations ?? []).map((x, j) => (j === i ? { ...x, pct: Number(e.target.value) } : x));
+                      const valid = isStrategyValid(nextAllocs);
+                      setStrategyDraft({
+                        ...strategyDraft,
+                        channelAllocations: nextAllocs,
+                        estimatedAmount: computeEstimatedAmount(strategyDraft.totalBudget ?? "", nextAllocs),
+                        validationStatus: valid ? "valid" : "invalid",
+                        errors: valid ? {} : { total: strategyError(nextAllocs) },
+                      });
+                      /* 合计=100 时清错误态,否则实时把文案写进 errors.total 供标红 */
+                      if (valid) setMixErr("");
+                    }} />
+                  <span style={{ color: "var(--muted)", fontSize: "var(--text-sm)" }}>%</span>
+                </div>
+              ))}
+              {(() => {
+                const allocs = strategyDraft.channelAllocations ?? [];
+                const total = mixTotal(allocs);
+                const base = parseBudget(strategyDraft.totalBudget ?? "");
+                const estimated = computeEstimatedAmount(strategyDraft.totalBudget ?? "", allocs);
+                const ok = isStrategyValid(allocs);
+                const totalErr = strategyError(allocs);
+                return (<>
+                  <div className={"budget-total" + (ok ? "" : " error")} style={ok ? {} : { borderColor: "var(--danger)" }}>
+                    <span>占比合计</span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ color: ok ? "var(--ink)" : "var(--danger)", fontFamily: "var(--mono)", fontWeight: 700 }}>{total}%</span>
+                      {base > 0 ? <span style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>预计金额 {estimated.toLocaleString("zh-CN")} 万</span> : null}
+                    </span>
+                  </div>
+                  {mixErr ? <div className="budget-err" style={{ color: "var(--danger)" }}>{mixErr}</div> : null}
+                  {totalErr ? <div className="budget-err" style={{ color: "var(--danger)", marginTop: 4 }}>{totalErr}</div> : null}
+                </>);
+              })()}
+            </div>
+          </Field>
+          <Field label="首选资源"><input className="inp" style={{ width: "100%" }} value={strategyDraft.preferredResources} onChange={(e) => setStrategyDraft({ ...strategyDraft, preferredResources: e.target.value })} placeholder="如:抖音信息流+小红书达人+分众电梯" /></Field>
           <Field label="备注"><textarea className="inp" rows={2} style={{ width: "100%" }} value={strategyDraft.note} onChange={(e) => setStrategyDraft({ ...strategyDraft, note: e.target.value })} /></Field>
           <Field label="方案附件">
             <div style={{ marginBottom: 8 }}>
