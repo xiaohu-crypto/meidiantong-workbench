@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { db } from "../db/db";
 import { repos } from "../core/data/repository";
@@ -6,10 +6,10 @@ import { funnel } from "../core/metrics";
 import { healthOf, latestTouch, customerStage, type CustomerStage } from "../core/derive";
 import { validateCustomer } from "../core/validators";
 import type { Contact, ContactPoint, Contract, Customer, Deal, Payment, Rel, RelRole, Task } from "../types";
-import { Btn, Chip, money, Modal, Field, useToast } from "../ui/common";
-import { IconCheck, IconClose, IconLayout, IconPlus, IconSearch, IconUsers } from "../components/icons";
+import { Btn, Chip, money, Modal, Field, useToast, Drawer } from "../ui/common";
+import { IconClose, IconPlus, IconSearch, IconUsers } from "../components/icons";
 import ImportCustomers from "../components/ImportCustomers";
-import { RecordPage, type WidgetDef, type RecordLayout } from "../ui/RecordPage";
+import { type RecordLayout } from "../ui/RecordPage";
 import { FieldsWidget } from "../ui/widgets/FieldsWidget";
 import { RelatedListWidget } from "../ui/widgets/RelatedListWidget";
 import { getAllScripts, addScript, updateScript, deleteScript, type SopScript } from "../core/sop";
@@ -129,11 +129,9 @@ export default function CRM(props: Props) {
       setTimeline(items.slice(0, 80));
     })();
   }, [openId, props.deals, props.cps, props.tasks, props.payments]);
-  const [tab, setTab] = useState<"概览" | "跟进" | "决策链" | "媒介策略" | "AI建议" | "SOP话术">("概览");
   /* P1 记录布局:默认硬编码,从 settings.recordLayouts 合并(P4 再做拖拽) */
   const [customerLayout, setCustomerLayout] = useState<RecordLayout>(DEFAULT_CUSTOMER_LAYOUT);
-  /* P4 布局编辑模式 */
-  const [editingLayout, setEditingLayout] = useState(false);
+  useEffect(() => { void (async () => { const all = await db.getSetting<Record<string, RecordLayout>>("recordLayouts", {}); await db.setSetting("recordLayouts", { ...all, customer: customerLayout }); })(); }, [customerLayout]);
   useEffect(() => {
     void (async () => {
       const saved = await db.getSetting<Record<string, RecordLayout>>("recordLayouts", {});
@@ -145,7 +143,14 @@ export default function CRM(props: Props) {
   }, []);
   /* 客户级媒介策略(存于 customer.custom.mediaStrategy) */
   const [strategyEdit, setStrategyEdit] = useState(false);
-  const [strategyDraft, setStrategyDraft] = useState<{ audience: string; budget: string; mix: string; resources: string; note: string; attachments: { name: string; path: string }[] }>({ audience: "", budget: "", mix: "", resources: "", note: "", attachments: [] });
+  const [strategyDraft, setStrategyDraft] = useState<{ audience: string; budget: string; mix: string; resources: string; note: string; attachments: { name: string; path: string }[]; mixList?: { channel: string; pct: number }[]; totalBudget?: string }>({ audience: "", budget: "", mix: "", resources: "", note: "", attachments: [], mixList: [{ channel: "信息流", pct: 50 }, { channel: "种草", pct: 30 }, { channel: "品牌", pct: 20 }], totalBudget: "" });
+  /* P1 三栏工作台:AI 副驾驶收折 / 媒介策略 100% 合理性评估 / 预算配比校验 / 联系人抽屉层级 */
+  const [aiCollapsed, setAiCollapsed] = useState(false);
+  const [strategyEvaluated, setStrategyEvaluated] = useState(false);
+  const [evalMsg, setEvalMsg] = useState("");
+  const [mixErr, setMixErr] = useState<string | null>(null);
+  const [contactLevel, setContactLevel] = useState(1);
+  const firstPctRef = useRef<HTMLInputElement | null>(null);
   const [cpOpen, setCpOpen] = useState(false);
   const [cpForm, setCpForm] = useState<{ channel: ContactPoint["channel"]; summary: string }>({ channel: "微信", summary: "" });
   const [taskOpen, setTaskOpen] = useState(false);
@@ -161,6 +166,11 @@ export default function CRM(props: Props) {
     show("联系人已添加");
     setContactOpen(false); setContactForm({ name: "", phone: "", title: "", role: "影响者", wechat: "" });
     await props.reload();
+  }
+  function openContact(level = 1) {
+    setContactLevel(level);
+    setContactForm({ name: "", phone: "", title: "", role: "影响者", wechat: "" });
+    setContactOpen(true);
   }
   async function refreshSop() { setSopScripts(await getAllScripts()); }
   function openSopNew() { setSopForm({ id: "", scene: "", text: "" }); setSopOpen(true); }
@@ -178,14 +188,32 @@ export default function CRM(props: Props) {
   function openStrategyEdit() {
     if (!drawerC) return;
     const s = ((drawerC.custom ?? {}) as Record<string, Record<string, string>>).mediaStrategy ?? {};
-    setStrategyDraft({ audience: s.audience ?? "", budget: s.budget ?? "", mix: s.mix ?? "", resources: s.resources ?? "", note: s.note ?? "", attachments: ((s.attachments as unknown) as { name: string; path: string }[]) ?? [] });
+    const storedMix = ((s as unknown) as { mixList?: { channel: string; pct: number }[] }).mixList;
+    setStrategyDraft({ audience: s.audience ?? "", budget: s.budget ?? "", mix: s.mix ?? "", resources: s.resources ?? "", note: s.note ?? "", attachments: ((s.attachments as unknown) as { name: string; path: string }[]) ?? [], mixList: storedMix && storedMix.length ? storedMix : [{ channel: "信息流", pct: 50 }, { channel: "种草", pct: 30 }, { channel: "品牌", pct: 20 }], totalBudget: ((s as unknown) as { totalBudget?: string }).totalBudget ?? "" });
+    setStrategyEvaluated(false);
     setStrategyEdit(true);
   }
   async function saveStrategy() {
     if (!drawerC) return;
-    await repos.customers.update(drawerC.id, { custom: { ...(drawerC.custom ?? {}), mediaStrategy: strategyDraft } }, "保存客户「" + drawerC.name + "」媒介策略");
+    const list = strategyDraft.mixList ?? [];
+    const total = list.reduce((s, x) => s + (Number(x.pct) || 0), 0);
+    /* P1 §3.3 预算配比动态校验:各渠道占比之和必须等于 100%,否则标红拦截不关闭 */
+    if (list.length > 0 && total !== 100) {
+      setMixErr("❌ 各媒体渠道的预算配比相加必须等于 100%（当前总计为 " + total + "%），请修正后再提交。");
+      firstPctRef.current?.focus();
+      return;
+    }
+    setMixErr(null);
+    const mixSummary = list.length ? list.map((x) => x.channel + " " + x.pct + "%").join(" / ") : strategyDraft.mix;
+    await repos.customers.update(drawerC.id, { custom: { ...(drawerC.custom ?? {}), mediaStrategy: { ...strategyDraft, mix: mixSummary } } }, "保存客户「" + drawerC.name + "」媒介策略");
     setStrategyEdit(false);
     show("客户媒介策略已保存");
+    /* P1 §4 100% 成功回填后触发右栏 AI 预算合理性评估 */
+    if (list.length > 0 && total === 100) {
+      const max = Math.max(...list.map((x) => Number(x.pct) || 0), 0);
+      setEvalMsg(max > 80 ? "🤖 AI 风险预警：检测到您将 80% 以上预算集中在单一触点，容易导致线索流流失，建议调低 20% 以分散风险。" : "🤖 AI 预算评估：当前预算配比极其合理。信息流主导线索获取（占比 50%），预计能让商机转化率提升 15%。");
+      setStrategyEvaluated(true);
+    }
     await props.reload();
   }
   /* 快速记录接触点(ContactPoint):写库后随 360° 时间线/健康度/通知同步刷新 */
@@ -509,10 +537,6 @@ export default function CRM(props: Props) {
   }
 
   /** P1:根据 WidgetDef 渲染客户详情具体 Widget(数据由页面侧提供) */
-  /* P4 拖拽重排回调:直接更新 state(退出编辑时再落库) */
-  function handleLayoutChange(next: RecordLayout) {
-    setCustomerLayout(next);
-  }
   /* P4 base 字段可见性:写入 widget.config.visibleFields */
   function setBaseVisibleFields(visible: string[]) {
     setCustomerLayout((prev) => ({
@@ -525,15 +549,7 @@ export default function CRM(props: Props) {
       })),
     }));
   }
-  /* P4 退出编辑:完整覆盖保存 recordLayouts.customer */
-  async function finishEditLayout() {
-    const all = await db.getSetting<Record<string, RecordLayout>>("recordLayouts", {});
-    await db.setSetting("recordLayouts", { ...all, customer: customerLayout });
-    show("布局已保存");
-    setEditingLayout(false);
-  }
-
-  function renderCustomerWidget(w: WidgetDef): ReactNode {
+  function renderCustomerWidget(w: { type: "fields" | "related" | "timeline" | "custom"; id: string; config?: Record<string, unknown> }): ReactNode {
     if (!drawerC) return null;
     if (w.type === "fields" && w.id === "base") {
       const h = healthOf(drawerC.id, props.cps, payments);
@@ -555,12 +571,12 @@ export default function CRM(props: Props) {
           ...Object.entries(drawerC.custom ?? {})
             .filter(([k, v]) => k !== "mediaStrategy" && typeof v !== "object" && v !== null && v !== undefined && !custFields.some((cf) => cf.key === k))
             .map(([k, v]) => ({ label: k, value: String(v) })),
-        ]} editing={editingLayout} visibleFields={baseVisible} onVisibleFieldsChange={setBaseVisibleFields} />
+        ]} editing={false} visibleFields={baseVisible} onVisibleFieldsChange={setBaseVisibleFields} />
       );
     }
     if (w.type === "related" && w.id === "contacts") {
       return (
-        <RelatedListWidget title="决策链联系人" emptyText="暂无联系人关联,点击右上角新增" onAdd={() => setContactOpen(true)} items={drawerContacts.map(({ rel, contact }) => ({
+        <RelatedListWidget title="决策链联系人" emptyText="暂无联系人关联,点击右上角新增" onAdd={() => openContact(1)} items={drawerContacts.map(({ rel, contact }) => ({
           id: rel.id,
           title: contact?.name ?? "未命名",
           sub: (contact?.title ?? "") + (contact?.phone ? " · " + contact.phone : ""),
@@ -609,6 +625,112 @@ export default function CRM(props: Props) {
       );
     }
     return null;
+  }
+
+  /* P1 右栏 AI 副驾驶对话面板(原「AI建议」Tab 内容,迁移为常驻) */
+  function renderAiPanel(): ReactNode {
+    return (
+      <div style={{ display: "flex", gap: 12, height: "100%", minHeight: 0 }}>
+        <div style={{ width: 200, flexShrink: 0, borderRight: "1px solid var(--border)", paddingRight: 10, overflowY: "auto" }}>
+          <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
+            <Btn kind="primary" sm style={{ flex: 1 }} onClick={newAiConv}><IconPlus size={12} /> 新对话</Btn>
+            <Btn kind="ghost" sm title="新建分组" onClick={newAiGroup}>📁</Btn>
+          </div>
+          {aiGroups.map((g) => {
+            const groupConvs = aiConvs.filter((c) => c.groupId === g.id);
+            return (
+              <div key={g.id} style={{ marginBottom: 4 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 6px", borderRadius: 4, cursor: "pointer", fontSize: "var(--text-xs)", color: "var(--ink-2)" }} onClick={() => toggleAiGroup(g.id)}>
+                  <span style={{ fontSize: 10 }}>{g.collapsed ? "▶" : "▼"}</span>
+                  {renamingGroup === g.id ? (
+                    <input className="inp" style={{ flex: 1, fontSize: "var(--text-xs)", padding: "2px 4px" }} defaultValue={g.title} autoFocus onBlur={(e) => renameAiGroup(g.id, e.target.value || g.title)} onKeyDown={(e) => { if (e.key === "Enter") renameAiGroup(g.id, (e.target as HTMLInputElement).value || g.title); }} />
+                  ) : (
+                    <span style={{ flex: 1, fontWeight: 600 }} onDoubleClick={() => setRenamingGroup(g.id)}>📁 {g.title}</span>
+                  )}
+                  <span style={{ fontSize: 9, color: "var(--ink-3)" }}>{groupConvs.length}</span>
+                  <span style={{ fontSize: 9, color: "var(--danger)", cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); deleteAiGroup(g.id); show("分组「" + g.title + "」已删除,对话移至未分组"); }}>×</span>
+                </div>
+                {!g.collapsed && groupConvs.map((c) => (
+                  <div key={c.id} style={{ padding: "4px 8px 4px 20px", borderRadius: 6, background: curConvId === c.id ? "var(--surface-2)" : "transparent", cursor: "pointer", marginBottom: 1, fontSize: "var(--text-xs)" }} onClick={() => setCurConvId(c.id)}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+                      {renamingConv === c.id ? (
+                        <input className="inp" style={{ flex: 1, fontSize: "var(--text-xs)", padding: "1px 4px" }} defaultValue={c.title} autoFocus onBlur={(e) => renameAiConv(c.id, e.target.value || c.title)} onKeyDown={(e) => { if (e.key === "Enter") renameAiConv(c.id, (e.target as HTMLInputElement).value || c.title); }} />
+                      ) : (
+                        <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} onDoubleClick={() => setRenamingConv(c.id)}>{c.title}</span>
+                      )}
+                      <select style={{ fontSize: 9, padding: 0, border: "none", background: "transparent", color: "var(--ink-3)", cursor: "pointer", width: 14 }} value={c.groupId ?? ""} onChange={(e) => { e.stopPropagation(); moveConvToGroup(c.id, e.target.value || undefined); }} onClick={(e) => e.stopPropagation()} title="移动到分组">
+                        <option value="">⊘</option>
+                        {aiGroups.map((gg) => <option key={gg.id} value={gg.id}>→{gg.title.slice(0,4)}</option>)}
+                      </select>
+                      <span style={{ fontSize: 9, color: "var(--danger)", cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); deleteAiConv(c.id); }}>×</span>
+                    </div>
+                    <div style={{ fontSize: 9, color: "var(--ink-3)", marginTop: 1 }}>{c.messages.length}条</div>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+          {aiConvs.filter((c) => !c.groupId).length > 0 && (
+            <div style={{ marginTop: 6, paddingTop: 6, borderTop: "1px solid var(--border-soft)" }}>
+              <div style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)", padding: "2px 6px", marginBottom: 2 }}>未分组 ({aiConvs.filter((c) => !c.groupId).length})</div>
+              {aiConvs.filter((c) => !c.groupId).map((c) => (
+                <div key={c.id} style={{ padding: "4px 8px", borderRadius: 6, background: curConvId === c.id ? "var(--surface-2)" : "transparent", cursor: "pointer", marginBottom: 1, fontSize: "var(--text-xs)" }} onClick={() => setCurConvId(c.id)}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+                    {renamingConv === c.id ? (
+                      <input className="inp" style={{ flex: 1, fontSize: "var(--text-xs)", padding: "1px 4px" }} defaultValue={c.title} autoFocus onBlur={(e) => renameAiConv(c.id, e.target.value || c.title)} onKeyDown={(e) => { if (e.key === "Enter") renameAiConv(c.id, (e.target as HTMLInputElement).value || c.title); }} />
+                    ) : (
+                      <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} onDoubleClick={() => setRenamingConv(c.id)}>{c.title}</span>
+                    )}
+                    <select style={{ fontSize: 9, padding: 0, border: "none", background: "transparent", color: "var(--ink-3)", cursor: "pointer", width: 14 }} value="" onChange={(e) => { e.stopPropagation(); moveConvToGroup(c.id, e.target.value || undefined); }} onClick={(e) => e.stopPropagation()} title="移动到分组">
+                      <option value="">⊘</option>
+                      {aiGroups.map((gg) => <option key={gg.id} value={gg.id}>→{gg.title.slice(0,4)}</option>)}
+                    </select>
+                    <span style={{ fontSize: 9, color: "var(--danger)", cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); deleteAiConv(c.id); }}>×</span>
+                  </div>
+                  <div style={{ fontSize: 9, color: "var(--ink-3)", marginTop: 1 }}>{c.messages.length}条</div>
+                </div>
+              ))}
+            </div>
+          )}
+          {aiConvs.length === 0 ? <p className="muted" style={{ fontSize: "var(--text-xs)", textAlign: "center", padding: 10 }}>暂无对话</p> : null}
+        </div>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+          <div style={{ flex: 1, overflowY: "auto", paddingRight: 4 }}>
+            {curConvId ? (() => {
+              const conv = aiConvs.find((c) => c.id === curConvId);
+              if (!conv || conv.messages.length === 0) return <p className="muted" style={{ textAlign: "center", padding: 30, fontSize: "var(--text-sm)" }}>在下方输入问题开始对话,可询问在途商机、最近跟进、回款等</p>;
+              return conv.messages.map((m, i) => (
+                <div key={i} style={{ marginBottom: 10, textAlign: m.role === "user" ? "right" : "left" }}>
+                  <div style={{ display: "inline-block", maxWidth: "85%", textAlign: "left", padding: "8px 12px", borderRadius: 10, background: m.role === "user" ? "var(--brand)" : "var(--surface-2)", color: m.role === "user" ? "#fff" : "var(--ink)", fontSize: "var(--text-sm)", lineHeight: 1.6 }}>
+                    <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{m.content}</div>
+                    <div style={{ fontSize: 10, color: m.role === "user" ? "rgba(255,255,255,0.7)" : "var(--ink-3)", marginTop: 4, display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                      <span>{new Date(m.ts).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}</span>
+                      <span style={{ cursor: "pointer" }} onClick={() => copyText(m.content)}>复制</span>
+                      <span style={{ cursor: "pointer" }} onClick={() => deleteMsg(conv.id, i)}>删除</span>
+                    </div>
+                  </div>
+                </div>
+              ));
+            })() : <p className="muted" style={{ textAlign: "center", padding: 30, fontSize: "var(--text-sm)" }}>选择或新建一个对话</p>}
+          </div>
+          <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
+            <div className="filter-input" style={{ flex: 1 }}>
+              <IconSearch size={13} />
+              <input value={askInput} onChange={(e) => setAskInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") runAsk(); }} placeholder="问我:这个客户有多少在途商机?最近跟进是什么时候?" />
+            </div>
+            <Btn kind="data" sm onClick={runAsk}>提问</Btn>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  /* P1 AI 自动摘要:实时读取左中两栏派生数据 */
+  function aiSummary(): string {
+    if (!drawerC) return "打开客户后展示智能摘要";
+    const h = healthOf(drawerC.id, props.cps, payments);
+    const dealsN = drawerDeals.filter((d) => !["输单", "流失"].includes(d.stage)).length;
+    const last = drawerCps[0]?.summary ?? "暂无跟进";
+    return `健康度 ${h}/100 · 在途商机 ${dealsN} 个 · 最近跟进:${last}`;
   }
 
   const colCount = 1 + 1 + (vc.industry ? 1 : 0) + (vc.grade ? 1 : 0) + (vc.health ? 1 : 0) + (vc.stage ? 1 : 0) + (vc.deal ? 1 : 0) + (vc.touch ? 1 : 0);
@@ -742,7 +864,7 @@ export default function CRM(props: Props) {
                       const h = dv?.health ?? 0;
                       const lt = dv?.latestTouch;
                       return (
-                        <div className="kcard" key={c.id} onClick={() => { setOpenId(c.id); setTab("概览"); }} style={{ cursor: "pointer" }}>
+                        <div className="kcard" key={c.id} onClick={() => { setOpenId(c.id); }} style={{ cursor: "pointer" }}>
                           <div className="t" style={{ fontWeight: 650, marginBottom: 4 }}>{c.name}</div>
                           <div className="m">
                             <Chip gray>{c.industry}</Chip>
@@ -786,7 +908,7 @@ export default function CRM(props: Props) {
                     const stg = dv?.stage ?? "潜在";
                     const cls = h >= 80 ? "good" : h >= 60 ? "mid" : "low";
                     return (
-                      <tr key={c.id} onClick={() => { setOpenId(c.id); setTab("概览"); }}>
+                      <tr key={c.id} onClick={() => { setOpenId(c.id); }}>
                         <td onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={selected.has(c.id)} onChange={() => { const n = new Set(selected); if (n.has(c.id)) n.delete(c.id); else n.add(c.id); setSelected(n); }} /></td>
                         <td><div className="cname"><span className="dot" style={{ background: h >= 80 ? "var(--success)" : h >= 60 ? "var(--warning)" : "var(--danger)" }} />{c.name}</div></td>
                         {vc.industry ? <td>{c.industry}</td> : null}
@@ -809,7 +931,7 @@ export default function CRM(props: Props) {
                   const stg = dv?.stage ?? "潜在";
                   const cls = h >= 80 ? "good" : h >= 60 ? "mid" : "low";
                   return (
-                    <tr key={c.id} onClick={() => { setOpenId(c.id); setTab("概览"); }}>
+                    <tr key={c.id} onClick={() => { setOpenId(c.id); }}>
                       <td onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={selected.has(c.id)} onChange={() => { const n = new Set(selected); if (n.has(c.id)) n.delete(c.id); else n.add(c.id); setSelected(n); }} /></td>
                       <td><div className="cname"><span className="dot" style={{ background: h >= 80 ? "var(--success)" : h >= 60 ? "var(--warning)" : "var(--danger)" }} />{c.name}</div></td>
                       {vc.industry ? <td>{c.industry}</td> : null}
@@ -880,25 +1002,44 @@ export default function CRM(props: Props) {
                   {drawerC.parentId ? <Chip>属集团 {nameOf(drawerC.parentId)}</Chip> : null}
                 </div>
               </div>
-              <button className="icon-btn" style={{ marginLeft: "auto", color: editingLayout ? "var(--brand)" : undefined }} title={editingLayout ? "完成布局编辑" : "编辑布局"} onClick={() => { if (editingLayout) void finishEditLayout(); else setEditingLayout(true); }}>{editingLayout ? <IconCheck size={16} /> : <IconLayout size={16} />}</button>
               <Btn kind="primary" sm onClick={() => openEdit(drawerC)}>编辑</Btn>
               <button className="icon-btn" onClick={() => setOpenId(null)} aria-label="关闭" title="关闭"><IconClose size={16} /></button>
             </div>
             <div className="drawer-body">
-              <RecordPage
-                layout={customerLayout}
-                activeTab={tab}
-                onTabChange={(t) => setTab(t as typeof tab)}
-                renderWidget={renderCustomerWidget}
-                editing={editingLayout}
-                onLayoutChange={handleLayoutChange}
-              />
+              <div className="crm-workbench">
+                <aside className="wb-left">
+                  {renderCustomerWidget({ type: "fields", id: "base" })}
+                  {renderCustomerWidget({ type: "related", id: "contacts" })}
+                </aside>
+                <section className="wb-center">
+                  {renderCustomerWidget({ type: "timeline", id: "timeline" })}
+                  <div className="wb-section">
+                    <div className="h-row" style={{ margin: "4px 0 8px" }}><span className="h-title sm">客户专属媒介策略</span></div>
+                    <MediaStrategyView customer={drawerC} onEdit={openStrategyEdit} />
+                  </div>
+                  {renderCustomerWidget({ type: "related", id: "tasks" })}
+                </section>
+                <aside className={"wb-right" + (aiCollapsed ? " collapsed" : "")}>
+                  <button className="wb-ai-toggle" onClick={() => setAiCollapsed((v) => !v)} title={aiCollapsed ? "展开 AI 副驾驶" : "收起 AI 副驾驶"}>🪄</button>
+                  <div className="wb-ai-head"><b>AI 副驾驶</b><span className="muted" style={{ fontSize: "var(--text-xs)" }}>实时读取左右栏</span></div>
+                  <div className="wb-ai-summary muted" style={{ fontSize: "var(--text-xs)", padding: "8px 10px", background: "var(--surface)", borderRadius: 8 }}>{aiSummary()}</div>
+                  <div className="wb-ai-quick" style={{ display: "flex", flexWrap: "wrap", gap: 6, margin: "8px 14px" }}>
+                    <Btn kind="ghost" sm onClick={() => setAskInput("帮我规划下一次跟进话术")}>💡 规划跟进话术</Btn>
+                    <Btn kind="ghost" sm onClick={() => setAskInput("生成一封回访邮件")}>📝 生成邮件</Btn>
+                    <Btn kind="ghost" sm onClick={openSopNew}>📚 话术库</Btn>
+                  </div>
+                  <div className="wb-ai-chat">
+                    {renderAiPanel()}
+                  </div>
+                  {strategyEvaluated ? (<div className="wb-ai-eval">{evalMsg}</div>) : null}
+                </aside>
+              </div>
               {financeWarning && (
                 <div style={{ margin: "8px 18px", padding: "10px 14px", border: "1px solid var(--warning)", borderRadius: 8, background: "var(--warning-bg)", color: "var(--warning)", fontSize: 13 }}>
                   数据异常：回款 {money(totalReceived + totalUnpaid)} 超过累计商机额 {money(totalDealVal)}，请核对商机阶段与合同金额。
                 </div>
               )}
-              {tab === "决策链" && (
+              {false && (
                 <div style={{ paddingTop: 6 }}>
                   <div className="dsec">角色徽章制(不画图谱)</div>
                   {drawerContacts.map(({ rel, contact }) => (
@@ -916,10 +1057,7 @@ export default function CRM(props: Props) {
                   {drawerContacts.length === 0 ? <p className="muted" style={{ padding: "12px 18px" }}>暂无联系人关联</p> : null}
                 </div>
               )}
-              {tab === "媒介策略" && drawerC ? (
-                <MediaStrategyView customer={drawerC} onEdit={openStrategyEdit} />
-              ) : null}
-              {tab === "AI建议" && (
+              {false && (
                 <div style={{ display: "flex", gap: 12, height: "calc(100vh - 224px)", minHeight: 320 }}>
                   <div style={{ width: 200, flexShrink: 0, borderRight: "1px solid var(--border)", paddingRight: 10, overflowY: "auto" }}>
                     <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
@@ -990,7 +1128,7 @@ export default function CRM(props: Props) {
 
                     <div style={{ flex: 1, overflowY: "auto", paddingRight: 4 }}>
                       {curConvId ? (() => {
-                        const conv = aiConvs.find((c) => c.id === curConvId);
+                        const conv = aiConvs.find((c) => c.id === curConvId)!;
                         if (!conv || conv.messages.length === 0) return <p className="muted" style={{ textAlign: "center", padding: 30, fontSize: "var(--text-sm)" }}>在下方输入问题开始对话,可询问在途商机、最近跟进、回款等</p>;
                         return conv.messages.map((m, i) => (
                           <div key={i} style={{ marginBottom: 10, textAlign: m.role === "user" ? "right" : "left" }}>
@@ -1016,7 +1154,7 @@ export default function CRM(props: Props) {
                   </div>
                 </div>
               )}
-              {tab === "SOP话术" && (
+              {false && (
                 <div>
                   <div className="h-row" style={{ marginBottom: 10 }}>
                     <span className="h-title sm">SOP 话术库</span>
@@ -1101,12 +1239,30 @@ export default function CRM(props: Props) {
         </Modal>
       ) : null}
       {strategyEdit ? (
-        <Modal title="客户媒介策略" onClose={() => setStrategyEdit(false)} footer={
-          <div className="grow"><Btn kind="ghost" onClick={() => setStrategyEdit(false)}>取消</Btn><Btn kind="primary" onClick={() => { void saveStrategy(); }}>保存</Btn></div>
+        <Drawer level={1} open={strategyEdit} title="客户媒介策略" onClose={() => setStrategyEdit(false)} footer={
+          <div className="grow">
+            <Btn kind="ghost" onClick={() => openContact(2)}>添加决策人</Btn>
+            <Btn kind="ghost" onClick={() => setStrategyEdit(false)}>取消</Btn>
+            <Btn kind="primary" onClick={() => { void saveStrategy(); }}>保存</Btn>
+          </div>
         }>
           <Field label="目标受众"><input className="inp" style={{ width: "100%" }} value={strategyDraft.audience} onChange={(e) => setStrategyDraft({ ...strategyDraft, audience: e.target.value })} placeholder="如:25-35岁新一线女性,美妆护肤" /></Field>
-          <Field label="预算区间"><input className="inp" style={{ width: "100%" }} value={strategyDraft.budget} onChange={(e) => setStrategyDraft({ ...strategyDraft, budget: e.target.value })} placeholder="如:月度 30-80 万" /></Field>
-          <Field label="建议配比"><input className="inp" style={{ width: "100%" }} value={strategyDraft.mix} onChange={(e) => setStrategyDraft({ ...strategyDraft, mix: e.target.value })} placeholder="如:种草50% / 效果30% / 品牌20%" /></Field>
+          <Field label="总预算(可选)"><input className="inp" style={{ width: "100%" }} value={strategyDraft.totalBudget ?? ""} onChange={(e) => setStrategyDraft({ ...strategyDraft, totalBudget: e.target.value })} placeholder="如:年度 800 万" /></Field>
+          <Field label="预算区间(可选)"><input className="inp" style={{ width: "100%" }} value={strategyDraft.budget} onChange={(e) => setStrategyDraft({ ...strategyDraft, budget: e.target.value })} placeholder="如:月度 30-80 万" /></Field>
+          <Field label="媒体预算配比">
+            <div className="budget-mix">
+              {(strategyDraft.mixList ?? []).map((m, i) => (
+                <div className="budget-mix-row" key={i}>
+                  <input className="inp" style={{ flex: 1 }} value={m.channel} onChange={(e) => setStrategyDraft({ ...strategyDraft, mixList: (strategyDraft.mixList ?? []).map((x, j) => j === i ? { ...x, channel: e.target.value } : x) })} placeholder="渠道" />
+                  <input className="inp" type="number" min={0} max={100} style={{ width: 88 }} value={m.pct} ref={i === 0 ? firstPctRef : undefined} onChange={(e) => setStrategyDraft({ ...strategyDraft, mixList: (strategyDraft.mixList ?? []).map((x, j) => j === i ? { ...x, pct: Number(e.target.value) } : x) })} />
+                  <span style={{ color: "var(--muted)", fontSize: "var(--text-sm)" }}>%</span>
+                  <Btn kind="ghost" sm onClick={() => setStrategyDraft({ ...strategyDraft, mixList: (strategyDraft.mixList ?? []).filter((_, j) => j !== i) })}>删</Btn>
+                </div>
+              ))}
+              <Btn kind="ghost" sm onClick={() => setStrategyDraft({ ...strategyDraft, mixList: [...(strategyDraft.mixList ?? []), { channel: "", pct: 0 }] })}>+ 添加渠道</Btn>
+              {(() => { const t = (strategyDraft.mixList ?? []).reduce((s, x) => s + (Number(x.pct) || 0), 0); return (<><div className={"budget-total" + (t !== 100 ? " error" : "")}><span>配比合计</span><span>{t}%</span></div>{mixErr ? <div className="budget-err">{mixErr}</div> : null}</>); })()}
+            </div>
+          </Field>
           <Field label="首选资源"><input className="inp" style={{ width: "100%" }} value={strategyDraft.resources} onChange={(e) => setStrategyDraft({ ...strategyDraft, resources: e.target.value })} placeholder="如:抖音信息流+小红书达人+分众电梯" /></Field>
           <Field label="备注"><textarea className="inp" rows={2} style={{ width: "100%" }} value={strategyDraft.note} onChange={(e) => setStrategyDraft({ ...strategyDraft, note: e.target.value })} /></Field>
           <Field label="方案附件">
@@ -1132,7 +1288,7 @@ export default function CRM(props: Props) {
               </div>
             ) : <p className="muted" style={{ fontSize: "var(--text-xs)", margin: 0 }}>暂无附件,可添加方案文档/图片等</p>}
           </Field>
-        </Modal>
+        </Drawer>
       ) : null}
       {cpOpen && drawerC ? (
         <Modal title={"记录跟进 · " + drawerC.name} onClose={() => setCpOpen(false)} footer={
@@ -1167,7 +1323,7 @@ export default function CRM(props: Props) {
         </Modal>
       ) : null}
       {contactOpen && drawerC ? (
-        <Modal title={"添加联系人 · " + drawerC.name} onClose={() => setContactOpen(false)} footer={
+        <Drawer level={contactLevel} open={contactOpen && !!drawerC} title={"添加联系人 · " + drawerC.name} onClose={() => setContactOpen(false)} footer={
           <div className="grow"><Btn kind="ghost" onClick={() => setContactOpen(false)}>取消</Btn><Btn kind="primary" onClick={() => { void saveContact(); }}>保存</Btn></div>
         }>
           <Field label="姓名"><input className="inp" style={{ width: "100%" }} value={contactForm.name} onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })} placeholder="必填" /></Field>
@@ -1183,7 +1339,7 @@ export default function CRM(props: Props) {
             <Field label="电话"><input className="inp" style={{ width: "100%" }} value={contactForm.phone} onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })} /></Field>
             <Field label="微信"><input className="inp" style={{ width: "100%" }} value={contactForm.wechat} onChange={(e) => setContactForm({ ...contactForm, wechat: e.target.value })} /></Field>
           </div>
-        </Modal>
+        </Drawer>
       ) : null}
       {sopOpen ? (
         <Modal title={sopForm.id ? "编辑话术" : "新增话术"} onClose={() => setSopOpen(false)} footer={

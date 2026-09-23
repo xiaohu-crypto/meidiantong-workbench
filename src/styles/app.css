@@ -674,6 +674,23 @@ html[data-titlebar="integrated"] .topbar .filter-input { -webkit-app-region: no-
 .crm-detail .drawer-head{flex:none}
 .crm-detail .drawer-body{flex:1 1 auto;min-height:0;overflow-y:auto;padding-bottom:20px}
 .crm-detail .drawer-foot{flex:none}
+/* P1 一体化工工作台三栏布局 */
+.crm-workbench{display:flex;gap:0;height:100%;min-height:0}
+.wb-left{flex:0 0 25%;max-width:25%;border-right:1px solid var(--border-soft);overflow-y:auto;padding:14px 16px}
+.wb-center{flex:1 1 50%;min-width:0;overflow-y:auto;padding:14px 18px}
+.wb-right{flex:0 0 25%;max-width:25%;border-left:1px solid var(--border-soft);position:relative;display:flex;flex-direction:column;background:var(--surface-2);transition:flex-basis .22s ease,max-width .22s ease}
+.wb-right.collapsed{flex-basis:0;max-width:0;overflow:hidden}
+.wb-ai-toggle{position:absolute;right:10px;bottom:16px;width:40px;height:40px;border-radius:50%;border:none;background:var(--danger,#e5484d);color:#fff;font-size:18px;cursor:pointer;box-shadow:var(--shadow-md);z-index:5}
+.wb-ai-head{padding:12px 14px 6px;display:flex;flex-direction:column;gap:2px}
+.wb-ai-summary{margin:0 14px}
+.wb-ai-chat{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding:0 14px}
+.wb-ai-eval{margin:10px 14px;padding:10px 12px;border:1px solid var(--brand);border-radius:8px;background:var(--brand-bg,#eef4ff);font-size:var(--text-sm);line-height:1.6}
+.wb-section{margin-top:14px}
+.budget-mix-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.budget-mix-row input{width:88px}
+.budget-total{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:8px;background:var(--surface);margin-top:6px;font-weight:600}
+.budget-total.error{background:var(--danger-bg,#fdecec);color:var(--danger,#e5484d)}
+.budget-err{color:var(--danger,#e5484d);font-size:var(--text-xs);margin-top:6px}
 /* ---- 媒介资源 5 Tab 平铺（锚点导航 + 全部渲染） ---- */
 .media-sec{scroll-margin-top:70px;padding-top:var(--sp-4);border-top:1px solid var(--border-soft);margin-top:var(--sp-4)}
 .media-sec:first-of-type{border-top:none;padding-top:0;margin-top:0}

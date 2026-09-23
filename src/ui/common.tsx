@@ -33,6 +33,39 @@ export function Modal(props: { title: string; onClose: () => void; children: Rea
   );
 }
 
+/**
+ * P1 统一右侧滑出抽屉基组件(替代散落的 Modal/多套抽屉体系,消除弹窗错乱)。
+ * 支持多层级(连续滑出):level 越高 z-index 越高、宽度越窄,形成金字塔。
+ *  - level1: mask z=1000 / drawer z=1001 / 宽 520
+ *  - level2: mask z=2000 / drawer z=2001 / 宽 480(叠在 level1 上方,左侧露边)
+ * 关闭遵循后进先出:点击本级遮罩仅关本级。滑出动画 ≤250ms(220ms)。
+ */
+export function Drawer(props: { open: boolean; title: string; onClose: () => void; level?: number; width?: number; children: ReactNode; footer?: ReactNode }) {
+  const level = props.level ?? 1;
+  const z = level * 1000 + 1;
+  const maskZ = level * 1000;
+  return (
+    <>
+      <div
+        className="drawer-mask"
+        style={{ zIndex: maskZ, background: level > 1 ? "rgba(0,0,0,0.15)" : "rgba(0,0,0,0.3)", opacity: props.open ? 1 : 0, pointerEvents: props.open ? "auto" : "none" }}
+        onClick={(e) => { if (e.target === e.currentTarget) props.onClose(); }}
+      />
+      <div
+        className="drawer"
+        style={{ zIndex: z, width: props.width ?? (level > 1 ? 480 : 520), right: props.open ? 0 : "-560px", transition: "right .22s ease" }}
+      >
+        <div className="drawer-head">
+          <b>{props.title}</b>
+          <button className="icon-btn" style={{ marginLeft: "auto" }} onClick={props.onClose} aria-label="关闭"><IconClose size={16} /></button>
+        </div>
+        <div className="drawer-body">{props.children}</div>
+        {props.footer ? <div className="drawer-foot">{props.footer}</div> : null}
+      </div>
+    </>
+  );
+}
+
 export function Field(props: { label: string; error?: string; children: ReactNode }) {
   return (
     <div className="field">
