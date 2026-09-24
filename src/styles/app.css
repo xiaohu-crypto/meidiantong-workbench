@@ -19,8 +19,69 @@ html.focus-mode .brand{justify-content:center;padding-left:8px;padding-right:8px
 .nav-foot{padding:10px 14px;border-top:1px solid var(--border-soft);font-size:var(--text-xs);color:var(--ink-4);display:flex;align-items:center;gap:7px;white-space:nowrap}
 .nav-foot .dot{width:6px;height:6px;border-radius:50%;background:var(--success);flex:none}
 
+
+/* ==========================================================
+  Finexy UI 重塑 · 纯 CSS 覆盖（v0.2.3-pre）
+  目标：客户管理页顶部漏斗卡 + 表格 + 标签 + 选项卡
+  原则：不改底层 JSX / 数据 / 功能，仅覆盖视觉层
+  ======================================================== */
+
+/* ---------- 1. 顶部漏斗指标卡 .fseg ---------- */
+.funnel{display:grid;grid-template-columns:repeat(7,1fr);gap:12px;margin-bottom:20px}
+.fseg{background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--r-xl);padding:16px 18px;display:flex;flex-direction:column;gap:4px;position:relative;box-shadow:var(--shadow-card);transition:var(--animate-theme-switch),transform .2s ease,box-shadow .2s ease;overflow:hidden}
+.fseg:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.fseg .n{font-size:22px;font-weight:700;letter-spacing:-.02em;line-height:1.2}
+.fseg .l{font-size:var(--text-xs);color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 首卡 .fseg.hot 品牌橙满铺 */
+.fseg.hot{background:var(--brand);border-color:transparent;color:#fff;box-shadow:0 6px 24px rgba(254,44,85,.25),0 2px 8px rgba(254,44,85,.18)}
+.fseg.hot .n{color:#fff}
+.fseg.hot .l{color:rgba(255,255,255,.78);font-weight:600}
+.fseg.hot::after{display:none}
+/* 去掉原有 fseg::after 箭头连接符（改用卡片间距） */
+.fseg::after{display:none}
+
+/* ---------- 2. 通透型数据表 .tgrid ---------- */
+table.tgrid{border-collapse:separate;border-spacing:0;background:var(--surface);border-radius:var(--r-xl);overflow:hidden}
+.card:has(> .tgrid-wrap),.card:has(> .tgrid){border-radius:var(--r-xl);border:1px solid var(--border-soft);box-shadow:var(--shadow-card);overflow:hidden}
+table.tgrid thead tr{background:var(--surface-2);border-bottom:2px solid var(--border)}
+table.tgrid th{font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em;padding:12px 14px;text-align:left;vertical-align:middle}
+table.tgrid td{padding:16px 14px;border-bottom:1px solid var(--border-soft);font-size:var(--text-sm);vertical-align:middle;transition:background .15s ease}
+table.tgrid td:first-child{border-left:2px solid transparent}
+table.tgrid tbody tr:last-child td{border-bottom:none}
+/* hover 行首橙色激活条 */
+table.tgrid tbody tr{position:relative;transition:background .15s ease}
+table.tgrid tbody tr:hover{background:var(--surface-2)}
+table.tgrid tbody tr:hover td:first-child{border-left:2px solid var(--brand)}
+
+/* ---------- 3. 药丸形胶囊标签 .chip ---------- */
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:var(--r-full);font-size:11px;font-weight:600;line-height:1.5;border:1px solid transparent;transition:all var(--animate-theme-switch)}
+.chip .chip-dot{width:5px;height:5px;border-radius:50%;background:currentColor;animation:chip-pulse 2s ease-in-out infinite}
+@keyframes chip-pulse{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.15)}}
+/* A/S 级客户：品牌橙微透明药丸 */
+.chip.brand{background:var(--brand-soft);border-color:transparent;color:var(--brand)}
+/* 普通灰色标签 */
+.chip.gray{background:var(--surface-2);color:var(--ink-3);border-color:var(--border-soft)}
+.chip.data{background:var(--data-soft);color:var(--data);border-color:transparent}
+.chip.green{background:var(--success-bg);color:var(--success);border-color:transparent}
+.chip.warn{background:var(--warning-bg);color:var(--warning);border-color:transparent}
+.chip.danger{background:var(--danger-bg);color:var(--danger);border-color:transparent}
+
+/* ---------- 4. 选项卡 .seg 切换钮 ---------- */
+.seg{display:inline-flex;gap:4px;padding:3px;background:var(--surface-2);border:1px solid var(--border-soft);border-radius:var(--r-full)}
+.seg button{padding:5px 14px;font-size:var(--text-xs);border:none;background:transparent;color:var(--ink-3);border-radius:var(--r-full);cursor:pointer;transition:all .2s ease;transform:scale(1)}
+.seg button:hover{color:var(--ink-2);transform:translateY(-1px)}
+.seg button.active{background:var(--brand);color:#fff;font-weight:600;box-shadow:0 2px 8px var(--brand-soft);transform:scale(1.02)}
+
+/* ---------- 5. 卡片容器 .card 全局升级 ---------- */
+.card{background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--r-xl);box-shadow:var(--shadow-card);transition:var(--animate-theme-switch)}
+
+/* ---------- 6. 客户名 .cname 字号微调 ---------- */
+.cname{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+.cname .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:8px;vertical-align:middle}
 .main{display:flex;flex-direction:column;min-width:0;min-height:0}
 .topbar{height:52px;display:flex;align-items:center;justify-content:center;gap:12px;padding:0 18px;border-bottom:1px solid var(--border);background:var(--surface);flex:none}
+.topbar-version-chip{margin-left:auto;-webkit-app-region:no-drag;font-size:11px;font-weight:600;letter-spacing:.3px;color:var(--ink-4);background:var(--surface-2);border:1px solid var(--border);border-radius:999px;padding:3px 10px;white-space:nowrap;user-select:none}
+.topbar-version-chip:hover{color:var(--ink-2);border-color:var(--brand)}
 .crumb{font-size:var(--text-sm);color:var(--ink-4)}
 .crumb b{color:var(--ink-2);font-weight:550;margin-left:6px}
 .tb-right{margin-left:auto;display:flex;align-items:center;gap:8px}
@@ -376,6 +437,13 @@ html[data-titlebar="integrated"] .topbar .filter-input { -webkit-app-region: no-
 .user-menu-divider{height:1px;background:var(--border-soft);margin:4px 0}
 .user-menu-item{display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:var(--text-sm);color:var(--ink-2);cursor:pointer;transition:background var(--t-fast)}
 .user-menu-item:hover{background:var(--surface-2);color:var(--ink-1)}
+/* === v0.2.2 主题三态选择浮层（浅色 / 暗黑 / 跟随系统） === */
+.theme-menu{position:absolute;bottom:calc(100% + 6px);right:-8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:0 8px 32px rgba(0,0,0,.28);z-index:1000;min-width:156px;padding:6px}
+.theme-menu-item{display:flex;align-items:center;gap:8px;padding:8px 10px;font-size:var(--text-sm);color:var(--ink-2);border-radius:var(--r-md);cursor:pointer;transition:background var(--t-fast)}
+.theme-menu-item:hover{background:var(--surface-2);color:var(--ink-1)}
+.theme-menu-item.active{color:var(--brand);font-weight:600}
+.theme-menu-item .tm-check{margin-left:auto;opacity:0}
+.theme-menu-item.active .tm-check{opacity:1}
 
 /* === 排版密度优化 === */
 .content{padding:20px 24px}
@@ -887,4 +955,3 @@ html[data-titlebar="integrated"] .topbar .filter-input { -webkit-app-region: no-
 @keyframes ai-ping{0%{transform:scale(1);opacity:.7}75%,100%{transform:scale(2.2);opacity:0}}
 .ai-status-tip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%) scale(.9);transform-origin:bottom center;background:var(--surface);border:1px solid var(--border);color:var(--ink-2);font-size:var(--text-xs);line-height:1.5;padding:6px 10px;border-radius:var(--r-md);box-shadow:var(--shadow-md);white-space:nowrap;opacity:0;pointer-events:none;transition:all var(--t-fast);z-index:60}
 .ai-status-anchor:hover .ai-status-tip{opacity:1;transform:translateX(-50%) scale(1)}
-

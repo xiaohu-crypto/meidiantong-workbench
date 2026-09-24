@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain, nativeImage, safeStorage, dialog, shell } from "electron";
+import { app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain, nativeImage, nativeTheme, safeStorage, dialog, shell } from "electron";
 import { mkdir, readdir, writeFile, unlink, readFile } from "node:fs/promises";
 import path2 from "node:path";
 const authOf = (k: string) => ("Bea" + "rer ") + k;
@@ -9,6 +9,54 @@ import { autoUpdater } from "electron-updater";
 
 let win: BrowserWindow | null = null;
 let tray: Tray | null = null;
+
+/* ============ 主题通道契约（与 preload.ts 的 window.electronAPI 对应） ============ */
+const THEME_CHANNELS = {
+  setMode: "theme:set-mode",
+  getSystem: "theme:get-system",
+  getSystemAsync: "theme:get-system-async",
+  systemUpdated: "theme:system-updated",
+} as const;
+
+const VALID_MODES = ["light", "dark", "system"] as const;
+type ThemeMode = (typeof VALID_MODES)[number];
+
+/** 从 nativeTheme 提取对外推送的统一载荷（主进程权威值） */
+function buildThemePayload(): { isDark: boolean } {
+  return { isDark: nativeTheme.shouldUseDarkColors };
+}
+
+/** 向所有已打开窗口广播主题状态（幂等，多窗口绝对一致） */
+function broadcastThemeState(): void {
+  const payload = buildThemePayload();
+  for (const w of BrowserWindow.getAllWindows()) {
+    if (!w.isDestroyed()) w.webContents.send(THEME_CHANNELS.systemUpdated, payload);
+  }
+}
+
+/** 落盘主题模式：system 跟随 OS；light/dark 强制锁定外壳与渲染层双端 */
+function applyThemeMode(mode: string): boolean {
+  if (!(VALID_MODES as readonly string[]).includes(mode)) return false;
+  nativeTheme.themeSource = mode as ThemeMode;
+  return true;
+}
+
+/** 注册换肤 IPC：接收 React 指令，回推系统真实状态 */
+function registerThemeIpc(): void {
+  // ① 渲染进程手动切换主题模式
+  ipcMain.on(THEME_CHANNELS.setMode, (_event, mode: string) => {
+    if (applyThemeMode(mode)) {
+      // 显式回推一次：themeSource 变更时 'updated' 事件不保证触发，主动广播保证绝对一致
+      broadcastThemeState();
+    }
+  });
+  // ② 冷启动同步读取（preload sendSync 通道）
+  ipcMain.on(THEME_CHANNELS.getSystem, (event) => {
+    event.returnValue = buildThemePayload();
+  });
+  // ③ 异步读取（preload invoke 通道）
+  ipcMain.handle(THEME_CHANNELS.getSystemAsync, () => buildThemePayload());
+}
 
 /** 标题栏模式:读 userData/window-mode.json(integrated=融合深色,默认;native=系统原生) */
 function windowMode(): "integrated" | "native" {
@@ -24,7 +72,8 @@ function createWindow() {
     width: 1360,
     height: 860,
     minWidth: 1100,
-    backgroundColor: "#0E0F13",
+    // 冷启动防闪烁（FOUC 优化）：底色与 nativeTheme 真实状态对齐（与 src/styles/index.css Token 同值）
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#0A0B0D" : "#F7F8FA",
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -32,6 +81,10 @@ function createWindow() {
       nodeIntegration: false,
       additionalArguments: ["--mt-window-mode=" + mode],
     },
+    // macOS：毛玻璃融入系统原生质感（Windows 走 titleBarOverlay / Mica）
+    ...(process.platform === "darwin"
+      ? { vibrancy: "under-window" as const, visualEffectState: "active" as const }
+      : {}),
   };
   if (mode === "integrated") {
     opts.titleBarStyle = "hidden";
@@ -81,6 +134,9 @@ function trayIcon() {
 
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null); // 移除原生 File/Edit/View 白色菜单栏
+  // ===== v0.2.2 迭代：主题 IPC 总线 + 系统级换肤监听 =====
+  registerThemeIpc();
+  nativeTheme.on("updated", broadcastThemeState); // OS 深色切换/themeSource 变更 → 实时推送渲染层
   createWindow();
 
   // ===== 自动更新:启动后静默检查,下载完成后提示重启 =====

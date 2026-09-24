@@ -7,6 +7,8 @@ import { payNotifyAt, staleNotifyAt } from "./core/derive";
 import type { Aar, Baseline, Contact, ContactPoint, Contract, Customer, Deal, Influencer, Milestone, MediaResource, Note, Objective, Payment, Pitch, PostBuy, RateCard, Rel, ScheduleItem, Supplier, Task } from "./types";
 import { lazy, Suspense } from "react";
 const Today = lazy(() => import("./pages/Today"));
+const Cockpit = lazy(() => import("./pages/Dashboard/Cockpit"));
+const GanttPlanner = lazy(() => import("./pages/Media/GanttPlanner"));
 const CRM = lazy(() => import("./pages/CRM"));
 const Work = lazy(() => import("./pages/Work"));
 const Dev = lazy(() => import("./pages/Dev"));
@@ -30,13 +32,15 @@ import Onboarding from "./components/Onboarding";
 import NotificationPanel from "./components/NotificationPanel";
 import AIAssistant from "./components/AIAssistant";
 import { Btn, Modal, useToast } from "./ui/common";
+import { useTheme, type ThemeMode } from "./context/ThemeContext";
 import { engine } from "./core/flow/engine";
+import { APP_VERSION } from "./core/version";
 import { FormBlock } from "./components/blocks/FormBlock";
 import { DetailsBlock } from "./components/blocks/DetailsBlock";
 import {
   IconHome, IconUsers, IconTask, IconKb, IconFunnel, IconToday,
   IconMedia, IconChart, IconGrowth, IconSettings, IconMoon, IconSun, IconBell, IconHelp, IconAI,
-  IconGrid, IconClock, IconLayout, IconBot,
+  IconGrid, IconClock, IconLayout, IconBot, IconAuto,
 } from "./components/icons";
 
 declare global {
@@ -79,14 +83,16 @@ interface DataSet {
   notificationsReadAt: number;
 }
 
-type View = "today" | "crm" | "work" | "dev" | "media" | "kb" | "data" | "growth" | "settings" | "help" | "notifications" | "builder" | "workflows" | "collections" | "audit" | "aistaff" | "mypages";
+type View = "today" | "cockpit" | "crm" | "work" | "dev" | "media" | "gantt" | "kb" | "data" | "growth" | "settings" | "help" | "notifications" | "builder" | "workflows" | "collections" | "audit" | "aistaff" | "mypages";
 
 const NAV: { key: View; label: string; icon: (p: { size?: number }) => JSX.Element; group: string }[] = [
   { key: "today", label: "首页", icon: IconToday, group: "常用" },
+  { key: "cockpit", label: "今日驾驶舱", icon: IconToday, group: "常用" },
   { key: "crm", label: "客户管理", icon: IconUsers, group: "业务" },
   { key: "work", label: "任务看板", icon: IconTask, group: "业务" },
   { key: "dev", label: "商机管理", icon: IconFunnel, group: "业务" },
   { key: "media", label: "媒介资源", icon: IconMedia, group: "业务" },
+  { key: "gantt", label: "排期甘特", icon: IconClock, group: "业务" },
   { key: "kb", label: "知识库", icon: IconKb, group: "业务" },
   { key: "data", label: "数据报表", icon: IconChart, group: "业务" },
   { key: "growth", label: "成长规划", icon: IconGrowth, group: "业务" },
@@ -137,11 +143,13 @@ export default function App() {
   const [data, setData] = useState<DataSet | null>(null);
   const [showQuick, setShowQuick] = useState(false);
   const [showOnboard, setShowOnboard] = useState(false);
-  const [theme, setTheme] = useState<"dark" | "light">("light");
+  // v0.2.2 迭代：主题统一由 ThemeContext 托管（localStorage mdt_theme + Electron 桥同步）
+  const { mode, resolvedTheme, setThemeMode } = useTheme();
   const [focusCid, setFocusCid] = useState<string | null>(null);
   const [kbFocus, setKbFocus] = useState<string | null>(null);
   const [updateVer, setUpdateVer] = useState<string | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [themeMenuOpen, setThemeMenuOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [flowForm, setFlowForm] = useState<{ store: string; id?: string } | null>(null);
   const [flowDetail, setFlowDetail] = useState<{ store: string; id: string } | null>(null);
@@ -213,11 +221,9 @@ export default function App() {
       await reload();
       const pays = (await db.getAll<Payment>("payments")).filter((p) => !p.deletedAt && p.status === "逾期");
       void startupCatchUp(pays.length);
+      // v0.2.2 迭代：迁移既有 IndexedDB 主题偏好 → ThemeContext（localStorage 单一真源）
       const t = await db.getSetting<"dark" | "light">("theme", "light");
-      setTheme(t);
-      document.documentElement.setAttribute("data-theme", t);
-      void window.mta?.titlebarSetTheme?.(t);
-      document.documentElement.dataset.titlebar = window.mta?.windowMode ?? "integrated";
+      if (t) setThemeMode(t);
       // 启动定时工作流（自动检测沉睡客户/到期合同）
       const { setupBuiltinWorkflows, startTimerWorkflows } = await import("./core/workflow/triggers");
       setupBuiltinWorkflows();
@@ -283,12 +289,22 @@ export default function App() {
     return () => window.clearInterval(id);
   }, []);
 
+  const MODE_LABEL: Record<ThemeMode, string> = {
+    light: "浅色",
+    dark: "暗黑",
+    system: "跟随系统",
+  };
+
   function switchTheme(t: "dark" | "light") {
-    setTheme(t);
-    document.documentElement.setAttribute("data-theme", t);
-    void db.setSetting("theme", t);
-    void window.mta?.titlebarSetTheme?.(t);
+    // v0.2.2 迭代：透传 ThemeContext（数据写入 localStorage，并自动同步主进程外壳）
+    setThemeMode(t);
   }
+
+  // 原生标题栏颜色随解析主题联动（Electron mta 桥）；非 Electron 环境静默跳过
+  useEffect(() => {
+    document.documentElement.dataset.titlebar = window.mta?.windowMode ?? "integrated";
+    void window.mta?.titlebarSetTheme?.(resolvedTheme === "dark" ? "dark" : "light");
+  }, [resolvedTheme]);
 
   function goCrm(customerId: string) { setFocusCid(customerId); setView("crm"); }
 
@@ -332,7 +348,7 @@ export default function App() {
         </div>
         <div className="sidebar-user-menu">
           <div className="user-menu-trigger">
-            <div className="user-avatar" onClick={() => setUserMenuOpen(!userMenuOpen)} style={{ cursor: "pointer" }}>媒</div>
+            <div className="user-avatar" onClick={() => { setUserMenuOpen(!userMenuOpen); setThemeMenuOpen(false); }} style={{ cursor: "pointer" }}>媒</div>
             <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 2 }}>
               <div style={{ position: "relative" }}>
                 <button data-notification-trigger className="icon-btn sm" title="通知中心" onClick={(e) => { e.stopPropagation(); setNotifyOpen((v) => !v); }}>
@@ -351,9 +367,25 @@ export default function App() {
                   />
                 ) : null}
               </div>
-              <button className="icon-btn sm" title="切换主题" onClick={() => switchTheme(theme === "dark" ? "light" : "dark")}>
-                {theme === "dark" ? <IconSun size={16} /> : <IconMoon size={16} />}
-              </button>
+              <div style={{ position: "relative" }}>
+                <button className="icon-btn sm" title={"主题：" + MODE_LABEL[mode]}
+                  onClick={() => { setThemeMenuOpen((v) => !v); setUserMenuOpen(false); }}>
+                  {mode === "system" ? <IconAuto size={16} />
+                    : resolvedTheme === "dark" ? <IconSun size={16} /> : <IconMoon size={16} />}
+                </button>
+                {themeMenuOpen ? (
+                  <div className="theme-menu" onClick={(e) => e.stopPropagation()}>
+                    {(["light", "dark", "system"] as ThemeMode[]).map((m) => (
+                      <div key={m} className={"theme-menu-item" + (mode === m ? " active" : "")}
+                        onClick={() => { setThemeMode(m); setThemeMenuOpen(false); }}>
+                        <span>{m === "light" ? <IconSun size={14} /> : m === "dark" ? <IconMoon size={14} /> : <IconAuto size={14} />}</span>
+                        <span>{MODE_LABEL[m]}</span>
+                        <span className="tm-check">✓</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             </div>
           </div>
           {userMenuOpen ? (
@@ -362,7 +394,7 @@ export default function App() {
                 <div className="user-avatar lg">媒</div>
                 <div>
                   <div className="user-menu-name">媒电通工作台</div>
-                  <div className="user-menu-sub">v0.1.0</div>
+                  <div className="user-menu-sub">v{APP_VERSION}</div>
                 </div>
               </div>
               <div className="user-menu-divider" />
@@ -377,6 +409,7 @@ export default function App() {
       <div className="main">
         <header className="topbar">
           <TopSearch onSelect={onSearchSelect} />
+          <div className="topbar-version-chip" title={`媒电通工作台 v${APP_VERSION} · 本地优先工作台`}>v{APP_VERSION}</div>
         </header>
 
         <main className="content">
@@ -394,6 +427,11 @@ export default function App() {
                 objectives={data.objectives} tasks={data.tasks} milestones={data.milestones}
                 reload={reload} openQuick={() => setShowQuick(true)} goCrm={goCrm} onNavigate={(v) => setView(v as View)} />
             ) : null}
+            {view === "cockpit" ? (
+              <Cockpit customers={data?.customers ?? []} deals={data?.deals ?? []}
+                payments={data?.payments ?? []} tasks={data?.tasks ?? []}
+                onDataChange={reload} onNavigate={(v) => setView(v as View)} />
+            ) : null}
             {view === "crm" && data ? (
               <CRM customers={data.customers} contacts={data.contacts} rels={data.rels} deals={data.deals}
                 contracts={data.contracts} payments={data.payments} cps={data.cps} tasks={data.tasks}
@@ -408,6 +446,9 @@ export default function App() {
             {view === "media" && data ? (
               <Media suppliers={data.suppliers} resources={data.resources} ratecards={data.ratecards}
                 items={data.items} postbuys={data.postbuys} customers={data.customers} influencers={data.influencers} reload={reload} />
+            ) : null}
+            {view === "gantt" ? (
+              <GanttPlanner items={data?.items ?? []} resources={data?.resources ?? []} />
             ) : null}
             {view === "kb" && data ? (
               <Kb notes={data.notes} reload={reload} focusId={kbFocus} />
@@ -429,7 +470,7 @@ export default function App() {
             {view === "audit" ? <AuditPage /> : null}
             {view === "aistaff" ? <AIStaffPage /> : null}
             {view === "settings" ? (
-              <SettingsPage theme={theme} setTheme={switchTheme} reload={reload}
+              <SettingsPage theme={resolvedTheme} setTheme={switchTheme} reload={reload}
                 customers={data?.customers ?? []} notes={data?.notes ?? []} customFields={data?.customFields ?? []} />
             ) : null}
           </Suspense>

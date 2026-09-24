@@ -58,3 +58,8 @@ electron-builder/
 
 # 构建产物误提取到根目录的保护
 /index-*.js
+
+# Build artifacts (kept local)
+release-anchor/
+release-v022/
+.bak-*/

@@ -48,3 +48,4 @@ export function IconGrid(p: IconProps) { return base(p.size, p.className, <><rec
 export function IconLayout(p: IconProps) { return base(p.size, p.className, <><rect x="3.5" y="4.5" width="17" height="15" rx="2" /><path d="M3.5 9.5h17M9 9.5v10" /></>); }
 export function IconBot(p: IconProps) { return base(p.size, p.className, <><rect x="4.5" y="7" width="15" height="11" rx="3" /><path d="M12 7V4M9 2.5h6M9 12h.01M15 12h.01M9 15.5h6" /></>); }
 export function IconClock(p: IconProps) { return base(p.size, p.className, <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></>); }
+export function IconAuto(p: IconProps) { return base(p.size, p.className, <><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4m11.4-11.4 1.4-1.4" /><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5" /></>); }
