@@ -22,8 +22,11 @@ export default function Kb(props: Props) {
   const [aiA, setAiA] = useState("");
   const [aiBusy, setAiBusy] = useState(false);
   const [paraFilter, setParaFilter] = useState<"" | Note["para"]>("");
+  const [typeFilter, setTypeFilter] = useState<string>("");
   const notes = props.notes.filter((n) => !n.deletedAt);
   const sel = notes.find((n) => n.id === selId) ?? null;
+
+  const NOTE_TYPES = ["", "方法论", "复盘", "客户沟通", "日报周报", "灵感"];
 
   /* 知识库统计（融自知识库管理） */
   const kbTotalChars = useMemo(() => notes.reduce((s, n) => s + (n.content ?? "").length, 0), [notes]);
@@ -124,7 +127,10 @@ async function askAi() {
     await props.reload();
   }
 
-  const filtered = notes.filter((n) => (paraFilter === "" || n.para === paraFilter) && (q === "" || n.title.includes(q) || n.content.includes(q) || n.tags.some((t) => t.includes(q))));
+  const filtered = notes.filter((n) =>
+    (paraFilter === "" || n.para === paraFilter)
+    && (typeFilter === "" || n.tags.includes(typeFilter))
+    && (q === "" || n.title.includes(q) || n.content.includes(q) || n.tags.some((t) => t.includes(q))));
 
   return (
     <div>
@@ -198,6 +204,15 @@ async function askAi() {
               </button>
             ))}
           </div>
+          <div style={{ padding: "6px 10px 0", display: "flex", gap: 3, flexWrap: "wrap" }}>
+            {NOTE_TYPES.map((t) => (
+              <button key={t || "all"} onClick={() => setTypeFilter(t)}
+                style={{ padding: "2px 8px", fontSize: 10, borderRadius: 999, border: "1px solid var(--border)",
+                  background: typeFilter === t ? "var(--data)" : "transparent", color: typeFilter === t ? "#fff" : "var(--ink-3)", cursor: "pointer" }}>
+                {t === "" ? "全部类型" : t}
+              </button>
+            ))}
+          </div>
           <div style={{ maxHeight: "60vh", overflowY: "auto" }}>
             {filtered.map((n) => (
               <div key={n.id} onClick={() => { setSelId(n.id); setDraft(null); }}
@@ -232,6 +247,22 @@ async function askAi() {
                   {["Projects", "Areas", "Resources", "Archives"].map((p) => <option key={p} value={p}>{PARA_LABELS[p] ?? p}</option>)}
                 </select>
                 <input className="inp" style={{ flex: 1 }} value={draft.tags} onChange={(e) => setDraft({ ...draft, tags: e.target.value })} placeholder="标签,逗号分隔" />
+              </div>
+              <div style={{ display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 11, color: "var(--ink-3)", alignSelf: "center" }}>类型:</span>
+                {NOTE_TYPES.filter(Boolean).map((t) => {
+                  const active = draft.tags.includes(t);
+                  return (
+                    <button key={t} onClick={() => {
+                      const cur = draft.tags.split(/[,，]/).map((s) => s.trim()).filter(Boolean);
+                      const next = active ? cur.filter((x) => x !== t) : [...cur, t];
+                      setDraft({ ...draft, tags: next.join(", ") });
+                    }}
+                      style={{ padding: "2px 10px", fontSize: 11, borderRadius: 999, cursor: "pointer",
+                        border: "1px solid var(--border)", background: active ? "var(--data)" : "transparent",
+                        color: active ? "#fff" : "var(--ink-2)" }}>{t}</button>
+                  );
+                })}
               </div>
               <textarea className="inp" style={{ width: "100%", minHeight: 260, lineHeight: 1.7 }}
                 value={draft.content} onChange={(e) => setDraft({ ...draft, content: e.target.value })}

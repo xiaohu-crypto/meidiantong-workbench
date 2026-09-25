@@ -9,6 +9,7 @@ export type DataSource = "aiEmployees" | "collections" | "pages" | "records";
 
 const DATA_CHANGED_EVT = "mdt:data-changed";
 const OPEN_AI_STAFF_EVT = "mdt:open-aistaff";
+const ASK_AI_EVT = "mdt:ask-ai";
 
 /** 广播数据变更（source 指明变更来源，监听方可选择性刷新） */
 export function emitDataChanged(source: DataSource): void {
@@ -38,4 +39,19 @@ export function onOpenAIStaff(cb: (empId: string) => void): () => void {
   };
   window.addEventListener(OPEN_AI_STAFF_EVT, handler);
   return () => window.removeEventListener(OPEN_AI_STAFF_EVT, handler);
+}
+
+/** 请求 AI 助手面板打开并自动发送一句话（AgentPage 首页输入框 → AI 面板） */
+export function emitAskAI(text: string): void {
+  window.dispatchEvent(new CustomEvent(ASK_AI_EVT, { detail: { text } }));
+}
+
+/** 订阅"打开 AI 并提问"请求 */
+export function onAskAI(cb: (text: string) => void): () => void {
+  const handler = (e: Event) => {
+    const detail = (e as CustomEvent).detail as { text?: unknown } | undefined;
+    cb(String(detail?.text ?? ""));
+  };
+  window.addEventListener(ASK_AI_EVT, handler);
+  return () => window.removeEventListener(ASK_AI_EVT, handler);
 }

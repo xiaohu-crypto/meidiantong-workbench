@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { getActiveAi, getAiConfig } from "../core/ai/client";
 import { EMPLOYEE_LIST, mergeEmployees, type Employee, type EmployeeId, buildContext } from "../core/ai/employees";
-import { onDataChanged, onOpenAIStaff } from "../core/events";
+import { onDataChanged, onOpenAIStaff, onAskAI } from "../core/events";
 import { retrieveNotes } from "../core/ai/rag";
 import { Markdown } from "./Markdown";
 import { db } from "../db/db";
@@ -27,8 +27,19 @@ export default function AIAssistant({ currentPage }: { currentPage: string }) {
   const [isLocalOnlyRoute, setIsLocalOnlyRoute] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const stoppedRef = useRef(false);
+  const sendRef = useRef<(text?: string) => void>(() => {});
 
   const emp: Employee = empList.find((e) => e.id === empId) ?? empList[0];
+
+  // AgentPage 首页输入框 → 打开面板并自动提问
+  useEffect(() => {
+    const off = onAskAI((text) => {
+      if (!text.trim()) return;
+      setOpen(true);
+      sendRef.current(text);
+    });
+    return off;
+  }, []);
 
   // 加载自定义员工配置 + P1 AI 安全网关状态(敏感数据本地隔离)
   useEffect(() => {
@@ -196,6 +207,7 @@ export default function AIAssistant({ currentPage }: { currentPage: string }) {
       setLoading(false);
     }
   }
+  sendRef.current = send;
 
   // 悬浮按钮位置状态
   const [pos, setPos] = useState({ x: window.innerWidth - 80, y: window.innerHeight - 100 });

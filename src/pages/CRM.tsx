@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { db } from "../db/db";
 import { repos } from "../core/data/repository";
@@ -120,6 +120,7 @@ export default function CRM(props: Props) {
   const [pageSize, setPageSize] = useState(50);
   const PAGE_SIZE = pageSize;
   const [openId, setOpenId] = useState<string | null>(props.focusCustomerId ?? null);
+  const [detailTab, setDetailTab] = useState<"profile" | "timeline" | "deals" | "contracts">("profile");
   const [timeline, setTimeline] = useState<{ ts: number; kind: string; title: string }[]>([]);
   useEffect(() => {
     void (async () => {
@@ -1096,36 +1097,74 @@ export default function CRM(props: Props) {
               <Btn kind={recordDensity === "compact" ? "data" : "ghost"} sm onClick={toggleRecordDensity} title="切换字段密度(紧凑/宽松)">{recordDensity === "compact" ? "⊟ 紧凑" : "⊞ 宽松"}</Btn>
               <button className="icon-btn" onClick={() => setOpenId(null)} aria-label="关闭" title="关闭"><IconClose size={16} /></button>
             </div>
+            <div style={{ display: "flex", gap: 4, padding: "0 18px", borderBottom: "1px solid var(--border-subtle)", flexShrink: 0 }}>
+              {([["profile","档案"],["timeline","跟进记录"],["deals","在途商机"],["contracts","合同与回款"]] as const).map(([k,l]) => (
+                <button key={k} onClick={() => setDetailTab(k)}
+                  style={{ padding: "10px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer",
+                    border: "none", borderBottom: detailTab===k ? "2px solid var(--brand-primary)" : "2px solid transparent",
+                    background: "transparent", color: detailTab===k ? "var(--brand-primary)" : "var(--text-muted)" }}>{l}</button>
+              ))}
+            </div>
             <div className="drawer-body">
               <div className="crm-workbench">
-                <aside className="wb-left">
-                  {renderCustomerWidget({ type: "fields", id: "base" })}
-                  {renderCustomerWidget({ type: "related", id: "contacts" })}
-                </aside>
-                <section className="wb-center">
-                  {renderCustomerWidget({ type: "timeline", id: "timeline" })}
-                  <div className="wb-section">
-                    <div className="h-row" style={{ margin: "4px 0 8px" }}><span className="h-title sm">客户专属媒介策略</span></div>
-                    <MediaStrategyView customer={drawerC} onEdit={openStrategyEdit} />
-                  </div>
-                  {renderCustomerWidget({ type: "related", id: "tasks" })}
-                </section>
-                <aside className={"wb-right" + (aiCollapsed ? " collapsed" : "")}>
-                  <div className="wb-ai-head">
-                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                      <b>AI辅助</b>
-                      <span className="muted" style={{ fontSize: "var(--text-xs)" }}>智能助手</span>
+                {detailTab === "profile" && (
+                  <>
+                    <aside className="wb-left">
+                      {renderCustomerWidget({ type: "fields", id: "base" })}
+                      {renderCustomerWidget({ type: "related", id: "contacts" })}
+                    </aside>
+                    <section className="wb-center">
+                      <div className="wb-section">
+                        <div className="h-row" style={{ margin: "4px 0 8px" }}><span className="h-title sm">客户专属媒介策略</span></div>
+                        <MediaStrategyView customer={drawerC} onEdit={openStrategyEdit} />
+                      </div>
+                      {renderCustomerWidget({ type: "related", id: "tasks" })}
+                    </section>
+                  </>
+                )}
+                {detailTab === "timeline" && (
+                  <section className="wb-center" style={{ gridColumn: "1 / -1" }}>
+                    {renderCustomerWidget({ type: "timeline", id: "timeline" })}
+                    {renderCustomerWidget({ type: "related", id: "tasks" })}
+                  </section>
+                )}
+                {detailTab === "deals" && (
+                  <section className="wb-center" style={{ gridColumn: "1 / -1" }}>
+                    <RelatedListWidget title="在途商机" emptyText="暂无在途商机" items={drawerDeals.filter((d) => !["输单","流失"].includes(d.stage)).map((d) => ({
+                      title: d.title, sub: d.stage + " · " + money(d.value),
+                    }))} />
+                  </section>
+                )}
+                {detailTab === "contracts" && (
+                  <section className="wb-center" style={{ gridColumn: "1 / -1" }}>
+                    <RelatedListWidget title="合同与回款" emptyText="暂无合同" items={drawerContracts.map((ht) => ({
+                      title: ht.title, sub: ht.status + " · " + money(ht.amount),
+                      children: drawerPays.filter((p) => p.contractId === ht.id).map((p) => (
+                        <div key={p.id} style={{ fontSize: 11, color: p.status==="逾期" ? "var(--status-danger)" : "var(--text-muted)", padding: "2px 0" }}>
+                          {p.status} · {p.dueDate} · {money(p.amount)}
+                        </div>
+                      )),
+                    }))} />
+                  </section>
+                )}
+                {detailTab === "profile" && (
+                  <aside className={"wb-right" + (aiCollapsed ? " collapsed" : "")}>
+                    <div className="wb-ai-head">
+                      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                        <b>AI辅助</b>
+                        <span className="muted" style={{ fontSize: "var(--text-xs)" }}>智能助手</span>
+                      </div>
+                      <button className="wb-ai-toggle-btn" onClick={() => setAiCollapsed((v) => !v)} title={aiCollapsed ? "展开AI辅助" : "收起AI辅助"}>
+                        {aiCollapsed ? "☰" : "✕"}
+                      </button>
                     </div>
-                    <button className="wb-ai-toggle-btn" onClick={() => setAiCollapsed((v) => !v)} title={aiCollapsed ? "展开AI辅助" : "收起AI辅助"}>
-                      {aiCollapsed ? "☰" : "✕"}
-                    </button>
-                  </div>
-                  <div className="wb-ai-summary">{aiSummary()}</div>
-                  <div className="wb-ai-chat">
-                    {renderAiPanel()}
-                  </div>
-                  {strategyEvaluated ? (<div className="wb-ai-eval">{evalMsg}</div>) : null}
-                </aside>
+                    <div className="wb-ai-summary">{aiSummary()}</div>
+                    <div className="wb-ai-chat">
+                      {renderAiPanel()}
+                    </div>
+                    {strategyEvaluated ? (<div className="wb-ai-eval">{evalMsg}</div>) : null}
+                  </aside>
+                )}
               </div>
               {financeWarning && (
                 <div style={{ margin: "8px 18px", padding: "10px 14px", border: "1px solid var(--warning)", borderRadius: 8, background: "var(--warning-bg)", color: "var(--warning)", fontSize: 13 }}>

@@ -340,16 +340,16 @@ export default function Data(props: Props) {
                     <td>合同</td>
                     <td className="num">{money(c.amount)}</td>
                     <td><span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700, background: "var(--status-success-bg)", color: "var(--status-success)" }}>已签</span></td>
-                    <td style={{ color: "var(--text-muted)", fontSize: 11 }}>{c.signedAt?.slice(0,10) ?? "—"}</td>
+                    <td style={{ color: "var(--text-muted)", fontSize: 11 }}>{c.signDate?.slice(0,10) ?? "—"}</td>
                   </tr>
                 ))}
                 {payments.slice(-3).reverse().map((p: Payment) => (
                   <tr key={p.id}>
-                    <td style={{ fontWeight: 700 }}>{p.name}</td>
+                    <td style={{ fontWeight: 700 }}>{"回款"}</td>
                     <td>回款</td>
                     <td className="num" style={{ color: "var(--status-success)", fontWeight: 700 }}>{money(p.amount)}</td>
                     <td><span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700, background: "var(--status-success-bg)", color: "var(--status-success)" }}>已收</span></td>
-                    <td style={{ color: "var(--text-muted)", fontSize: 11 }}>{p.date?.slice(0,10) ?? "—"}</td>
+                    <td style={{ color: "var(--text-muted)", fontSize: 11 }}>{p.paidDate?.slice(0,10) ?? p.dueDate?.slice(0,10) ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>

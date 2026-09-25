@@ -63,3 +63,6 @@ electron-builder/
 release-anchor/
 release-v022/
 .bak-*/
+_shots/
+_shot_v32.cjs
+

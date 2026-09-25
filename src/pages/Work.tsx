@@ -56,31 +56,6 @@ export default function Work(props: Props) {
 
   const tasks = props.tasks.filter((t) => !t.deletedAt);
   const wip = tasks.filter((t) => t.kanbanCol === "进行中").length;
-  const obj = props.objectives[0];
-
-  /* P3 AI 智能聚合(纯本地计算,不调云端) */
-  const nameOfCust = (id: string) => props.customers.find((c) => c.id === id)?.name ?? "未知客户";
-  const groupedByCust = new Map<string, Task[]>();
-  for (const t of tasks) {
-    if (!t.customerId) continue;
-    if (!groupedByCust.has(t.customerId)) groupedByCust.set(t.customerId, []);
-    groupedByCust.get(t.customerId)!.push(t);
-  }
-  const focusCustomers = [...groupedByCust.entries()].map(([cid, ts]) => {
-    const high = ts.filter((t) => t.priority === "高").length;
-    const nearest = ts.filter((t) => t.kanbanCol !== "完成" && t.due).sort((a, b) => (a.due ?? "").localeCompare(b.due ?? ""))[0] ?? null;
-    return { cid, total: ts.length, high, nearest };
-  }).sort((a, b) => b.high - a.high || (a.nearest?.due ?? "9999").localeCompare(b.nearest?.due ?? "9999")).slice(0, 5);
-  const highTodos = tasks.filter((t) => t.priority === "高" && t.kanbanCol !== "完成").slice(0, 5);
-  const nowDate = new Date();
-  const dow = (nowDate.getDay() + 6) % 7; // 周一为 0
-  const monday = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate() - dow);
-  const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
-  const iso = (d: Date) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-  const highTodoIds = new Set(highTodos.map((t) => t.id));
-  const weekTasks = tasks
-    .filter((t) => t.kanbanCol !== "完成" && t.due && t.due >= iso(monday) && t.due <= iso(sunday) && !highTodoIds.has(t.id))
-    .sort((a, b) => (a.due ?? "").localeCompare(b.due ?? "")).slice(0, 5);
 
   async function drop(col: KanbanCol) {
     setOver(null);
@@ -114,57 +89,6 @@ export default function Work(props: Props) {
             ))}
           </div>
           <Btn kind="primary" onClick={() => setAddOpen(true)}><IconPlus size={14} /> 新建任务</Btn>
-        </div>
-      </div>
-
-      {obj ? (
-        <div className="card card-pad" style={{ marginBottom: 16 }}>
-          <div className="h-row"><span className="h-title sm">{obj.quarter} · {obj.title}</span><Chip kind="data">OKR 只读</Chip></div>
-          {obj.keyResults.map((kr) => (
-            <div key={kr.name} className="progress">
-              <div className="pl"><span>{kr.name}</span><b className="num">{kr.progress}%</b></div>
-              <div className="bar-track"><div className="bar-fill" style={{ width: kr.progress + "%", background: kr.name.includes("回款") && kr.progress < 90 ? "var(--warning)" : "var(--success)" }} /></div>
-            </div>
-          ))}
-        </div>
-      ) : null}
-
-      { /* P3 AI 智能聚合卡片:近期关注客户 / 高优先级待办 / 本周截止 */ }
-      <div className="card card-pad ai-aggregate" style={{ marginBottom: 16 }}>
-        <div className="h-row" style={{ marginBottom: 10 }}>
-          <span className="h-title sm">AI 智能聚合</span>
-          <Chip kind="data">本地计算</Chip>
-        </div>
-        <div className="ai-agg-grid">
-          <div className="ai-agg-col">
-            <div className="ai-agg-head"><Chip kind="brand">近期关注客户</Chip></div>
-            {focusCustomers.length === 0 ? <p className="muted" style={{ fontSize: "var(--text-xs)" }}>暂无关联客户的任务</p> : focusCustomers.map((g) => (
-              <div key={g.cid} className="ai-agg-row" style={{ cursor: props.goCrm ? "pointer" : "default" }} onClick={() => props.goCrm?.(g.cid)}>
-                <span className="ai-agg-name">{nameOfCust(g.cid)}</span>
-                <Chip kind="gray">{g.total} 任务</Chip>
-                {g.high > 0 ? <Chip kind="danger">高 {g.high}</Chip> : null}
-                {g.nearest ? <span className="cell-sub">最近截止:{g.nearest.title} · {g.nearest.due}</span> : null}
-              </div>
-            ))}
-          </div>
-          <div className="ai-agg-col">
-            <div className="ai-agg-head"><Chip kind="danger">高优先级待办</Chip></div>
-            {highTodos.length === 0 ? <p className="muted" style={{ fontSize: "var(--text-xs)" }}>暂无高优先级未完成任务</p> : highTodos.map((t) => (
-              <div key={t.id} className="ai-agg-row" onClick={() => openEdit(t)} style={{ cursor: "pointer" }}>
-                <span className="ai-agg-name">{t.title}</span>
-                {t.due ? <span className="cell-sub">截止 {t.due}</span> : null}
-              </div>
-            ))}
-          </div>
-          <div className="ai-agg-col">
-            <div className="ai-agg-head"><Chip kind="warn">本周截止</Chip></div>
-            {weekTasks.length === 0 ? <p className="muted" style={{ fontSize: "var(--text-xs)" }}>本周暂无到期任务</p> : weekTasks.map((t) => (
-              <div key={t.id} className="ai-agg-row" onClick={() => openEdit(t)} style={{ cursor: "pointer" }}>
-                <span className="ai-agg-name">{t.title}</span>
-                <span className="cell-sub">{t.due}{t.customerId ? " · " + nameOfCust(t.customerId) : ""}</span>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 

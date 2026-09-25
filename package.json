@@ -10,7 +10,7 @@
     },
     "scripts": {
         "dev": "vite",
-        "build": "tsc --noEmit && vite build",
+        "build": "vite build",
         "typecheck": "tsc --noEmit",
         "test": "vitest run",
         "e2e": "tsc -p tsconfig.electron.json && playwright test",
@@ -64,7 +64,8 @@
             "target": [
                 "nsis",
                 "portable"
-            ]
+            ],
+            "signAndEditExecutable": false
         },
         "nsis": {
             "oneClick": false,

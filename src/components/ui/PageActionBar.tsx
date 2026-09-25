@@ -20,8 +20,8 @@ export const PageActionBar: React.FC<PageActionBarProps> = ({ title, subtitle, o
       </div>
       <div style={{ display: "flex", gap: 8 }}>
         {onRefresh && <Btn kind="ghost" sm onClick={onRefresh}>刷新</Btn>}
-        {onImport && <Btn kind="secondary" sm onClick={onImport}>导入</Btn>}
-        {onExport && <Btn kind="secondary" sm onClick={onExport}>导出</Btn>}
+        {onImport && <Btn kind="ghost" sm onClick={onImport}>导入</Btn>}
+        {onExport && <Btn kind="ghost" sm onClick={onExport}>导出</Btn>}
         {onNew && <Btn kind="primary" sm onClick={onNew}>+ 新建</Btn>}
       </div>
     </div>

@@ -17,7 +17,6 @@ const Dev = lazy(() => import("./pages/Dev"));
 const Media = lazy(() => import("./pages/Media"));
 const Kb = lazy(() => import("./pages/Kb"));
 const Data = lazy(() => import("./pages/Data"));
-const Growth = lazy(() => import("./pages/Growth"));
 const Help = lazy(() => import("./pages/Help"));
 import { startupCatchUp, maybeNotify } from "./core/notify";
 const SettingsPage = lazy(() => import("./pages/Settings"));
@@ -192,7 +191,7 @@ export default function App() {
       if (e.ctrlKey || e.metaKey) {
         const num = parseInt(e.key, 10);
         if (num >= 1 && num <= 9) {
-          const navViews: View[] = ["today", "work", "crm", "dev", "media", "kb", "data", "growth", "settings"];
+          const navViews: View[] = ["today", "work", "crm", "dev", "media", "kb", "data", "settings"];
           const v = navViews[num - 1];
           if (v) { e.preventDefault(); setView(v); }
         }
@@ -299,7 +298,7 @@ export default function App() {
             <Work tasks={data.tasks} objectives={data.objectives} customers={data.customers} reload={reload} goCrm={goCrm} />
           ) : null}
           {view === "dev" && data ? (
-            <Dev deals={data.deals} customers={data.customers} pitches={data.pitches} reload={reload} />
+            <Dev contracts={data.contracts} payments={data.payments} customers={data.customers} reload={reload} />
           ) : null}
           {view === "media" && data ? (
             <Media suppliers={data.suppliers} resources={data.resources} ratecards={data.ratecards}
@@ -313,9 +312,6 @@ export default function App() {
           ) : null}
           {view === "data" && data ? (
             <Data contracts={data.contracts} payments={data.payments} deals={data.deals} items={data.items} baselines={data.baselines} postbuys={data.postbuys} resources={data.resources} tasks={data.tasks} reload={reload} />
-          ) : null}
-          {view === "growth" && data ? (
-            <Growth tasks={data.tasks} payments={data.payments} pitches={data.pitches} cps={data.cps} contracts={data.contracts} reload={reload} />
           ) : null}
           {view === "notifications" && data ? (
             <Notifications customers={data.customers} payments={data.payments} cps={data.cps} goCrm={goCrm} reload={reload} notificationsReadAt={data.notificationsReadAt} />
