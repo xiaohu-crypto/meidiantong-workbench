@@ -188,7 +188,7 @@ export default function GanttPlanner({ items, resources }: GanttPlannerProps) {
   const trackWidth = LEFT_W + weeks.length * COL_W;
 
   return (
-    <div className="mx-auto max-w-[1600px] px-6 py-6">
+    <div className="mx-auto max-w-[1600px] px-6 py-6 animate-fade-in">
       {/* 页面头部 */}
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>

@@ -1,6 +1,6 @@
 /* File: src/styles/index.css
- * 原子化组件库主题入口（v0.2.2 迭代新增）
- * 仅启用 Tailwind utilities（不启用 base，避免重置既有 tokens.css/app.css 样式）；
+ * 原子化组件库主题入口（v0.2.3 视觉升级：哑光暗黑磨砂感）
+ * 仅启用 Tailwind utilities（不启用 base，避免重置既有 app.css 样式）；
  * 组件 token 使用独立命名空间（--bg-surface/--text-primary/--brand-primary...），与既有 --bg/--ink 体系共存。
  */
 
@@ -13,67 +13,77 @@
 :root,
 [data-theme="light"] {
   --color-scheme: light;
-  --bg-app: #F7F8FA;          /* 应用画布背景（浅灰） */
-  --bg-surface: #FFFFFF;      /* 主容器/卡片背景（纯白） */
-  --bg-sidebar: #FFFFFF;      /* 左侧导航栏背景 */
-  --bg-muted: #F1F3F5;        /* 禁用/只读轨道/表格隔行变色 */
-  --border-subtle: #E4E7ED;   /* 极细边框与分割线 */
+  --bg-app: #f7f9fb;            /* 应用画布背景（极浅冷灰） */
+  --bg-surface: #ffffff;        /* 主容器/卡片背景（纯白） */
+  --bg-sidebar: #ffffff;        /* 左侧导航栏背景 */
+  --bg-muted: #f1f3f5;          /* 禁用/只读轨道/表格隔行变色 */
+  --border-subtle: rgba(18, 19, 26, 0.03); /* 极淡薄边界 */
 
-  --text-primary: #1A1A1A;    /* 核心数字/大标题（极致碳黑） */
-  --text-secondary: #5C5E66;  /* 正文/次要标签（中灰） */
-  --text-muted: #A8ABB2;      /* 占位符/暗淡说明 */
+  --text-primary: #1a1c23;      /* 核心数字/大标题 */
+  --text-secondary: #687083;    /* 正文/次要标签 */
+  --text-muted: #9ca4b6;        /* 占位符/暗淡说明 */
 
-  --brand-primary: #FF6B4A;   /* 战略情绪色：珊瑚橙（全场控视点） */
-  --brand-hover: #E55A3B;
-  --brand-subtle: #FFF0ED;
+  --brand-primary: #ff5a36;      /* 战略情绪色：珊瑚橙 */
+  --brand-hover: #e04827;
+  --brand-subtle: #fff0ed;
 
-  --status-success: #52C41A;  /* 已完成/已成单/已回款 */
-  --status-success-bg: #F6FFED;
-  --status-pending: #E6A23C;  /* 进行中/跟进中/待审核 */
-  --status-pending-bg: #FFFBE6;
-  --status-danger: #F56C6C;   /* 严重警告/逾期回款/WIP超限 */
-  --status-danger-bg: #FFF1F0;
+  --status-success: #10b981;      /* 已完成/已成单/已回款 */
+  --status-success-bg: #e6f4ea;
+  --status-pending: #f59e0b;      /* 进行中/跟进中/待审核 */
+  --status-pending-bg: #fef3c7;
+  --status-danger: #ef4444;       /* 严重警告/逾期回款/WIP超限 */
+  --status-danger-bg: #fee2e2;
 
-  --shadow-card: 0px 8px 24px rgba(0, 0, 0, 0.04);
-  --shadow-popover: 0px 12px 32px rgba(0, 0, 0, 0.08);
-  --shadow-drawer: -12px 0px 36px rgba(0, 0, 0, 0.05);
+  --shadow-card: 0px 4px 24px rgba(18, 19, 26, 0.015),
+                 0px 12px 36px rgba(18, 19, 26, 0.03);
+  --shadow-popover: 0px 12px 32px rgba(18, 19, 26, 0.08);
+  --shadow-drawer: -12px 0px 36px rgba(18, 19, 26, 0.05);
 
-  --radius-xl: 16px;          /* 大卡片圆角 */
-  --radius-lg: 12px;          /* 按钮、输入框圆角 */
-  --radius-md: 8px;           /* 标签、微型气泡圆角 */
+  --radius-xl: 24px;             /* 大卡片圆角 */
+  --radius-lg: 16px;             /* 按钮、输入框圆角 */
+  --radius-md: 8px;              /* 标签、微型气泡圆角 */
 }
 
 [data-theme="dark"] {
   --color-scheme: dark;
-  --bg-app: #0A0B0D;          /* OLED 抗疲劳深邃黑背景 */
-  --bg-surface: #14161A;      /* 悬浮暗色卡片面板 */
-  --bg-sidebar: #101114;
-  --bg-muted: #1E222B;
-  --border-subtle: #24272E;
+  --bg-app: #0a0b10;             /* 深邃哑光吸光底色 */
+  --bg-surface: #141724;         /* 抬升一层的舱面板背景 */
+  --bg-sidebar: #0f1016;
+  --bg-muted: #1c1f2a;
+  --border-subtle: rgba(255, 255, 255, 0.04); /* 极细亮色微发光边框 */
 
-  --text-primary: #F5F7FA;    /* 柔和高反差白字 */
-  --text-secondary: #909399;  /* 银灰护眼正文字体 */
-  --text-muted: #4C4F56;
+  --text-primary: #e6eaf2;      /* 降低白字明度，防止夜间散光刺眼 */
+  --text-secondary: #9aa2b5;
+  --text-muted: #4d5366;
 
-  --brand-primary: #FF7D60;   /* 适配暗色的去饱和珊瑚橙 */
-  --brand-hover: #FF8F75;
-  --brand-subtle: #2C1E1B;
+  --brand-primary: #ff6b4a;      /* 适配暗色的珊瑚橙 */
+  --brand-hover: #ff8366;
+  --brand-subtle: rgba(255, 107, 74, 0.08);
 
-  --status-success: #73D13D;
-  --status-success-bg: #142411;
-  --status-pending: #FADB14;
-  --status-pending-bg: #2B2612;
-  --status-danger: #FF7875;
-  --status-danger-bg: #2C1B1B;
+  --status-success: #34d399;
+  --status-success-bg: rgba(52, 211, 153, 0.06);
+  --status-pending: #fbbf24;
+  --status-pending-bg: rgba(251, 191, 36, 0.06);
+  --status-danger: #f87171;
+  --status-danger-bg: rgba(248, 113, 113, 0.06);
 
-  --shadow-card: 0px 8px 32px rgba(0, 0, 0, 0.24);
-  --shadow-popover: 0px 16px 48px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0px 8px 32px rgba(0, 0, 0, 0.4);
+  --shadow-popover: 0px 16px 48px rgba(0, 0, 0, 0.45);
   --shadow-drawer: -12px 0px 40px rgba(0, 0, 0, 0.5);
 }
 
 /* 原生控件 / 滚动条跟随主题（color-scheme） */
 html {
   color-scheme: var(--color-scheme);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "PingFang SC", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
 }
 
 /* ============================================================
@@ -96,7 +106,8 @@ html {
   *::after {
     transition: none !important;
   }
-  .status-dot {
+  .status-dot,
+  .wip-pulse {
     animation: none !important;
   }
 }
@@ -104,6 +115,24 @@ html {
 ::selection {
   background-color: var(--brand-subtle);
   color: var(--brand-primary);
+}
+
+/* ============================================================
+   全局细滚动条（6px，跟随主题边框色）
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
 }
 
 /* ============================================================
@@ -123,6 +152,41 @@ html {
 
 .status-dot {
   animation: status-neon 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* ============================================================
+   WIP 超载卡片脉冲告警（红色呼吸光晕）
+   ============================================================ */
+@keyframes wip-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.0);
+  }
+  50% {
+    box-shadow: 0 0 24px 2px rgba(248, 113, 113, 0.12);
+  }
+}
+
+.wip-pulse {
+  animation: wip-pulse 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* ============================================================
+   页面入场淡入（Cockpit / Gantt 等视图切换）
+   ============================================================ */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
 }
 
 /* ============================================================

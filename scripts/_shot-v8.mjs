@@ -1,0 +1,11 @@
+import { chromium } from "playwright";
+const b = await chromium.launch();
+const p = await b.newPage({ viewport: { width: 1440, height: 900 } });
+await p.goto("http://localhost:8926/index.html", { waitUntil: "networkidle" });
+await p.waitForTimeout(500);
+const shots = "D:/HaLeMa/Documents/媒电通工作台/code/meidiantong-workbench/ui-design-runs/深度提炼媒电通工作台AP-20260925-105929-4c9f/shots/";
+await p.click('.nav-item:has-text("合同与台账")');
+await p.waitForTimeout(400);
+await p.screenshot({ path: shots + "v8_finance.png" });
+await b.close();
+console.log("done");

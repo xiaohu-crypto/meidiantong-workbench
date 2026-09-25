@@ -28,15 +28,15 @@ export default function StatusPill({
   return (
     <span
       className={[
-        "inline-flex items-center gap-1.5 rounded-[var(--radius-md)] px-2.5 py-1",
-        "text-xs font-medium whitespace-nowrap",
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5",
+        "text-[10px] font-extrabold whitespace-nowrap",
         tone,
         className,
       ].join(" ")}
     >
       <span
         aria-hidden="true"
-        className="status-dot h-1.5 w-1.5 rounded-full bg-current"
+        className="h-1.5 w-1.5 rounded-full animate-pulse bg-current"
       />
       {text}
     </span>

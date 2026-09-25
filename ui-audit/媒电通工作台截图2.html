@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<title>媒电通工作台 v0.2.2 · 深度 UI 审计报告</title>
+<style>
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f6f8fa; color: #111217; margin: 0; padding: 32px; }
+  h1 { font-size: 24px; margin: 0 0 8px; }
+  .sub { color: #5e6475; font-size: 13px; margin-bottom: 32px; }
+  h2 { font-size: 18px; margin: 40px 0 16px; padding-left: 12px; border-left: 3px solid #ff5a36; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(480px, 1fr)); gap: 20px; }
+  figure { margin: 0; background: #fff; border: 1px solid rgba(18,19,26,0.06); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(18,19,26,0.03); }
+  img { width: 100%; display: block; border-bottom: 1px solid #f1f3f5; }
+  figcaption { padding: 10px 14px; font-size: 12px; display: flex; justify-content: space-between; }
+  figcaption b { color: #111217; }
+  figcaption span { color: #9ca3af; font-family: ui-monospace, monospace; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; font-size: 12px; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #f1f3f5; }
+  th { background: #f6f8fa; font-weight: 600; }
+  tr.muted { color: #9ca3af; }
+</style>
+</head>
+<body>
+  <h1>媒电通工作台 v0.2.2 · 深度 UI 审计报告</h1>
+  <div class="sub">Vite dev 真实数据 · 1440×900 · 全菜单 + 所有子页签/筛选标签切换截图</div>
+  <h2>浅色模式（75 张）</h2><div class="grid">
+    <figure><img src="shots/light_today.png" alt="light_today" loading="lazy"/>
+    <figcaption><b>浅色 · 首页</b><span>light_today</span></figcaption></figure>
+  
+    <figure><img src="shots/light_today_tab_智能建议.png" alt="light_today_tab_智能建议" loading="lazy"/>
+    <figcaption><b>子页签 · 智能建议</b><span>light_today_tab_智能建议</span></figcaption></figure>
+  
+    <figure><img src="shots/light_today_tab_有逾期回款.png" alt="light_today_tab_有逾期回款" loading="lazy"/>
+    <figcaption><b>子页签 · 有逾期回款</b><span>light_today_tab_有逾期回款</span></figcaption></figure>
+  
+    <figure><img src="shots/light_cockpit.png" alt="light_cockpit" loading="lazy"/>
+    <figcaption><b>浅色 · 今日驾驶舱</b><span>light_cockpit</span></figcaption></figure>
+  
+    <figure><img src="shots/light_crm.png" alt="light_crm" loading="lazy"/>
+    <figcaption><b>浅色 · 客户管理</b><span>light_crm</span></figcaption></figure>
+  
+    <figure><img src="shots/light_crm_tab_C.png" alt="light_crm_tab_C" loading="lazy"/>
+    <figcaption><b>子页签 · C</b><span>light_crm_tab_C</span></figcaption></figure>
+  
+    <figure><img src="shots/light_work.png" alt="light_work" loading="lazy"/>
+    <figcaption><b>浅色 · 任务看板</b><span>light_work</span></figcaption></figure>
+  
+    <figure><img src="shots/light_work_tab_OKR_只读.png" alt="light_work_tab_OKR_只读" loading="lazy"/>
+    <figcaption><b>子页签 · OKR 只读</b><span>light_work_tab_OKR_只读</span></figcaption></figure>
+  
+    <figure><img src="shots/light_work_tab_本地计算.png" alt="light_work_tab_本地计算" loading="lazy"/>
+    <figcaption><b>子页签 · 本地计算</b><span>light_work_tab_本地计算</span></figcaption></figure>
+  
+    <figure><img src="shots/light_work_tab_近期关注客户.png" alt="light_work_tab_近期关注客户" loading="lazy"/>
+    <figcaption><b>子页签 · 近期关注客户</b><span>light_work_tab_近期关注客户</span></figcaption></figure>
+  
+    <figure><img src="shots/light_work_tab_2_任务.png" alt="light_work_tab_2_任务" loading="lazy"/>
+    <figcaption><b>子页签 · 2 任务</b><span>light_work_tab_2_任务</span></figcaption></figure>
+  
+    <figure><img src="shots/light_work_tab_任务.png" alt="light_work_tab_任务" loading="lazy"/>
+    <figcaption><b>子页签 · 任务</b><span>light_work_tab_任务</span></figcaption></figure>
+  
+    <figure><img src="shots/light_dev.png" alt="light_dev" loading="lazy"/>
+    <figcaption><b>浅色 · 商机管理</b><span>light_dev</span></figcaption></figure>
+  
+    <figure><img src="shots/light_dev_tab_点击卡片查看详情.png" alt="light_dev_tab_点击卡片查看详情" loading="lazy"/>
+    <figcaption><b>子页签 · 点击卡片查看详情</b><span>light_dev_tab_点击卡片查看详情</span></figcaption></figure>
+  
+    <figure><img src="shots/light_dev_tab_1.png" alt="light_dev_tab_1" loading="lazy"/>
+    <figcaption><b>子页签 · 1</b><span>light_dev_tab_1</span></figcaption></figure>
+  
+    <figure><img src="shots/light_dev_tab_5_.png" alt="light_dev_tab_5_" loading="lazy"/>
+    <figcaption><b>子页签 · 5%</b><span>light_dev_tab_5_</span></figcaption></figure>
+  
+    <figure><img src="shots/light_media.png" alt="light_media" loading="lazy"/>
+    <figcaption><b>浅色 · 媒介资源</b><span>light_media</span></figcaption></figure>
+  
+    <figure><img src="shots/light_media_tab_排期.png" alt="light_media_tab_排期" loading="lazy"/>
+    <figcaption><b>子页签 · 排期</b><span>light_media_tab_排期</span></figcaption></figure>
+  
+    <figure><img src="shots/light_media_tab_资源与刊例.png" alt="light_media_tab_资源与刊例" loading="lazy"/>
+    <figcaption><b>子页签 · 资源与刊例</b><span>light_media_tab_资源与刊例</span></figcaption></figure>
+  
+    <figure><img src="shots/light_media_tab_达人库.png" alt="light_media_tab_达人库" loading="lazy"/>
+    <figcaption><b>子页签 · 达人库</b><span>light_media_tab_达人库</span></figcaption></figure>
+  
+    <figure><img src="shots/light_media_tab_报价器.png" alt="light_media_tab_报价器" loading="lazy"/>
+    <figcaption><b>子页签 · 报价器</b><span>light_media_tab_报价器</span></figcaption></figure>
+  
+    <figure><img src="shots/light_media_tab_售后数据.png" alt="light_media_tab_售后数据" loading="lazy"/>
+    <figcaption><b>子页签 · 售后数据</b><span>light_media_tab_售后数据</span></figcaption></figure>
+  
+    <figure><img src="shots/light_media_tab_仅内部.png" alt="light_media_tab_仅内部" loading="lazy"/>
+    <figcaption><b>子页签 · 仅内部</b><span>light_media_tab_仅内部</span></figcaption></figure>
+  
+    <figure><img src="shots/light_gantt.png" alt="light_gantt" loading="lazy"/>
+    <figcaption><b>浅色 · 排期甘特</b><span>light_gantt</span></figcaption></figure>
+  
+    <figure><img src="shots/light_kb.png" alt="light_kb" loading="lazy"/>
+    <figcaption><b>浅色 · 知识库</b><span>light_kb</span></figcaption></figure>
+  
+    <figure><img src="shots/light_kb_tab__方法论.png" alt="light_kb_tab__方法论" loading="lazy"/>
+    <figcaption><b>子页签 · #方法论</b><span>light_kb_tab__方法论</span></figcaption></figure>
+  
+    <figure><img src="shots/light_kb_tab__双11.png" alt="light_kb_tab__双11" loading="lazy"/>
+    <figcaption><b>子页签 · #双11</b><span>light_kb_tab__双11</span></figcaption></figure>
+  
+    <figure><img src="shots/light_data.png" alt="light_data" loading="lazy"/>
+    <figcaption><b>浅色 · 数据报表</b><span>light_data</span></figcaption></figure>
+  
+    <figure><img src="shots/light_data_tab_仪表盘.png" alt="light_data_tab_仪表盘" loading="lazy"/>
+    <figcaption><b>子页签 · 仪表盘</b><span>light_data_tab_仪表盘</span></figcaption></figure>
+  
+    <figure><img src="shots/light_data_tab_详细报表.png" alt="light_data_tab_详细报表" loading="lazy"/>
+    <figcaption><b>子页签 · 详细报表</b><span>light_data_tab_详细报表</span></figcaption></figure>
+  
+    <figure><img src="shots/light_data_tab_概览.png" alt="light_data_tab_概览" loading="lazy"/>
+    <figcaption><b>子页签 · 概览</b><span>light_data_tab_概览</span></figcaption></figure>
+  
+    <figure><img src="shots/light_growth.png" alt="light_growth" loading="lazy"/>
+    <figcaption><b>浅色 · 成长规划</b><span>light_growth</span></figcaption></figure>
+  
+    <figure><img src="shots/light_growth_tab_2026_9_18.png" alt="light_growth_tab_2026_9_18" loading="lazy"/>
+    <figcaption><b>子页签 · 2026/9/18</b><span>light_growth_tab_2026_9_18</span></figcaption></figure>
+  
+    <figure><img src="shots/light_growth_tab_初学者_专家_四级.png" alt="light_growth_tab_初学者_专家_四级" loading="lazy"/>
+    <figcaption><b>子页签 · 初学者→专家 四级</b><span>light_growth_tab_初学者_专家_四级</span></figcaption></figure>
+  
+    <figure><img src="shots/light_builder.png" alt="light_builder" loading="lazy"/>
+    <figcaption><b>浅色 · 页面构建器</b><span>light_builder</span></figcaption></figure>
+  
+    <figure><img src="shots/light_mypages.png" alt="light_mypages" loading="lazy"/>
+    <figcaption><b>浅色 · 我的页面</b><span>light_mypages</span></figcaption></figure>
+  
+    <figure><img src="shots/light_workflows.png" alt="light_workflows" loading="lazy"/>
+    <figcaption><b>浅色 · 工作流</b><span>light_workflows</span></figcaption></figure>
+  
+    <figure><img src="shots/light_workflows_tab_自动化业务规则.png" alt="light_workflows_tab_自动化业务规则" loading="lazy"/>
+    <figcaption><b>子页签 · 自动化业务规则</b><span>light_workflows_tab_自动化业务规则</span></figcaption></figure>
+  
+    <figure><img src="shots/light_workflows_tab_已启用.png" alt="light_workflows_tab_已启用" loading="lazy"/>
+    <figcaption><b>子页签 · 已启用</b><span>light_workflows_tab_已启用</span></figcaption></figure>
+  
+    <figure><img src="shots/light_collections.png" alt="light_collections" loading="lazy"/>
+    <figcaption><b>浅色 · 数据表</b><span>light_collections</span></figcaption></figure>
+  
+    <figure><img src="shots/light_collections_tab_结构.png" alt="light_collections_tab_结构" loading="lazy"/>
+    <figcaption><b>子页签 · 结构</b><span>light_collections_tab_结构</span></figcaption></figure>
+  
+    <figure><img src="shots/light_collections_tab_数据.png" alt="light_collections_tab_数据" loading="lazy"/>
+    <figcaption><b>子页签 · 数据</b><span>light_collections_tab_数据</span></figcaption></figure>
+  
+    <figure><img src="shots/light_collections_tab_9_个字段.png" alt="light_collections_tab_9_个字段" loading="lazy"/>
+    <figcaption><b>子页签 · 9 个字段</b><span>light_collections_tab_9_个字段</span></figcaption></figure>
+  
+    <figure><img src="shots/light_collections_tab_必填.png" alt="light_collections_tab_必填" loading="lazy"/>
+    <figcaption><b>子页签 · 必填</b><span>light_collections_tab_必填</span></figcaption></figure>
+  
+    <figure><img src="shots/light_collections_tab_列表显示.png" alt="light_collections_tab_列表显示" loading="lazy"/>
+    <figcaption><b>子页签 · 列表显示</b><span>light_collections_tab_列表显示</span></figcaption></figure>
+  
+    <figure><img src="shots/light_audit.png" alt="light_audit" loading="lazy"/>
+    <figcaption><b>浅色 · 操作记录</b><span>light_audit</span></figcaption></figure>
+  
+    <figure><img src="shots/light_audit_tab_结构.png" alt="light_audit_tab_结构" loading="lazy"/>
+    <figcaption><b>子页签 · 结构</b><span>light_audit_tab_结构</span></figcaption></figure>
+  
+    <figure><img src="shots/light_audit_tab_数据.png" alt="light_audit_tab_数据" loading="lazy"/>
+    <figcaption><b>子页签 · 数据</b><span>light_audit_tab_数据</span></figcaption></figure>
+  
+    <figure><img src="shots/light_audit_tab_9_个字段.png" alt="light_audit_tab_9_个字段" loading="lazy"/>
+    <figcaption><b>子页签 · 9 个字段</b><span>light_audit_tab_9_个字段</span></figcaption></figure>
+  
+    <figure><img src="shots/light_audit_tab_必填.png" alt="light_audit_tab_必填" loading="lazy"/>
+    <figcaption><b>子页签 · 必填</b><span>light_audit_tab_必填</span></figcaption></figure>
+  
+    <figure><img src="shots/light_audit_tab_列表显示.png" alt="light_audit_tab_列表显示" loading="lazy"/>
+    <figcaption><b>子页签 · 列表显示</b><span>light_audit_tab_列表显示</span></figcaption></figure>
+  
+    <figure><img src="shots/light_aistaff.png" alt="light_aistaff" loading="lazy"/>
+    <figcaption><b>浅色 · AI员工</b><span>light_aistaff</span></figcaption></figure>
+  
+    <figure><img src="shots/light_aistaff_tab_结构.png" alt="light_aistaff_tab_结构" loading="lazy"/>
+    <figcaption><b>子页签 · 结构</b><span>light_aistaff_tab_结构</span></figcaption></figure>
+  
+    <figure><img src="shots/light_aistaff_tab_数据.png" alt="light_aistaff_tab_数据" loading="lazy"/>
+    <figcaption><b>子页签 · 数据</b><span>light_aistaff_tab_数据</span></figcaption></figure>
+  
+    <figure><img src="shots/light_aistaff_tab_9_个字段.png" alt="light_aistaff_tab_9_个字段" loading="lazy"/>
+    <figcaption><b>子页签 · 9 个字段</b><span>light_aistaff_tab_9_个字段</span></figcaption></figure>
+  
+    <figure><img src="shots/light_aistaff_tab_必填.png" alt="light_aistaff_tab_必填" loading="lazy"/>
+    <figcaption><b>子页签 · 必填</b><span>light_aistaff_tab_必填</span></figcaption></figure>
+  
+    <figure><img src="shots/light_aistaff_tab_列表显示.png" alt="light_aistaff_tab_列表显示" loading="lazy"/>
+    <figcaption><b>子页签 · 列表显示</b><span>light_aistaff_tab_列表显示</span></figcaption></figure>
+  
+    <figure><img src="shots/light_settings.png" alt="light_settings" loading="lazy"/>
+    <figcaption><b>浅色 · 系统设置</b><span>light_settings</span></figcaption></figure>
+  
+    <figure><img src="shots/light_settings_tab_外观.png" alt="light_settings_tab_外观" loading="lazy"/>
+    <figcaption><b>子页签 · 外观</b><span>light_settings_tab_外观</span></figcaption></figure>
+  
+    <figure><img src="shots/light_settings_tab_AI模型.png" alt="light_settings_tab_AI模型" loading="lazy"/>
+    <figcaption><b>子页签 · AI模型</b><span>light_settings_tab_AI模型</span></figcaption></figure>
+  
+    <figure><img src="shots/light_settings_tab_通知与备份.png" alt="light_settings_tab_通知与备份" loading="lazy"/>
+    <figcaption><b>子页签 · 通知与备份</b><span>light_settings_tab_通知与备份</span></figcaption></figure>
+  
+    <figure><img src="shots/light_settings_tab_数据与隐私.png" alt="light_settings_tab_数据与隐私" loading="lazy"/>
+    <figcaption><b>子页签 · 数据与隐私</b><span>light_settings_tab_数据与隐私</span></figcaption></figure>
+  
+    <figure><img src="shots/light_settings_tab_自定义字段.png" alt="light_settings_tab_自定义字段" loading="lazy"/>
+    <figcaption><b>子页签 · 自定义字段</b><span>light_settings_tab_自定义字段</span></figcaption></figure>
+  
+    <figure><img src="shots/light_settings_tab_标签治理.png" alt="light_settings_tab_标签治理" loading="lazy"/>
+    <figcaption><b>子页签 · 标签治理</b><span>light_settings_tab_标签治理</span></figcaption></figure>
+  
+    <figure><img src="shots/light_settings_tab_回收站.png" alt="light_settings_tab_回收站" loading="lazy"/>
+    <figcaption><b>子页签 · 回收站</b><span>light_settings_tab_回收站</span></figcaption></figure>
+  
+    <figure><img src="shots/light_settings_tab_操作日志.png" alt="light_settings_tab_操作日志" loading="lazy"/>
+    <figcaption><b>子页签 · 操作日志</b><span>light_settings_tab_操作日志</span></figcaption></figure>
+  
+    <figure><img src="shots/light_help.png" alt="light_help" loading="lazy"/>
+    <figcaption><b>浅色 · 帮助中心</b><span>light_help</span></figcaption></figure>
+  
+    <figure><img src="shots/light_help_tab_外观.png" alt="light_help_tab_外观" loading="lazy"/>
+    <figcaption><b>子页签 · 外观</b><span>light_help_tab_外观</span></figcaption></figure>
+  
+    <figure><img src="shots/light_help_tab_AI模型.png" alt="light_help_tab_AI模型" loading="lazy"/>
+    <figcaption><b>子页签 · AI模型</b><span>light_help_tab_AI模型</span></figcaption></figure>
+  
+    <figure><img src="shots/light_help_tab_通知与备份.png" alt="light_help_tab_通知与备份" loading="lazy"/>
+    <figcaption><b>子页签 · 通知与备份</b><span>light_help_tab_通知与备份</span></figcaption></figure>
+  
+    <figure><img src="shots/light_help_tab_数据与隐私.png" alt="light_help_tab_数据与隐私" loading="lazy"/>
+    <figcaption><b>子页签 · 数据与隐私</b><span>light_help_tab_数据与隐私</span></figcaption></figure>
+  
+    <figure><img src="shots/light_help_tab_自定义字段.png" alt="light_help_tab_自定义字段" loading="lazy"/>
+    <figcaption><b>子页签 · 自定义字段</b><span>light_help_tab_自定义字段</span></figcaption></figure>
+  
+    <figure><img src="shots/light_help_tab_标签治理.png" alt="light_help_tab_标签治理" loading="lazy"/>
+    <figcaption><b>子页签 · 标签治理</b><span>light_help_tab_标签治理</span></figcaption></figure>
+  
+    <figure><img src="shots/light_help_tab_回收站.png" alt="light_help_tab_回收站" loading="lazy"/>
+    <figcaption><b>子页签 · 回收站</b><span>light_help_tab_回收站</span></figcaption></figure>
+  
+    <figure><img src="shots/light_help_tab_操作日志.png" alt="light_help_tab_操作日志" loading="lazy"/>
+    <figcaption><b>子页签 · 操作日志</b><span>light_help_tab_操作日志</span></figcaption></figure>
+  </div>
+  <h2>暗黑模式（75 张）</h2><div class="grid">
+    <figure><img src="shots/dark_today.png" alt="dark_today" loading="lazy"/>
+    <figcaption><b>暗黑 · 首页</b><span>dark_today</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_today_tab_智能建议.png" alt="dark_today_tab_智能建议" loading="lazy"/>
+    <figcaption><b>子页签 · 智能建议</b><span>dark_today_tab_智能建议</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_today_tab_有逾期回款.png" alt="dark_today_tab_有逾期回款" loading="lazy"/>
+    <figcaption><b>子页签 · 有逾期回款</b><span>dark_today_tab_有逾期回款</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_cockpit.png" alt="dark_cockpit" loading="lazy"/>
+    <figcaption><b>暗黑 · 今日驾驶舱</b><span>dark_cockpit</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_crm.png" alt="dark_crm" loading="lazy"/>
+    <figcaption><b>暗黑 · 客户管理</b><span>dark_crm</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_crm_tab_C.png" alt="dark_crm_tab_C" loading="lazy"/>
+    <figcaption><b>子页签 · C</b><span>dark_crm_tab_C</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_work.png" alt="dark_work" loading="lazy"/>
+    <figcaption><b>暗黑 · 任务看板</b><span>dark_work</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_work_tab_OKR_只读.png" alt="dark_work_tab_OKR_只读" loading="lazy"/>
+    <figcaption><b>子页签 · OKR 只读</b><span>dark_work_tab_OKR_只读</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_work_tab_本地计算.png" alt="dark_work_tab_本地计算" loading="lazy"/>
+    <figcaption><b>子页签 · 本地计算</b><span>dark_work_tab_本地计算</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_work_tab_近期关注客户.png" alt="dark_work_tab_近期关注客户" loading="lazy"/>
+    <figcaption><b>子页签 · 近期关注客户</b><span>dark_work_tab_近期关注客户</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_work_tab_2_任务.png" alt="dark_work_tab_2_任务" loading="lazy"/>
+    <figcaption><b>子页签 · 2 任务</b><span>dark_work_tab_2_任务</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_work_tab_任务.png" alt="dark_work_tab_任务" loading="lazy"/>
+    <figcaption><b>子页签 · 任务</b><span>dark_work_tab_任务</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_dev.png" alt="dark_dev" loading="lazy"/>
+    <figcaption><b>暗黑 · 商机管理</b><span>dark_dev</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_dev_tab_点击卡片查看详情.png" alt="dark_dev_tab_点击卡片查看详情" loading="lazy"/>
+    <figcaption><b>子页签 · 点击卡片查看详情</b><span>dark_dev_tab_点击卡片查看详情</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_dev_tab_1.png" alt="dark_dev_tab_1" loading="lazy"/>
+    <figcaption><b>子页签 · 1</b><span>dark_dev_tab_1</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_dev_tab_5_.png" alt="dark_dev_tab_5_" loading="lazy"/>
+    <figcaption><b>子页签 · 5%</b><span>dark_dev_tab_5_</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_media.png" alt="dark_media" loading="lazy"/>
+    <figcaption><b>暗黑 · 媒介资源</b><span>dark_media</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_media_tab_排期.png" alt="dark_media_tab_排期" loading="lazy"/>
+    <figcaption><b>子页签 · 排期</b><span>dark_media_tab_排期</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_media_tab_资源与刊例.png" alt="dark_media_tab_资源与刊例" loading="lazy"/>
+    <figcaption><b>子页签 · 资源与刊例</b><span>dark_media_tab_资源与刊例</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_media_tab_达人库.png" alt="dark_media_tab_达人库" loading="lazy"/>
+    <figcaption><b>子页签 · 达人库</b><span>dark_media_tab_达人库</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_media_tab_报价器.png" alt="dark_media_tab_报价器" loading="lazy"/>
+    <figcaption><b>子页签 · 报价器</b><span>dark_media_tab_报价器</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_media_tab_售后数据.png" alt="dark_media_tab_售后数据" loading="lazy"/>
+    <figcaption><b>子页签 · 售后数据</b><span>dark_media_tab_售后数据</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_media_tab_仅内部.png" alt="dark_media_tab_仅内部" loading="lazy"/>
+    <figcaption><b>子页签 · 仅内部</b><span>dark_media_tab_仅内部</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_gantt.png" alt="dark_gantt" loading="lazy"/>
+    <figcaption><b>暗黑 · 排期甘特</b><span>dark_gantt</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_kb.png" alt="dark_kb" loading="lazy"/>
+    <figcaption><b>暗黑 · 知识库</b><span>dark_kb</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_kb_tab__方法论.png" alt="dark_kb_tab__方法论" loading="lazy"/>
+    <figcaption><b>子页签 · #方法论</b><span>dark_kb_tab__方法论</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_kb_tab__双11.png" alt="dark_kb_tab__双11" loading="lazy"/>
+    <figcaption><b>子页签 · #双11</b><span>dark_kb_tab__双11</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_data.png" alt="dark_data" loading="lazy"/>
+    <figcaption><b>暗黑 · 数据报表</b><span>dark_data</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_data_tab_仪表盘.png" alt="dark_data_tab_仪表盘" loading="lazy"/>
+    <figcaption><b>子页签 · 仪表盘</b><span>dark_data_tab_仪表盘</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_data_tab_详细报表.png" alt="dark_data_tab_详细报表" loading="lazy"/>
+    <figcaption><b>子页签 · 详细报表</b><span>dark_data_tab_详细报表</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_data_tab_概览.png" alt="dark_data_tab_概览" loading="lazy"/>
+    <figcaption><b>子页签 · 概览</b><span>dark_data_tab_概览</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_growth.png" alt="dark_growth" loading="lazy"/>
+    <figcaption><b>暗黑 · 成长规划</b><span>dark_growth</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_growth_tab_2026_9_18.png" alt="dark_growth_tab_2026_9_18" loading="lazy"/>
+    <figcaption><b>子页签 · 2026/9/18</b><span>dark_growth_tab_2026_9_18</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_growth_tab_初学者_专家_四级.png" alt="dark_growth_tab_初学者_专家_四级" loading="lazy"/>
+    <figcaption><b>子页签 · 初学者→专家 四级</b><span>dark_growth_tab_初学者_专家_四级</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_builder.png" alt="dark_builder" loading="lazy"/>
+    <figcaption><b>暗黑 · 页面构建器</b><span>dark_builder</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_mypages.png" alt="dark_mypages" loading="lazy"/>
+    <figcaption><b>暗黑 · 我的页面</b><span>dark_mypages</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_workflows.png" alt="dark_workflows" loading="lazy"/>
+    <figcaption><b>暗黑 · 工作流</b><span>dark_workflows</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_workflows_tab_自动化业务规则.png" alt="dark_workflows_tab_自动化业务规则" loading="lazy"/>
+    <figcaption><b>子页签 · 自动化业务规则</b><span>dark_workflows_tab_自动化业务规则</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_workflows_tab_已启用.png" alt="dark_workflows_tab_已启用" loading="lazy"/>
+    <figcaption><b>子页签 · 已启用</b><span>dark_workflows_tab_已启用</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_collections.png" alt="dark_collections" loading="lazy"/>
+    <figcaption><b>暗黑 · 数据表</b><span>dark_collections</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_collections_tab_结构.png" alt="dark_collections_tab_结构" loading="lazy"/>
+    <figcaption><b>子页签 · 结构</b><span>dark_collections_tab_结构</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_collections_tab_数据.png" alt="dark_collections_tab_数据" loading="lazy"/>
+    <figcaption><b>子页签 · 数据</b><span>dark_collections_tab_数据</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_collections_tab_9_个字段.png" alt="dark_collections_tab_9_个字段" loading="lazy"/>
+    <figcaption><b>子页签 · 9 个字段</b><span>dark_collections_tab_9_个字段</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_collections_tab_必填.png" alt="dark_collections_tab_必填" loading="lazy"/>
+    <figcaption><b>子页签 · 必填</b><span>dark_collections_tab_必填</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_collections_tab_列表显示.png" alt="dark_collections_tab_列表显示" loading="lazy"/>
+    <figcaption><b>子页签 · 列表显示</b><span>dark_collections_tab_列表显示</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_audit.png" alt="dark_audit" loading="lazy"/>
+    <figcaption><b>暗黑 · 操作记录</b><span>dark_audit</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_audit_tab_结构.png" alt="dark_audit_tab_结构" loading="lazy"/>
+    <figcaption><b>子页签 · 结构</b><span>dark_audit_tab_结构</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_audit_tab_数据.png" alt="dark_audit_tab_数据" loading="lazy"/>
+    <figcaption><b>子页签 · 数据</b><span>dark_audit_tab_数据</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_audit_tab_9_个字段.png" alt="dark_audit_tab_9_个字段" loading="lazy"/>
+    <figcaption><b>子页签 · 9 个字段</b><span>dark_audit_tab_9_个字段</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_audit_tab_必填.png" alt="dark_audit_tab_必填" loading="lazy"/>
+    <figcaption><b>子页签 · 必填</b><span>dark_audit_tab_必填</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_audit_tab_列表显示.png" alt="dark_audit_tab_列表显示" loading="lazy"/>
+    <figcaption><b>子页签 · 列表显示</b><span>dark_audit_tab_列表显示</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_aistaff.png" alt="dark_aistaff" loading="lazy"/>
+    <figcaption><b>暗黑 · AI员工</b><span>dark_aistaff</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_aistaff_tab_结构.png" alt="dark_aistaff_tab_结构" loading="lazy"/>
+    <figcaption><b>子页签 · 结构</b><span>dark_aistaff_tab_结构</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_aistaff_tab_数据.png" alt="dark_aistaff_tab_数据" loading="lazy"/>
+    <figcaption><b>子页签 · 数据</b><span>dark_aistaff_tab_数据</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_aistaff_tab_9_个字段.png" alt="dark_aistaff_tab_9_个字段" loading="lazy"/>
+    <figcaption><b>子页签 · 9 个字段</b><span>dark_aistaff_tab_9_个字段</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_aistaff_tab_必填.png" alt="dark_aistaff_tab_必填" loading="lazy"/>
+    <figcaption><b>子页签 · 必填</b><span>dark_aistaff_tab_必填</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_aistaff_tab_列表显示.png" alt="dark_aistaff_tab_列表显示" loading="lazy"/>
+    <figcaption><b>子页签 · 列表显示</b><span>dark_aistaff_tab_列表显示</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_settings.png" alt="dark_settings" loading="lazy"/>
+    <figcaption><b>暗黑 · 系统设置</b><span>dark_settings</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_settings_tab_外观.png" alt="dark_settings_tab_外观" loading="lazy"/>
+    <figcaption><b>子页签 · 外观</b><span>dark_settings_tab_外观</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_settings_tab_AI模型.png" alt="dark_settings_tab_AI模型" loading="lazy"/>
+    <figcaption><b>子页签 · AI模型</b><span>dark_settings_tab_AI模型</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_settings_tab_通知与备份.png" alt="dark_settings_tab_通知与备份" loading="lazy"/>
+    <figcaption><b>子页签 · 通知与备份</b><span>dark_settings_tab_通知与备份</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_settings_tab_数据与隐私.png" alt="dark_settings_tab_数据与隐私" loading="lazy"/>
+    <figcaption><b>子页签 · 数据与隐私</b><span>dark_settings_tab_数据与隐私</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_settings_tab_自定义字段.png" alt="dark_settings_tab_自定义字段" loading="lazy"/>
+    <figcaption><b>子页签 · 自定义字段</b><span>dark_settings_tab_自定义字段</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_settings_tab_标签治理.png" alt="dark_settings_tab_标签治理" loading="lazy"/>
+    <figcaption><b>子页签 · 标签治理</b><span>dark_settings_tab_标签治理</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_settings_tab_回收站.png" alt="dark_settings_tab_回收站" loading="lazy"/>
+    <figcaption><b>子页签 · 回收站</b><span>dark_settings_tab_回收站</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_settings_tab_操作日志.png" alt="dark_settings_tab_操作日志" loading="lazy"/>
+    <figcaption><b>子页签 · 操作日志</b><span>dark_settings_tab_操作日志</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_help.png" alt="dark_help" loading="lazy"/>
+    <figcaption><b>暗黑 · 帮助中心</b><span>dark_help</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_help_tab_外观.png" alt="dark_help_tab_外观" loading="lazy"/>
+    <figcaption><b>子页签 · 外观</b><span>dark_help_tab_外观</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_help_tab_AI模型.png" alt="dark_help_tab_AI模型" loading="lazy"/>
+    <figcaption><b>子页签 · AI模型</b><span>dark_help_tab_AI模型</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_help_tab_通知与备份.png" alt="dark_help_tab_通知与备份" loading="lazy"/>
+    <figcaption><b>子页签 · 通知与备份</b><span>dark_help_tab_通知与备份</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_help_tab_数据与隐私.png" alt="dark_help_tab_数据与隐私" loading="lazy"/>
+    <figcaption><b>子页签 · 数据与隐私</b><span>dark_help_tab_数据与隐私</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_help_tab_自定义字段.png" alt="dark_help_tab_自定义字段" loading="lazy"/>
+    <figcaption><b>子页签 · 自定义字段</b><span>dark_help_tab_自定义字段</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_help_tab_标签治理.png" alt="dark_help_tab_标签治理" loading="lazy"/>
+    <figcaption><b>子页签 · 标签治理</b><span>dark_help_tab_标签治理</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_help_tab_回收站.png" alt="dark_help_tab_回收站" loading="lazy"/>
+    <figcaption><b>子页签 · 回收站</b><span>dark_help_tab_回收站</span></figcaption></figure>
+  
+    <figure><img src="shots/dark_help_tab_操作日志.png" alt="dark_help_tab_操作日志" loading="lazy"/>
+    <figcaption><b>子页签 · 操作日志</b><span>dark_help_tab_操作日志</span></figcaption></figure>
+  </div>
+  <h2>驾驶舱页可点击元素清单（共 19 个）</h2>
+  <table><thead><tr><th>文本</th><th>title</th><th>可见性</th></tr></thead><tbody><tr class=""><td>🏠首页</td><td>—</td><td>可见</td></tr><tr class=""><td>📊今日驾驶舱</td><td>—</td><td>可见</td></tr><tr class=""><td>👥客户管理</td><td>—</td><td>可见</td></tr><tr class=""><td>📋任务看板</td><td>—</td><td>可见</td></tr><tr class=""><td>🎯商机管理</td><td>—</td><td>可见</td></tr><tr class=""><td>🌐媒介资源</td><td>—</td><td>可见</td></tr><tr class=""><td>📅排期甘特</td><td>—</td><td>可见</td></tr><tr class=""><td>📖知识库</td><td>—</td><td>可见</td></tr><tr class=""><td>📈数据报表</td><td>—</td><td>可见</td></tr><tr class=""><td>🛡️成长规划</td><td>—</td><td>可见</td></tr><tr class=""><td>🛠️页面构建器</td><td>—</td><td>可见</td></tr><tr class=""><td>⚡工作流</td><td>—</td><td>可见</td></tr><tr class=""><td>🗄️数据表</td><td>—</td><td>可见</td></tr><tr class=""><td>⚙️系统设置</td><td>—</td><td>可见</td></tr><tr class=""><td>🌙 暗黑</td><td>—</td><td>可见</td></tr><tr class=""><td>记录为已跟进</td><td>—</td><td>可见</td></tr><tr class=""><td>生成跟进话术草稿</td><td>—</td><td>可见</td></tr><tr class=""><td>查看全部</td><td>—</td><td>可见</td></tr><tr class="muted"><td>✨</td><td>AI助手</td><td>隐藏</td></tr></tbody></table>
+</body></html>

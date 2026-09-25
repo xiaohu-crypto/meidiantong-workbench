@@ -1,0 +1,10 @@
+import { chromium } from "playwright";
+const b = await chromium.launch();
+const p = await b.newPage({ viewport: { width: 1440, height: 900 } });
+await p.goto("http://localhost:8927/index.html", { waitUntil: "networkidle" });
+await p.waitForTimeout(500);
+await p.evaluate(() => { document.getElementById('historyDrawer').style.display = 'block'; });
+await p.waitForTimeout(300);
+await p.screenshot({ path: "D:/HaLeMa/Documents/媒电通工作台/code/meidiantong-workbench/ui-design-runs/深度提炼媒电通工作台AP-20260925-105929-4c9f/shots/v14_agent_expanded.png", fullPage: false });
+await b.close();
+console.log("done");

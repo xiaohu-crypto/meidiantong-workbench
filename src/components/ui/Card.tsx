@@ -1,4 +1,5 @@
 // File: src/components/ui/Card.tsx
+// Finexy v0.2.3 · 24px 大圆角 + p-9 空气悬浮
 import type { ReactNode } from "react";
 
 interface CardProps {
@@ -6,27 +7,33 @@ interface CardProps {
   title?: ReactNode;
   extra?: ReactNode;
   className?: string;
+  isDangerWip?: boolean;
 }
 
-/**
- * 基础容器卡片：单层 surface 面板，带可选标题栏（title / extra）。
- * 全部外观由 CSS 变量驱动，主题切换时背景、边框、阴影同步过渡。
- */
-export default function Card({ children, title, extra, className = "" }: CardProps) {
+export default function Card({
+  children,
+  title,
+  extra,
+  className = "",
+  isDangerWip = false,
+}: CardProps) {
   const hasHeader = title != null || extra != null;
+  const surfaceClass = isDangerWip
+    ? "border border-[color:var(--status-danger)] shadow-[0_0_24px_rgba(248,113,113,0.08)]"
+    : "border border-[color:var(--border-subtle)] shadow-[var(--shadow-card)]";
 
   return (
     <section
       className={[
-        "border border-[color:var(--border-subtle)] bg-[var(--bg-surface)]",
-        "rounded-[var(--radius-xl)] p-6 shadow-[var(--shadow-card)]",
+        "bg-[var(--bg-surface)] rounded-[var(--radius-xl)] p-9 transition-all duration-300",
+        surfaceClass,
         className,
       ].join(" ")}
     >
       {hasHeader && (
-        <header className="mb-4 flex items-center justify-between gap-4">
+        <header className="mb-6 flex items-center justify-between gap-4">
           {title != null && (
-            <h3 className="text-sm font-semibold text-[color:var(--text-secondary)]">
+            <h3 className="text-sm font-black tracking-tight text-[color:var(--text-primary)]">
               {title}
             </h3>
           )}

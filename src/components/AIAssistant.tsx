@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { getActiveAi, getAiConfig } from "../core/ai/client";
 import { EMPLOYEE_LIST, mergeEmployees, type Employee, type EmployeeId, buildContext } from "../core/ai/employees";
 import { onDataChanged, onOpenAIStaff } from "../core/events";
@@ -197,9 +197,47 @@ export default function AIAssistant({ currentPage }: { currentPage: string }) {
     }
   }
 
+  // 悬浮按钮位置状态
+  const [pos, setPos] = useState({ x: window.innerWidth - 80, y: window.innerHeight - 100 });
+  const [snapped, setSnapped] = useState<"left" | "right" | null>(null);
+  const [hovering, setHovering] = useState(false);
+  const dragRef = useRef<{ dragging: boolean; startX: number; startY: number; origX: number; origY: number }>({ dragging: false, startX: 0, startY: 0, origX: 0, origY: 0 });
+
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
+    dragRef.current = { dragging: true, startX: e.clientX, startY: e.clientY, origX: pos.x, origY: pos.y };
+    const move = (ev: MouseEvent) => {
+      if (!dragRef.current.dragging) return;
+      const dx = ev.clientX - dragRef.current.startX;
+      const dy = ev.clientY - dragRef.current.startY;
+      let nx = dragRef.current.origX + dx;
+      let ny = dragRef.current.origY + dy;
+      nx = Math.max(0, Math.min(window.innerWidth - 56, nx));
+      ny = Math.max(0, Math.min(window.innerHeight - 56, ny));
+      setPos({ x: nx, y: ny });
+    };
+    const up = (ev: MouseEvent) => {
+      dragRef.current.dragging = false;
+      if (pos.x < 80) setSnapped("left");
+      else if (pos.x > window.innerWidth - 100) setSnapped("right");
+      else setSnapped(null);
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  }, [pos]);
+
   if (!open) {
     return (
-      <button className="ai-fab" title="AI助手" onClick={() => setOpen(true)}>
+      <button
+        className={`ai-fab ${snapped && !hovering ? "snapped-" + snapped : ""}`}
+        title="AI助手"
+        onClick={() => setOpen(true)}
+        onMouseDown={onMouseDown}
+        onMouseEnter={() => setHovering(true)}
+        onMouseLeave={() => setHovering(false)}
+        style={{ left: pos.x, top: pos.y }}
+      >
         <span className="ai-fab-icon">✨</span>
       </button>
     );

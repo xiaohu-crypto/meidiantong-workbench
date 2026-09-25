@@ -78,9 +78,6 @@ export function Dashboard({ dashboard, activeTab, onTabChange, renderWidget, edi
 
   return (
     <div>
-      <div className="page-head">
-        <div><h1>{dashboard.name}</h1></div>
-      </div>
       <div className="tabs">
         {dashboard.tabs.map((t) => (
           <span

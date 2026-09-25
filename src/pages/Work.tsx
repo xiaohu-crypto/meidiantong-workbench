@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PageActionBar } from "../components/ui/PageActionBar";
 import { db } from "../db/db";
 import { repos } from "../core/data/repository";
 import type { Customer, KanbanCol, Objective, Task } from "../types";
@@ -102,7 +103,7 @@ export default function Work(props: Props) {
 
   return (
     <div>
-      <div className="page-head">
+      <div className="page-head" style={{display:"none"}}>
         <div><h1>任务看板</h1><div className="date">看板四列 · 拖拽流转 · 进行中 WIP 上限 {WIP_LIMIT}(当前 {wip})</div></div>
         <div className="actions">
           <div style={{ display: "inline-flex", gap: 4, marginRight: 8 }}>

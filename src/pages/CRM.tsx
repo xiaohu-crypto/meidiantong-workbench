@@ -1111,8 +1111,15 @@ export default function CRM(props: Props) {
                   {renderCustomerWidget({ type: "related", id: "tasks" })}
                 </section>
                 <aside className={"wb-right" + (aiCollapsed ? " collapsed" : "")}>
-                  <button className="wb-ai-toggle" onClick={() => setAiCollapsed((v) => !v)} title={aiCollapsed ? "展开 AI 副驾驶" : "收起 AI 副驾驶"}>🪄</button>
-                  <div className="wb-ai-head"><b>AI 副驾驶</b><span className="muted" style={{ fontSize: "var(--text-xs)" }}>实时读取左右栏</span></div>
+                  <div className="wb-ai-head">
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                      <b>AI辅助</b>
+                      <span className="muted" style={{ fontSize: "var(--text-xs)" }}>智能助手</span>
+                    </div>
+                    <button className="wb-ai-toggle-btn" onClick={() => setAiCollapsed((v) => !v)} title={aiCollapsed ? "展开AI辅助" : "收起AI辅助"}>
+                      {aiCollapsed ? "☰" : "✕"}
+                    </button>
+                  </div>
                   <div className="wb-ai-summary">{aiSummary()}</div>
                   <div className="wb-ai-chat">
                     {renderAiPanel()}

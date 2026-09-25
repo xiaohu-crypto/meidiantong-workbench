@@ -1,13 +1,15 @@
+// File: src/App.tsx
+// 根入口：保留全部数据接线（18 页 lazy + IndexedDB + Onboarding + 通知 + AI 助手），
+// 外层布局替换为 LayoutFrame（哑光暗黑磨砂感 + 子页签总线）。
 import { useCallback, useEffect, useState } from "react";
 import { db } from "./db/db";
 import { seedIfEmpty } from "./data/seed";
 import { seedExtraIfEmpty } from "./data/seed2";
 import { rebuildIndex, type SearchDoc } from "./core/search";
-import { payNotifyAt, staleNotifyAt } from "./core/derive";
 import type { Aar, Baseline, Contact, ContactPoint, Contract, Customer, Deal, Influencer, Milestone, MediaResource, Note, Objective, Payment, Pitch, PostBuy, RateCard, Rel, ScheduleItem, Supplier, Task } from "./types";
 import { lazy, Suspense } from "react";
 const Today = lazy(() => import("./pages/Today"));
-const Cockpit = lazy(() => import("./pages/Dashboard/Cockpit"));
+const AgentPage = lazy(() => import("./pages/AgentPage"));
 const GanttPlanner = lazy(() => import("./pages/Media/GanttPlanner"));
 const CRM = lazy(() => import("./pages/CRM"));
 const Work = lazy(() => import("./pages/Work"));
@@ -29,19 +31,14 @@ const MyPagesPage = lazy(() => import("./pages/MyPages"));
 import QuickCapture from "./components/QuickCapture";
 import TopSearch from "./components/TopSearch";
 import Onboarding from "./components/Onboarding";
-import NotificationPanel from "./components/NotificationPanel";
 import AIAssistant from "./components/AIAssistant";
 import { Btn, Modal, useToast } from "./ui/common";
-import { useTheme, type ThemeMode } from "./context/ThemeContext";
+import { useTheme } from "./context/ThemeContext";
 import { engine } from "./core/flow/engine";
 import { APP_VERSION } from "./core/version";
 import { FormBlock } from "./components/blocks/FormBlock";
 import { DetailsBlock } from "./components/blocks/DetailsBlock";
-import {
-  IconHome, IconUsers, IconTask, IconKb, IconFunnel, IconToday,
-  IconMedia, IconChart, IconGrowth, IconSettings, IconMoon, IconSun, IconBell, IconHelp, IconAI,
-  IconGrid, IconClock, IconLayout, IconBot, IconAuto,
-} from "./components/icons";
+import { LayoutFrame } from "./components/ui/LayoutFrame";
 
 declare global {
   interface Window {
@@ -83,31 +80,9 @@ interface DataSet {
   notificationsReadAt: number;
 }
 
-type View = "today" | "cockpit" | "crm" | "work" | "dev" | "media" | "gantt" | "kb" | "data" | "growth" | "settings" | "help" | "notifications" | "builder" | "workflows" | "collections" | "audit" | "aistaff" | "mypages";
+type View = "agent" | "today" | "crm" | "work" | "dev" | "media" | "gantt" | "kb" | "data" | "growth" | "settings" | "help" | "notifications" | "builder" | "workflows" | "collections" | "audit" | "aistaff" | "mypages";
 
-const NAV: { key: View; label: string; icon: (p: { size?: number }) => JSX.Element; group: string }[] = [
-  { key: "today", label: "首页", icon: IconToday, group: "常用" },
-  { key: "cockpit", label: "今日驾驶舱", icon: IconToday, group: "常用" },
-  { key: "crm", label: "客户管理", icon: IconUsers, group: "业务" },
-  { key: "work", label: "任务看板", icon: IconTask, group: "业务" },
-  { key: "dev", label: "商机管理", icon: IconFunnel, group: "业务" },
-  { key: "media", label: "媒介资源", icon: IconMedia, group: "业务" },
-  { key: "gantt", label: "排期甘特", icon: IconClock, group: "业务" },
-  { key: "kb", label: "知识库", icon: IconKb, group: "业务" },
-  { key: "data", label: "数据报表", icon: IconChart, group: "业务" },
-  { key: "growth", label: "成长规划", icon: IconGrowth, group: "业务" },
-  { key: "builder", label: "页面构建器", icon: IconAI, group: "系统" },
-  { key: "mypages", label: "我的页面", icon: IconLayout, group: "系统" },
-  { key: "workflows", label: "工作流", icon: IconFunnel, group: "系统" },
-  { key: "collections", label: "数据表", icon: IconGrid, group: "系统" },
-  { key: "audit", label: "操作记录", icon: IconClock, group: "系统" },
-  { key: "aistaff", label: "AI员工", icon: IconBot, group: "系统" },
-  { key: "settings", label: "系统设置", icon: IconSettings, group: "系统" },
-  { key: "help", label: "帮助中心", icon: IconHelp, group: "系统" },
-];
-
-/** 合法视图集合（nav 事件校验用） */
-const VIEW_KEYS = NAV.map((n) => n.key);
+const VIEW_KEYS: View[] = ["agent", "today", "crm", "work", "dev", "media", "gantt", "kb", "data", "growth", "settings", "help", "notifications", "builder", "workflows", "collections", "audit", "aistaff", "mypages"];
 
 async function loadAll(): Promise<DataSet> {
   const alive = async <T extends { deletedAt?: number }>(store: Parameters<typeof db.getAll>[0]) =>
@@ -139,28 +114,22 @@ async function loadAll(): Promise<DataSet> {
 }
 
 export default function App() {
-  const [view, setView] = useState<View>("today");
+  const [view, setView] = useState<View>("agent");
   const [data, setData] = useState<DataSet | null>(null);
   const [showQuick, setShowQuick] = useState(false);
   const [showOnboard, setShowOnboard] = useState(false);
-  // v0.2.2 迭代：主题统一由 ThemeContext 托管（localStorage mdt_theme + Electron 桥同步）
-  const { mode, resolvedTheme, setThemeMode } = useTheme();
+  const { resolvedTheme, setThemeMode } = useTheme();
   const [focusCid, setFocusCid] = useState<string | null>(null);
   const [kbFocus, setKbFocus] = useState<string | null>(null);
   const [updateVer, setUpdateVer] = useState<string | null>(null);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [themeMenuOpen, setThemeMenuOpen] = useState(false);
-  const [notifyOpen, setNotifyOpen] = useState(false);
   const [flowForm, setFlowForm] = useState<{ store: string; id?: string } | null>(null);
   const [flowDetail, setFlowDetail] = useState<{ store: string; id: string } | null>(null);
   const [builderPageUid, setBuilderPageUid] = useState<string | null>(null);
+  const [currentTab, setCurrentTab] = useState<string>("全局概览");
   const toast = useToast();
 
   const reload = useCallback(async () => { setData(await loadAll()); }, []);
-  const closeNotify = useCallback(() => setNotifyOpen(false), []);
-  const goAllNotifications = useCallback(() => { setNotifyOpen(false); setView("notifications"); }, []);
 
-  // FlowEngine事件桥接：openForm/openDetail/refresh/notify/closeDrawer 全局响应
   useEffect(() => {
     return engine.onEvent((e) => {
       const p = (e.payload ?? {}) as Record<string, unknown>;
@@ -191,7 +160,6 @@ export default function App() {
     });
   }, [reload, toast.show]);
 
-  // 区块内跳转（ModelRenderCtx.nav）→ 切换当前视图
   useEffect(() => {
     const onNav = (e: Event) => {
       const detail = (e as CustomEvent).detail;
@@ -202,15 +170,6 @@ export default function App() {
     return () => window.removeEventListener("nav", onNav);
   }, []);
 
-  // 未读通知数:逾期回款 + 14天无接触客户
-  const unreadCount = data ? (
-    data.payments.filter((p) => p.status === "逾期" && !p.deletedAt && payNotifyAt(p) > data.notificationsReadAt).length +
-    data.customers.filter((c) => {
-      if (c.deletedAt) return false;
-      const last = data.cps.filter((cp) => cp.customerId === c.id && !cp.deletedAt).sort((a, b) => b.time - a.time)[0];
-      return !!last && Date.now() - last.time > 14 * 86400000 && staleNotifyAt(last.time) > data.notificationsReadAt;
-    }).length
-  ) : 0;
 
   useEffect(() => {
     void (async () => {
@@ -221,10 +180,8 @@ export default function App() {
       await reload();
       const pays = (await db.getAll<Payment>("payments")).filter((p) => !p.deletedAt && p.status === "逾期");
       void startupCatchUp(pays.length);
-      // v0.2.2 迭代：迁移既有 IndexedDB 主题偏好 → ThemeContext（localStorage 单一真源）
       const t = await db.getSetting<"dark" | "light">("theme", "light");
       if (t) setThemeMode(t);
-      // 启动定时工作流（自动检测沉睡客户/到期合同）
       const { setupBuiltinWorkflows, startTimerWorkflows } = await import("./core/workflow/triggers");
       setupBuiltinWorkflows();
       startTimerWorkflows(30 * 60 * 1000);
@@ -247,7 +204,7 @@ export default function App() {
       window.mta.onUpdateReady((v: string) => { setUpdateVer(v); });
     }
     return () => window.removeEventListener("keydown", onKey);
-  }, [reload]);
+  }, [reload, setThemeMode]);
 
   useEffect(() => {
     if (!data) return;
@@ -289,18 +246,6 @@ export default function App() {
     return () => window.clearInterval(id);
   }, []);
 
-  const MODE_LABEL: Record<ThemeMode, string> = {
-    light: "浅色",
-    dark: "暗黑",
-    system: "跟随系统",
-  };
-
-  function switchTheme(t: "dark" | "light") {
-    // v0.2.2 迭代：透传 ThemeContext（数据写入 localStorage，并自动同步主进程外壳）
-    setThemeMode(t);
-  }
-
-  // 原生标题栏颜色随解析主题联动（Electron mta 桥）；非 Electron 环境静默跳过
   useEffect(() => {
     document.documentElement.dataset.titlebar = window.mta?.windowMode ?? "integrated";
     void window.mta?.titlebarSetTheme?.(resolvedTheme === "dark" ? "dark" : "light");
@@ -315,169 +260,84 @@ export default function App() {
     else if (doc.type === "笔记") { setKbFocus(doc.id); setView("kb"); }
   }
 
+  // LayoutFrame 菜单切换适配：菜单 ID 直接映射 View
+  const handleLayoutSelect = (menu: string, tab: string) => {
+    setView(menu as View);
+    setCurrentTab(tab);
+    if (menu === "crm") setFocusCid(null);
+    if (menu === "kb") setKbFocus(null);
+  };
+
   return (
-    <div className="app">
-          <aside className="sidebar">
-        <div className="brand">
-          <div className="brand-mark"><IconHome size={17} /></div>
-          <div>
-            <div className="brand-name">媒电通工作台</div>
-            <div className="brand-sub">本地优先工作台</div>
+    <>
+      <LayoutFrame
+        currentMenu={view}
+        currentTab={currentTab}
+        onSelect={handleLayoutSelect}
+      >
+        <Suspense fallback={
+          <div style={{ padding: 24 }}>
+            <div style={{ height: 32, width: 200, background: "var(--bg-muted)", borderRadius: 8, marginBottom: 16, animation: "pulse 1.2s infinite" }} />
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 16 }}>
+              {[0,1,2,3].map((i) => <div key={i} style={{ height: 80, background: "var(--bg-muted)", borderRadius: 12, animation: "pulse 1.2s infinite" }} />)}
+            </div>
+            <div style={{ height: 200, background: "var(--bg-muted)", borderRadius: 12, animation: "pulse 1.2s infinite" }} />
           </div>
-        </div>
-        <nav className="nav">
-          {["常用", "业务", "系统"].map((group) => (
-            <div key={group} className={"nav-group" + (group === "系统" ? " nav-sys" : "")}>
-              <div className="nav-label">{group}</div>
-              {NAV.filter((n) => n.group === group).map((n) => (
-                <div key={n.key} className={"nav-item" + (view === n.key ? " active" : "")}
-                  onClick={() => { setView(n.key); setUserMenuOpen(false); if (n.key === "crm") setFocusCid(null); if (n.key === "kb") setKbFocus(null); }}>
-                  <n.icon size={16} />
-                  <span className="ni-label">{n.label}</span>
-                </div>
-              ))}
-            </div>
-          ))}
-        </nav>
-        <div className="ai-status-anchor" title="本地敏感数据安全盾">
-          <span className="ai-status" data-on="true">
-            <span className="ai-status-ping" />
-            <span className="ai-status-dot" />
-          </span>
-          <span className="ai-status-tip">本地敏感数据安全盾：已锁定 (AES-256-GCM)</span>
-        </div>
-        <div className="sidebar-user-menu">
-          <div className="user-menu-trigger">
-            <div className="user-avatar" onClick={() => { setUserMenuOpen(!userMenuOpen); setThemeMenuOpen(false); }} style={{ cursor: "pointer" }}>媒</div>
-            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 2 }}>
-              <div style={{ position: "relative" }}>
-                <button data-notification-trigger className="icon-btn sm" title="通知中心" onClick={(e) => { e.stopPropagation(); setNotifyOpen((v) => !v); }}>
-                  <IconBell size={16} />
-                  {unreadCount > 0 ? <span className="badge-dot">{unreadCount > 99 ? "99+" : unreadCount}</span> : null}
-                </button>
-                {notifyOpen && data ? (
-                  <NotificationPanel
-                    customers={data.customers}
-                    payments={data.payments}
-                    cps={data.cps}
-                    notificationsReadAt={data.notificationsReadAt}
-                    reload={reload}
-                    onClose={closeNotify}
-                    onViewAll={goAllNotifications}
-                  />
-                ) : null}
-              </div>
-              <div style={{ position: "relative" }}>
-                <button className="icon-btn sm" title={"主题：" + MODE_LABEL[mode]}
-                  onClick={() => { setThemeMenuOpen((v) => !v); setUserMenuOpen(false); }}>
-                  {mode === "system" ? <IconAuto size={16} />
-                    : resolvedTheme === "dark" ? <IconSun size={16} /> : <IconMoon size={16} />}
-                </button>
-                {themeMenuOpen ? (
-                  <div className="theme-menu" onClick={(e) => e.stopPropagation()}>
-                    {(["light", "dark", "system"] as ThemeMode[]).map((m) => (
-                      <div key={m} className={"theme-menu-item" + (mode === m ? " active" : "")}
-                        onClick={() => { setThemeMode(m); setThemeMenuOpen(false); }}>
-                        <span>{m === "light" ? <IconSun size={14} /> : m === "dark" ? <IconMoon size={14} /> : <IconAuto size={14} />}</span>
-                        <span>{MODE_LABEL[m]}</span>
-                        <span className="tm-check">✓</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          </div>
-          {userMenuOpen ? (
-            <div className="user-menu-dropdown" onClick={(e) => e.stopPropagation()}>
-              <div className="user-menu-header">
-                <div className="user-avatar lg">媒</div>
-                <div>
-                  <div className="user-menu-name">媒电通工作台</div>
-                  <div className="user-menu-sub">v{APP_VERSION}</div>
-                </div>
-              </div>
-              <div className="user-menu-divider" />
-              <div className="user-menu-item" onClick={() => { setUserMenuOpen(false); window.mta?.installUpdate(); }}>
-                <span style={{ fontSize: 16 }}>↻</span><span>检查更新</span>
-              </div>
-            </div>
+        }>
+          {view === "agent" ? <AgentPage /> : null}
+          {view === "today" && data ? (
+            <Today customers={data.customers} deals={data.deals} payments={data.payments} cps={data.cps}
+              objectives={data.objectives} tasks={data.tasks} milestones={data.milestones}
+              reload={reload} openQuick={() => setShowQuick(true)} goCrm={goCrm} onNavigate={(v) => setView(v as View)} />
           ) : null}
-        </div>
-      </aside>
+          {view === "crm" && data ? (
+            <CRM customers={data.customers} contacts={data.contacts} rels={data.rels} deals={data.deals}
+              contracts={data.contracts} payments={data.payments} cps={data.cps} tasks={data.tasks}
+              reload={reload} focusCustomerId={focusCid} customFields={data.customFields} />
+          ) : null}
+          {view === "work" && data ? (
+            <Work tasks={data.tasks} objectives={data.objectives} customers={data.customers} reload={reload} goCrm={goCrm} />
+          ) : null}
+          {view === "dev" && data ? (
+            <Dev deals={data.deals} customers={data.customers} pitches={data.pitches} reload={reload} />
+          ) : null}
+          {view === "media" && data ? (
+            <Media suppliers={data.suppliers} resources={data.resources} ratecards={data.ratecards}
+              items={data.items} postbuys={data.postbuys} customers={data.customers} influencers={data.influencers} reload={reload} />
+          ) : null}
+          {view === "gantt" ? (
+            <GanttPlanner items={data?.items ?? []} resources={data?.resources ?? []} />
+          ) : null}
+          {view === "kb" && data ? (
+            <Kb notes={data.notes} reload={reload} focusId={kbFocus} />
+          ) : null}
+          {view === "data" && data ? (
+            <Data contracts={data.contracts} payments={data.payments} deals={data.deals} items={data.items} baselines={data.baselines} postbuys={data.postbuys} resources={data.resources} tasks={data.tasks} reload={reload} />
+          ) : null}
+          {view === "growth" && data ? (
+            <Growth tasks={data.tasks} payments={data.payments} pitches={data.pitches} cps={data.cps} contracts={data.contracts} reload={reload} />
+          ) : null}
+          {view === "notifications" && data ? (
+            <Notifications customers={data.customers} payments={data.payments} cps={data.cps} goCrm={goCrm} reload={reload} notificationsReadAt={data.notificationsReadAt} />
+          ) : null}
+          {view === "help" ? <Help /> : null}
+          {view === "builder" ? <BuilderPage initialPageUid={builderPageUid} /> : null}
+          {view === "mypages" ? <MyPagesPage /> : null}
+          {view === "workflows" ? <WorkflowsPage /> : null}
+          {view === "collections" ? <CollectionsPage /> : null}
+          {view === "audit" ? <AuditPage /> : null}
+          {view === "aistaff" ? <AIStaffPage /> : null}
+          {view === "settings" ? (
+            <SettingsPage theme={resolvedTheme} setTheme={(t) => setThemeMode(t)} reload={reload}
+              customers={data?.customers ?? []} notes={data?.notes ?? []} customFields={data?.customFields ?? []} />
+          ) : null}
+        </Suspense>
+        {!data && view !== "help" && view !== "settings" ? (
+          <p style={{ padding: 24, color: "var(--text-muted)" }}>正在加载数据…</p>
+        ) : null}
+      </LayoutFrame>
 
-      <div className="main">
-        <header className="topbar">
-          <TopSearch onSelect={onSearchSelect} />
-          <div className="topbar-version-chip" title={`媒电通工作台 v${APP_VERSION} · 本地优先工作台`}>v{APP_VERSION}</div>
-        </header>
-
-        <main className="content">
-          <Suspense fallback={
-            <div style={{ padding: 24 }}>
-              <div style={{ height: 32, width: 200, background: "var(--surface-2)", borderRadius: 6, marginBottom: 16, animation: "pulse 1.2s infinite" }} />
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 16 }}>
-                {[0,1,2,3].map((i) => <div key={i} style={{ height: 80, background: "var(--surface-2)", borderRadius: 8, animation: "pulse 1.2s infinite" }} />)}
-              </div>
-              <div style={{ height: 200, background: "var(--surface-2)", borderRadius: 8, animation: "pulse 1.2s infinite" }} />
-            </div>
-          }>
-            {view === "today" && data ? (
-              <Today customers={data.customers} deals={data.deals} payments={data.payments} cps={data.cps}
-                objectives={data.objectives} tasks={data.tasks} milestones={data.milestones}
-                reload={reload} openQuick={() => setShowQuick(true)} goCrm={goCrm} onNavigate={(v) => setView(v as View)} />
-            ) : null}
-            {view === "cockpit" ? (
-              <Cockpit customers={data?.customers ?? []} deals={data?.deals ?? []}
-                payments={data?.payments ?? []} tasks={data?.tasks ?? []}
-                onDataChange={reload} onNavigate={(v) => setView(v as View)} />
-            ) : null}
-            {view === "crm" && data ? (
-              <CRM customers={data.customers} contacts={data.contacts} rels={data.rels} deals={data.deals}
-                contracts={data.contracts} payments={data.payments} cps={data.cps} tasks={data.tasks}
-                              reload={reload} focusCustomerId={focusCid} customFields={data.customFields} />
-            ) : null}
-            {view === "work" && data ? (
-              <Work tasks={data.tasks} objectives={data.objectives} customers={data.customers} reload={reload} goCrm={goCrm} />
-            ) : null}
-            {view === "dev" && data ? (
-              <Dev deals={data.deals} customers={data.customers} pitches={data.pitches} reload={reload} />
-            ) : null}
-            {view === "media" && data ? (
-              <Media suppliers={data.suppliers} resources={data.resources} ratecards={data.ratecards}
-                items={data.items} postbuys={data.postbuys} customers={data.customers} influencers={data.influencers} reload={reload} />
-            ) : null}
-            {view === "gantt" ? (
-              <GanttPlanner items={data?.items ?? []} resources={data?.resources ?? []} />
-            ) : null}
-            {view === "kb" && data ? (
-              <Kb notes={data.notes} reload={reload} focusId={kbFocus} />
-            ) : null}
-            {view === "data" && data ? (
-              <Data contracts={data.contracts} payments={data.payments} deals={data.deals} items={data.items} baselines={data.baselines} postbuys={data.postbuys} resources={data.resources} tasks={data.tasks} reload={reload} />
-            ) : null}
-            {view === "growth" && data ? (
-              <Growth tasks={data.tasks} payments={data.payments} pitches={data.pitches} cps={data.cps} contracts={data.contracts} reload={reload} />
-            ) : null}
-            {view === "notifications" && data ? (
-              <Notifications customers={data.customers} payments={data.payments} cps={data.cps} goCrm={goCrm} reload={reload} notificationsReadAt={data.notificationsReadAt} />
-            ) : null}
-            {view === "help" ? <Help /> : null}
-            {view === "builder" ? <BuilderPage initialPageUid={builderPageUid} /> : null}
-            {view === "mypages" ? <MyPagesPage /> : null}
-            {view === "workflows" ? <WorkflowsPage /> : null}
-            {view === "collections" ? <CollectionsPage /> : null}
-            {view === "audit" ? <AuditPage /> : null}
-            {view === "aistaff" ? <AIStaffPage /> : null}
-            {view === "settings" ? (
-              <SettingsPage theme={resolvedTheme} setTheme={switchTheme} reload={reload}
-                customers={data?.customers ?? []} notes={data?.notes ?? []} customFields={data?.customFields ?? []} />
-            ) : null}
-          </Suspense>
-          {!data && view !== "help" && view !== "settings" ? <p className="muted" style={{ padding: 24 }}>正在加载数据…</p> : null}
-        </main>
-      </div>
-
+      {/* 浮层（在 LayoutFrame 外，不被布局裁剪） */}
       <QuickCapture open={showQuick} onClose={() => setShowQuick(false)} reload={reload} customers={data?.customers ?? []} />
       {flowForm ? (
         <Modal title={flowForm.id ? "编辑记录" : "新增记录"} onClose={() => setFlowForm(null)}
@@ -502,8 +362,8 @@ export default function App() {
           <p>已发现新版本 v{updateVer}，重启后将自动完成更新。</p>
         </Modal>
       ) : null}
-      <AIAssistant currentPage={NAV.find((n) => n.key === view)?.label ?? view} />
+      <AIAssistant currentPage={view} />
       {toast.node}
-    </div>
+    </>
   );
 }

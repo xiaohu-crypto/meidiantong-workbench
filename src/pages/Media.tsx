@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { PageActionBar } from "../components/ui/PageActionBar";
 import { db } from "../db/db";
 import type { Customer, Influencer, MediaResource, PostBuy, PricePoint, RateCard, ScheduleItem, Supplier } from "../types";
 import { Btn, Chip, Field, Modal, money, uid, useToast } from "../ui/common";
@@ -299,7 +300,7 @@ export default function Media(props: Props) {
 
   return (
     <div>
-      <div className="page-head">
+      <div className="page-head" style={{display:"none"}}>
         <div><h1>媒介资源</h1><div className="date">资源档案 / 达人库 / 自助报价 / 售后数据</div></div>
         <div className="actions">
           <Btn kind="ghost" onClick={exportScheduleQuote}>导出排期报价单</Btn>

@@ -1,0 +1,37 @@
+{
+  "query": "三色分工",
+  "signature": {
+    "ground": null,
+    "typeVoice": null,
+    "imageWorld": null,
+    "layoutLogic": null,
+    "colorStrategy": "tri-role",
+    "motionVoice": null
+  },
+  "why": {
+    "ground": "query 没给这一维的信号 —— 由你按内容定",
+    "typeVoice": "query 没给这一维的信号 —— 由你按内容定",
+    "imageWorld": "query 没给这一维的信号 —— 由你按内容定",
+    "layoutLogic": "query 没给这一维的信号 —— 由你按内容定",
+    "colorStrategy": "你指定的",
+    "motionVoice": "query 没给这一维的信号 —— 由你按内容定"
+  },
+  "open": [
+    "ground",
+    "typeVoice",
+    "imageWorld",
+    "layoutLogic",
+    "motionVoice"
+  ],
+  "divergence": {
+    "vsRecent": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "min": 0,
+    "require": 3
+  }
+}

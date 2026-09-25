@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { PageActionBar } from "../components/ui/PageActionBar";
 import { db } from "../db/db";
 import { weightedValue } from "../core/metrics";
 import type { Baseline, Contract, Deal, Payment, ScheduleItem, PostBuy, Task } from "../types";
@@ -40,7 +41,7 @@ export default function Data(props: Props) {
   const { show, node } = useToast();
   const [metric, setMetric] = useState<Metric>("签约额");
   const [bl, setBl] = useState({ dimension: "", metric: "", value: "" });
-  const [dashTab, setDashTab] = useState<"dashboard" | "detail">("dashboard");
+  const [dashTab, setDashTab] = useState<"dashboard" | "detail">("detail");
   const [activeDashTab, setActiveDashTab] = useState("main");
   /* P4 仪表盘布局:从 settings.dashboards 合并默认 */
   const [dashboard, setDashboard] = useState<DashboardDef>(DEFAULT_DASHBOARD);
@@ -222,13 +223,10 @@ export default function Data(props: Props) {
 
   return (
     <div>
-      <div className="page-head">
+      <div className="page-head" style={{display:"none"}}>
         <div><h1>数据报表</h1><div className="date">经营分析仪表盘 · 自动汇总客户与商机数据</div></div>
       </div>
-      <div className="tabs">
-        <span className={"tab" + (dashTab === "dashboard" ? " active" : "")} onClick={() => setDashTab("dashboard")}>仪表盘</span>
-        <span className={"tab" + (dashTab === "detail" ? " active" : "")} onClick={() => setDashTab("detail")}>详细报表</span>
-      </div>
+      
       {contracts.length === 0 && activeDeals.length === 0 && payments.length === 0 ? (
         <div className="empty-state">
           <div className="es-icon">&#128202;</div>
@@ -255,7 +253,7 @@ export default function Data(props: Props) {
         </div>
       ) : (
         <>
-          <div className="page-head">
+          <div className="page-head" style={{display:"none"}}>
             <div className="date">口径可切换(签约额/回款/毛利)· 基准值表让数据可解读 · 演示口径:合同签约额</div>
             <div className="actions">
               <select className="sel" value={metric} onChange={(e) => setMetric(e.target.value as Metric)}>
@@ -265,99 +263,97 @@ export default function Data(props: Props) {
             </div>
           </div>
 
-          <div className="kpis" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 16 }}>
-            <div className="kpi card-pad card"><div className="muted" style={{ fontSize: "var(--text-xs)" }}>累计签约额</div><div style={{ fontSize: 22, fontWeight: 750 }} className="num">{money(kpiSign)}</div><div className="cell-sub">合同口径<span dangerouslySetInnerHTML={{ __html: momArrow(vals[5], vals[4]) }} /></div></div>
-            <div className="kpi card-pad card"><div className="muted" style={{ fontSize: "var(--text-xs)" }}>已收回款</div><div style={{ fontSize: 22, fontWeight: 750 }} className="num">{money(kpiPaid)}</div><div className="cell-sub">回款率(到期口径)<span className="num"> {collectRate}%</span></div></div>
-            <div className="kpi card-pad card"><div className="muted" style={{ fontSize: "var(--text-xs)" }}>综合毛利率</div><div style={{ fontSize: 22, fontWeight: 750 }} className="num">{marginRate}%</div><div className="cell-sub">含所有签约商机的(签约额-媒体成本)/签约额</div></div>
-            <div className="kpi card-pad card"><div className="muted" style={{ fontSize: "var(--text-xs)" }}>在途加权商机</div><div style={{ fontSize: 22, fontWeight: 750 }} className="num">{money(weighted)}</div><div className="cell-sub">{activeDeals.length} 个商机</div></div>
-          </div>
+          {/* 金融Dashboard风格：左大卡 + 中4格 + 右柱状图 */}
+          <div style={{ display: "grid", gridTemplateColumns: "4fr 4fr 4fr", gap: 16, marginBottom: 16 }}>
+            {/* 左侧大卡：总签约额 */}
+            <div style={{ background: "var(--bg-surface)", borderRadius: "24px", padding: 28, border: "1px solid var(--border-subtle)", boxShadow: "var(--shadow-card)" }}>
+              <div style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 700 }}>累计签约额</div>
+              <div style={{ fontSize: 36, fontWeight: 900, fontFamily: "ui-monospace,monospace", marginTop: 8, letterSpacing: "-1px" }} className="num">{money(kpiSign)}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10, fontSize: 12, fontWeight: 700, color: "var(--status-success)" }}>
+                <span>↑ {vals[5] && vals[4] ? Math.round(((vals[5]-vals[4])/Math.max(vals[4],1))*100) : 0}%</span>
+                <span style={{ color: "var(--text-muted)", fontWeight: 500 }}>较上月</span>
+              </div>
+              <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+                <button onClick={() => window.dispatchEvent(new CustomEvent("nav", { detail: "crm" }))} style={{ flex: 1, padding: "10px 0", borderRadius: "12px", border: "none", background: "var(--text-primary)", color: "var(--bg-surface)", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>去签客户</button>
+                <button onClick={exportReport} style={{ flex: 1, padding: "10px 0", borderRadius: "12px", border: "1px solid var(--border-subtle)", background: "transparent", color: "var(--text-primary)", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>导出报告</button>
+              </div>
+            </div>
 
-          <div className="card card-pad" style={{ marginBottom: 16 }}>
-            <div className="h-row"><span className="h-title sm">{metric}趋势(近 6 个月)</span><Chip kind="data" style={{ marginLeft: "auto" }}>青=数据系列</Chip></div>
-            <div style={{ display: "flex", alignItems: "flex-end", gap: 14, height: 160, padding: "12px 4px 0" }}>
-              {months.map((m, i) => (
-                <div key={m} style={{ flex: 1, textAlign: "center" }}>
-                  <div style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)", marginBottom: 4 }} className="num">{vals[i] ? money(vals[i]).replace("¥", "") : "—"}</div>
-                  <div style={{ height: Math.max(4, (vals[i] / maxV) * 110), background: i === 5 ? "var(--brand)" : "var(--chart-1)", borderRadius: "6px 6px 0 0", opacity: i === 5 ? 1 : .85 }} />
-                  <div style={{ fontSize: "var(--text-xs)", color: "var(--ink-4)", marginTop: 6 }}>{m.slice(5)}月</div>
-                </div>
-              ))}
+            {/* 中间2x2四格 */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ background: "var(--brand-primary)", borderRadius: "20px", padding: 20, color: "#fff" }}>
+                <div style={{ fontSize: 11, opacity: 0.9, fontWeight: 700 }}>已收回款</div>
+                <div style={{ fontSize: 22, fontWeight: 900, fontFamily: "ui-monospace,monospace", marginTop: 6 }} className="num">{money(kpiPaid)}</div>
+                <div style={{ fontSize: 10, opacity: 0.8, marginTop: 4, fontWeight: 600 }}>回款率 {collectRate}%</div>
+              </div>
+              <div style={{ background: "var(--bg-surface)", borderRadius: "20px", padding: 20, border: "1px solid var(--border-subtle)" }}>
+                <div style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 700 }}>综合毛利率</div>
+                <div style={{ fontSize: 22, fontWeight: 900, fontFamily: "ui-monospace,monospace", marginTop: 6, color: "var(--text-primary)" }}>{marginRate}%</div>
+                <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 4, fontWeight: 600 }}>签约-成本/签约</div>
+              </div>
+              <div style={{ background: "var(--bg-surface)", borderRadius: "20px", padding: 20, border: "1px solid var(--border-subtle)" }}>
+                <div style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 700 }}>在途商机</div>
+                <div style={{ fontSize: 22, fontWeight: 900, fontFamily: "ui-monospace,monospace", marginTop: 6, color: "var(--text-primary)" }} className="num">{money(weighted)}</div>
+                <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 4, fontWeight: 600 }}>{activeDeals.length} 个商机</div>
+              </div>
+              <div style={{ background: "var(--bg-surface)", borderRadius: "20px", padding: 20, border: "1px solid var(--border-subtle)" }}>
+                <div style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 700 }}>合同总数</div>
+                <div style={{ fontSize: 22, fontWeight: 900, fontFamily: "ui-monospace,monospace", marginTop: 6, color: "var(--text-primary)" }}>{contracts.length}</div>
+                <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 4, fontWeight: 600 }}>已签合同</div>
+              </div>
+            </div>
+
+            {/* 右侧柱状图 */}
+            <div style={{ background: "var(--bg-surface)", borderRadius: "24px", padding: 24, border: "1px solid var(--border-subtle)", boxShadow: "var(--shadow-card)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontSize: 13, fontWeight: 900, color: "var(--text-primary)" }}>{metric}趋势</div>
+                <select value={metric} onChange={(e) => setMetric(e.target.value as Metric)} style={{ fontSize: 10, border: "1px solid var(--border-subtle)", borderRadius: 8, padding: "4px 8px", background: "var(--bg-app)", color: "var(--text-secondary)" }}>
+                  <option>签约额</option><option>回款</option><option>毛利</option>
+                </select>
+              </div>
+              <div style={{ display: "flex", alignItems: "flex-end", gap: 10, height: 140, marginTop: 16, paddingTop: 8 }}>
+                {months.map((m, i) => (
+                  <div key={m} style={{ flex: 1, textAlign: "center" }}>
+                    <div style={{ fontSize: 9, color: "var(--text-muted)", marginBottom: 4, fontFamily: "ui-monospace,monospace" }}>{vals[i] ? Math.round(vals[i]/10000) + "w" : ""}</div>
+                    <div style={{ height: Math.max(4, (vals[i] / Math.max(maxV,1)) * 90), background: i === 5 ? "var(--brand-primary)" : "var(--chart-1, #FF6B4A33)", borderRadius: "4px 4px 0 0" }} />
+                    <div style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 4 }}>{m.slice(5)}月</div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
-          <div className="card card-pad" style={{ marginBottom: 16 }}>
-            <div className="h-row"><span className="h-title sm">商机漏斗</span><Chip kind="data" style={{ marginLeft: "auto" }}>各阶段数量</Chip></div>
-            {(() => {
-              const stages = ["线索", "MQL", "SQL", "商机", "报价", "谈判", "签约"];
-              const counts = stages.map((st) => props.deals.filter((d) => !d.deletedAt && d.stage === st).length);
-              const maxC = Math.max(...counts, 1);
-              const lost = props.deals.filter((d) => !d.deletedAt && (d.stage === "输单" || d.stage === "流失")).length;
-              return (
-                <div style={{ padding: "12px 0" }}>
-                  {stages.map((st, i) => (
-                    <div key={st} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                      <div style={{ width: 40, fontSize: 12, color: "var(--ink-3)", textAlign: "right" }}>{st}</div>
-                      <div style={{ flex: 1, background: "var(--surface-2)", borderRadius: 4, overflow: "hidden" }}>
-                        <div style={{ width: (counts[i] / maxC) * 100 + "%", background: i === stages.length - 1 ? "var(--success)" : "var(--chart-1)", height: 22, display: "flex", alignItems: "center", paddingLeft: 6, fontSize: 11, color: "var(--ink)", fontWeight: 600 }}>
-                          {counts[i]}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, fontSize: 12, color: "var(--ink-3)" }}>
-                    <div style={{ width: 40, textAlign: "right" }}>输单</div>
-                    <div style={{ flex: 1, color: "var(--danger)" }}>{lost} 个</div>
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-
-          <div className="card card-pad" style={{ marginBottom: 16 }}>
-            <div className="h-row"><span className="h-title sm">投放ROI看板</span><Chip kind="data" style={{ marginLeft: "auto" }}>售后数据口径</Chip></div>
-            {(() => {
-              const pbs = (props.postbuys ?? []).filter((p) => !p.deletedAt);
-              if (pbs.length === 0) return <p className="muted" style={{ padding: 12 }}>暂无投后数据,去媒介页录入售后数据</p>;
-              const resName = (id: string) => (props.resources ?? []).find((r) => r.id === id)?.name ?? id;
-              return (
-                <table className="tgrid">
-                  <thead><tr><th>媒体资源</th><th>月份</th><th>曝光</th><th>CPM</th><th>ROI</th><th>CTR</th></tr></thead>
-                  <tbody>
-                    {pbs.slice(-10).reverse().map((pb: PostBuy) => (
-                      <tr key={pb.id}>
-                        <td style={{ fontWeight: 600 }}>{resName(pb.resourceId)}</td>
-                        <td>{pb.month}</td>
-                        <td className="num">{pb.actualImpression.toLocaleString()}</td>
-                        <td className="num">¥{pb.cpm}</td>
-                        <td className="num" style={{ color: pb.roi >= 1 ? "var(--success)" : "var(--danger)", fontWeight: 700 }}>{pb.roi}x</td>
-                        <td className="num">{pb.ctr ? pb.ctr + "%" : "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              );
-            })()}
-          </div>
-
-          <div className="card card-pad">
-            <div className="h-row"><span className="h-title sm">行业基准值表</span><button className="btn ghost sm" style={{ marginLeft: "auto" }} onClick={() => window.print()}>导出PDF</button><Chip gray style={{ marginLeft: "auto" }}>可维护 · 图表解读依据</Chip></div>
+          {/* 底部：最近活动表格 */}
+          <div style={{ background: "var(--bg-surface)", borderRadius: "24px", padding: 24, border: "1px solid var(--border-subtle)", boxShadow: "var(--shadow-card)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 900, color: "var(--text-primary)" }}>最近经营活动</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <div style={{ padding: "6px 14px", borderRadius: 999, background: "var(--bg-app)", border: "1px solid var(--border-subtle)", fontSize: 11, color: "var(--text-secondary)" }}>🔍 搜索</div>
+              </div>
+            </div>
             <table className="tgrid">
-              <thead><tr><th>行业/维度</th><th>指标</th><th>基准值</th><th>来源</th></tr></thead>
+              <thead><tr><th>项目</th><th>类型</th><th>金额</th><th>状态</th><th>日期</th></tr></thead>
               <tbody>
-                {baselines.map((b) => (
-                  <tr key={b.id} style={{ cursor: "default" }}>
-                    <td style={{ fontWeight: 600 }}>{b.dimension}</td><td>{b.metric}</td>
-                    <td className="num" style={{ fontWeight: 650 }}>{b.value}</td><td className="cell-sub">{b.source}</td>
+                {contracts.slice(-5).reverse().map((c: Contract) => (
+                  <tr key={c.id}>
+                    <td style={{ fontWeight: 700 }}>{c.name}</td>
+                    <td>合同</td>
+                    <td className="num">{money(c.amount)}</td>
+                    <td><span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700, background: "var(--status-success-bg)", color: "var(--status-success)" }}>已签</span></td>
+                    <td style={{ color: "var(--text-muted)", fontSize: 11 }}>{c.signedAt?.slice(0,10) ?? "—"}</td>
+                  </tr>
+                ))}
+                {payments.slice(-3).reverse().map((p: Payment) => (
+                  <tr key={p.id}>
+                    <td style={{ fontWeight: 700 }}>{p.name}</td>
+                    <td>回款</td>
+                    <td className="num" style={{ color: "var(--status-success)", fontWeight: 700 }}>{money(p.amount)}</td>
+                    <td><span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700, background: "var(--status-success-bg)", color: "var(--status-success)" }}>已收</span></td>
+                    <td style={{ color: "var(--text-muted)", fontSize: 11 }}>{p.date?.slice(0,10) ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <div className="field-row" style={{ marginTop: 10 }}>
-              <Field label="行业/维度"><input className="inp" style={{ width: "100%" }} value={bl.dimension} onChange={(e) => setBl({ ...bl, dimension: e.target.value })} /></Field>
-              <Field label="指标"><input className="inp" style={{ width: "100%" }} value={bl.metric} onChange={(e) => setBl({ ...bl, metric: e.target.value })} /></Field>
-            </div>
-            <Field label="基准值(如 ¥45-70 / ≥1:2.5)"><input className="inp num" style={{ width: "100%" }} value={bl.value} onChange={(e) => setBl({ ...bl, value: e.target.value })} /></Field>
-            <Btn kind="data" onClick={() => { void addBaseline(); }}>保存基准值</Btn>
           </div>
         </>
       )}
@@ -365,5 +361,5 @@ export default function Data(props: Props) {
       )}
       {node}
     </div>
-  );
+  )
 }

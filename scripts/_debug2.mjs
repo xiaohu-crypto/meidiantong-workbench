@@ -1,0 +1,11 @@
+import { chromium } from "playwright";
+const b = await chromium.launch();
+const p = await b.newPage();
+p.on("pageerror", e => console.log("PAGEERR:", e.message));
+p.on("console", m => { if (m.type()==='error') console.log("ERR:", m.text()); });
+await p.goto("http://localhost:8927/index.html", { waitUntil: "networkidle" });
+await p.waitForTimeout(1000);
+const title = await p.evaluate(() => document.getElementById('tbTitle').textContent);
+const content = await p.evaluate(() => document.getElementById('content').innerHTML.length);
+console.log("title:", title, "content len:", content);
+await b.close();

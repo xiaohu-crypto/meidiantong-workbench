@@ -1,4 +1,5 @@
 // File: src/components/ui/Metric.tsx
+// Finexy v0.2.3 · 断层式大字阶 text-4xl + p-9
 
 interface Trend {
   value: string;
@@ -14,13 +15,6 @@ interface MetricProps {
   className?: string;
 }
 
-/**
- * 高密度数字指标卡。
- * @param label   指标名（如：在途商机）
- * @param value   主数值（等宽字体渲染，如：¥461,000）
- * @param trend   趋势对象 { value: '12.3%', isPositive: boolean, text: '较上周' }
- * @param variant danger 时数值强制使用状态红
- */
 export default function Metric({
   label,
   value,
@@ -34,40 +28,41 @@ export default function Metric({
   return (
     <div
       className={[
-        "rounded-[var(--radius-xl)] border border-[color:var(--border-subtle)]",
-        "bg-[var(--bg-surface)] p-5 shadow-[var(--shadow-card)]",
+        "group overflow-hidden rounded-[var(--radius-xl)] border border-[color:var(--border-subtle)]",
+        "bg-[var(--bg-surface)] p-9 shadow-[var(--shadow-card)] flex flex-col justify-between",
         className,
       ].join(" ")}
     >
-      <p className="text-xs font-medium uppercase tracking-wide text-[color:var(--text-muted)]">
-        {label}
-      </p>
-
-      <p
-        className={[
-          "mt-2 font-mono text-3xl font-bold tracking-tight tabular-nums",
-          isDanger
-            ? "text-[color:var(--status-danger)]"
-            : "text-[color:var(--text-primary)]",
-        ].join(" ")}
-      >
-        {value}
-      </p>
+      <div>
+        <p className="text-[10px] font-extrabold uppercase tracking-wider text-[color:var(--text-secondary)]">
+          {label}
+        </p>
+        <p
+          className={[
+            "mt-2 font-mono text-4xl font-black tracking-tight tabular-nums",
+            isDanger
+              ? "text-[color:var(--status-danger)]"
+              : "text-[color:var(--text-primary)]",
+          ].join(" ")}
+        >
+          {value}
+        </p>
+      </div>
 
       {trend && (
-        <div className="mt-3 flex items-baseline gap-1.5">
+        <div className="mt-5 flex items-center gap-2 text-[11px] font-bold">
           <span
             className={[
-              "text-xs font-semibold",
+              "inline-flex items-center rounded-[var(--radius-md)] px-2 py-0.5 font-mono",
               trendUp
-                ? "text-[color:var(--status-success)]"
-                : "text-[color:var(--status-danger)]",
+                ? "bg-[var(--status-success-bg)] text-[color:var(--status-success)]"
+                : "bg-[var(--status-danger-bg)] text-[color:var(--status-danger)]",
             ].join(" ")}
           >
-            {trendUp ? "↑" : "↓"} {trend.value}
+            {trend.value}
           </span>
           {trend.text && (
-            <span className="text-xs text-[color:var(--text-muted)]">{trend.text}</span>
+            <span className="font-medium text-[color:var(--text-muted)]">{trend.text}</span>
           )}
         </div>
       )}

@@ -1,0 +1,32 @@
+{
+  "query": "深度提炼媒电通工作台APP全部功能（首页/客户管理/商机管理/任务看板/媒介资源排期甘特图/数据报表/知识库/工作流/数据表/系统设置等14个模块），按照Finexy Finance Dashboard原型的CSS变量和布局结构（240px侧边栏+64px顶部栏+24px大圆角卡片+36px等宽大数字+珊瑚橙#FF5A36点缀色+白底浅灰#F7F9FB背景），做一整套第二个版本的设计图，包含所有14个页面的完整布局，先出设计图等老板确认后再开发",
+  "signature": {
+    "ground": "paper",
+    "typeVoice": "sans-cool",
+    "imageWorld": "graphic-abstract",
+    "layoutLogic": null,
+    "colorStrategy": "tri-role",
+    "motionVoice": null
+  },
+  "why": {
+    "ground": "语义命中 1 个线索",
+    "typeVoice": "语义命中 1 个线索",
+    "imageWorld": "语义命中 2 个线索",
+    "layoutLogic": "query 没给这一维的信号 —— 由你按内容定",
+    "colorStrategy": "语义命中 1 个线索",
+    "motionVoice": "query 没给这一维的信号 —— 由你按内容定"
+  },
+  "open": [
+    "layoutLogic",
+    "motionVoice"
+  ],
+  "divergence": {
+    "vsRecent": [
+      1,
+      1,
+      0
+    ],
+    "min": 0,
+    "require": 3
+  }
+}

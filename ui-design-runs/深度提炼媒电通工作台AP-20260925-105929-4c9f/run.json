@@ -1,0 +1,169 @@
+{
+  "version": 1,
+  "created": "2026-09-25T10:59:29",
+  "query": "深度提炼媒电通工作台APP全部功能（首页/客户管理/商机管理/任务看板/媒介资源排期甘特图/数据报表/知识库/工作流/数据表/系统设置等14个模块），按照Finexy Finance Dashboard原型的CSS变量和布局结构（240px侧边栏+64px顶部栏+24px大圆角卡片+36px等宽大数字+珊瑚橙#FF5A36点缀色+白底浅灰#F7F9FB背景），做一整套第二个版本的设计图，包含所有14个页面的完整布局，先出设计图等老板确认后再开发",
+  "contract": {
+    "query": "深度提炼媒电通工作台APP全部功能（首页/客户管理/商机管理/任务看板/媒介资源排期甘特图/数据报表/知识库/工作流/数据表/系统设置等14个模块），按照Finexy Finance Dashboard原型的CSS变量和布局结构（240px侧边栏+64px顶部栏+24px大圆角卡片+36px等宽大数字+珊瑚橙#FF5A36点缀色+白底浅灰#F7F9FB背景），做一整套第二个版本的设计图，包含所有14个页面的完整布局，先出设计图等老板确认后再开发",
+    "artifactClass": "web",
+    "surface": "web-console",
+    "provenance": "explicit",
+    "operation": "create",
+    "handoff": [
+      "html",
+      "doc"
+    ],
+    "count": {
+      "unit": "模块",
+      "n": null,
+      "mode": "target",
+      "source": "载体默认"
+    },
+    "canvas": {
+      "w": 1440,
+      "h": 900,
+      "source": "载体默认"
+    },
+    "ledger": [
+      {
+        "kind": "色值",
+        "value": "#FF5A36",
+        "block": true
+      },
+      {
+        "kind": "色值",
+        "value": "#F7F9FB",
+        "block": true
+      },
+      {
+        "kind": "必须",
+        "value": "所有14个页面的完整布局",
+        "block": false
+      }
+    ],
+    "attachments": [],
+    "skeleton": "console",
+    "title": "深度提炼媒电通工作台APP全部功能（首页… · 设计方案",
+    "workdir": "D:\\HaLeMa\\Documents\\媒电通工作台\\code\\meidiantong-workbench\\ui-design-runs\\深度提炼媒电通工作台AP-20260925-105929-4c9f",
+    "deliverables": {
+      "doc": {
+        "proposal": "doc/proposal.xml",
+        "canvases": [
+          "doc/canvas-a.html",
+          "doc/canvas-b.html"
+        ],
+        "cover": "doc/cover.html",
+        "coverImage": "shots/cover.jpg",
+        "required": true,
+        "note": "设计思路、设计想法、设计语言、为什么这么设计；窄栏排版画布，像一份印出来的专题"
+      },
+      "product": {
+        "path": "console/index.html",
+        "profile": "web-console",
+        "required": true,
+        "shape": null,
+        "h5Shape": null,
+        "note": "B 端控制台：表格 + 筛选 + 弹窗 + 空/异常状态，1440 与 1920 两档"
+      }
+    },
+    "assetPlan": [
+      {
+        "role": "hero-bg",
+        "how": "image_gen",
+        "slot": "full-bleed",
+        "why": "首屏满版氛围，文字压在上面"
+      },
+      {
+        "role": "icon-set",
+        "how": "svg",
+        "slot": "inline",
+        "why": "图标必须用 SVG——生图出不了透明底"
+      },
+      {
+        "role": "texture",
+        "how": "css",
+        "slot": "layer",
+        "why": "底纹用 CSS 画，不占素材预算"
+      },
+      {
+        "role": "data-visual",
+        "how": "svg",
+        "slot": "layer",
+        "why": "图表用 SVG 画——生图画不了精确数字"
+      },
+      {
+        "role": "number-plate",
+        "how": "css",
+        "slot": "layer",
+        "why": "巨数字版面用 CSS，字要能选中"
+      },
+      {
+        "role": "material-detail",
+        "how": "image_gen",
+        "slot": "full-bleed",
+        "why": "材质微距通栏"
+      },
+      {
+        "role": "scene-01",
+        "how": "image_gen",
+        "slot": "full-bleed",
+        "why": "使用场景，主体在画面里"
+      }
+    ],
+    "minVisualAssets": 8,
+    "frozen": "2026-09-25T10:59:30",
+    "hash": "4f3896c31c6bbf6c"
+  },
+  "style": {
+    "query": "深度提炼媒电通工作台APP全部功能（首页/客户管理/商机管理/任务看板/媒介资源排期甘特图/数据报表/知识库/工作流/数据表/系统设置等14个模块），按照Finexy Finance Dashboard原型的CSS变量和布局结构（240px侧边栏+64px顶部栏+24px大圆角卡片+36px等宽大数字+珊瑚橙#FF5A36点缀色+白底浅灰#F7F9FB背景），做一整套第二个版本的设计图，包含所有14个页面的完整布局，先出设计图等老板确认后再开发",
+    "signature": {
+      "ground": "paper",
+      "typeVoice": "sans-cool",
+      "imageWorld": "graphic-abstract",
+      "layoutLogic": null,
+      "colorStrategy": "tri-role",
+      "motionVoice": null
+    },
+    "why": {
+      "ground": "语义命中 1 个线索",
+      "typeVoice": "语义命中 1 个线索",
+      "imageWorld": "语义命中 2 个线索",
+      "layoutLogic": "query 没给这一维的信号 —— 由你按内容定",
+      "colorStrategy": "语义命中 1 个线索",
+      "motionVoice": "query 没给这一维的信号 —— 由你按内容定"
+    },
+    "open": [
+      "layoutLogic",
+      "motionVoice"
+    ],
+    "divergence": {
+      "vsRecent": [
+        1,
+        1,
+        0
+      ],
+      "min": 0,
+      "require": 3
+    }
+  },
+  "receipts": {
+    "shot": [],
+    "observe": [],
+    "check": [
+      {
+        "ts": "2026-09-25T11:06:06",
+        "profile": "web-console",
+        "target": "console/index.html",
+        "sha": {
+          "console/index.html": "dc98be4c28f9"
+        },
+        "block": [],
+        "report": [],
+        "assetCount": null,
+        "passed": true
+      }
+    ],
+    "publish": [],
+    "read": []
+  },
+  "delivery": null
+}

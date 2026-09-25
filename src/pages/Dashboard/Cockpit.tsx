@@ -185,6 +185,10 @@ export default function Cockpit({
     [overdue.length]
   );
 
+  // —— WIP 限额红线告警：在途商机 > 5 触发单兵负载超载 ——
+  const WIP_LIMIT = 5;
+  const isOverWip = inFlight.length > WIP_LIMIT;
+
   // —— 操作状态 ——
   const [followed, setFollowed] = useState<Set<string>>(new Set());
   const [followBusy, setFollowBusy] = useState<string | null>(null);
@@ -224,21 +228,31 @@ export default function Cockpit({
   }
 
   return (
-    <div className="mx-auto max-w-[1440px] px-6 py-6">
+    <div className="mx-auto max-w-[1440px] px-6 py-6 animate-fade-in">
       {/* 页面头部 */}
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[color:var(--text-primary)]">
+          <h1 className="text-2xl font-black tracking-tight text-[color:var(--text-primary)]">
             今日驾驶舱
           </h1>
-          <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
+          <p className="mt-1 text-sm font-medium text-[color:var(--text-secondary)]">
             {todayLabel} · 数据来自本地 IndexedDB 实时聚合
           </p>
         </div>
-        <StatusPill
-          type={overdue.length > 0 ? "danger" : "success"}
-          text={overdue.length > 0 ? `存在 ${overdue.length} 笔逾期` : "回款健康"}
-        />
+        <div className="flex items-center gap-2">
+          {isOverWip && (
+            <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-[var(--status-danger-bg)] px-3 py-1">
+              <span className="status-dot h-1.5 w-1.5 rounded-full bg-[var(--status-danger)]" />
+              <span className="text-[10px] font-bold text-[color:var(--status-danger)]">
+                WIP 超载：在途 {inFlight.length} 笔 / 上限 {WIP_LIMIT}
+              </span>
+            </div>
+          )}
+          <StatusPill
+            type={overdue.length > 0 ? "danger" : "success"}
+            text={overdue.length > 0 ? `存在 ${overdue.length} 笔逾期` : "回款健康"}
+          />
+        </div>
       </header>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-10">
@@ -336,6 +350,7 @@ export default function Cockpit({
         <aside className="lg:col-span-3">
           <Card
             title="今日待办"
+            isDangerWip={isOverWip}
             extra={
               <Button size="sm" variant="ghost" onClick={() => onNavigate?.("work")}>
                 查看全部

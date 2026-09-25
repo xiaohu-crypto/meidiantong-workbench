@@ -1,42 +1,78 @@
-﻿:root{
-  --brand:#FE2C55; --brand-strong:#FE4566; --brand-soft:rgba(254,44,85,.12);
-  --data:#25F4EE; --data-soft:rgba(37,244,238,.10);
-  --danger:#FF6B6E; --danger-bg:rgba(255,107,110,.10);
-  --success:#2EDB8B; --success-bg:rgba(46,219,139,.10); --warning:#F5B93E; --warning-bg:rgba(245,185,62,.12);
-  --bg:#0E0F13; --surface:#16181D; --surface-2:#1C1E24;
-  --border:#272A31; --border-soft:#20222A;
-  --ink:#F2F3F5; --ink-2:#D5D8DE; --ink-3:#9BA0AA; --ink-4:#6B7078;
-  --chart-1:#25F4EE; --chart-2:#8B7CF6; --chart-3:#5AC8FA; --chart-4:#9BA0AA;
-  /* P1 §双模 Finexy 极简:双层极浅微阴影(对齐 --shadow-card 0 4px 20px + 0 2px 6px) */
-  --shadow-sm:0 1px 2px rgba(0,0,0,.4);
-  --shadow-md:0 6px 20px rgba(0,0,0,.45);
-  --shadow-card:0 4px 20px rgba(0,0,0,.02), 0 2px 6px rgba(0,0,0,.02);
-  /* P1 §双模主题切换平滑过渡曲线 */
-  --animate-theme-switch:all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  --text-xs:12px; --text-sm:13px; --text-base:14px; --text-lg:16px;
-  --text-xl:18px; --text-2xl:20px; --text-3xl:24px; --text-4xl:30px;
+﻿/* File: src/styles/tokens.css
+ * Finexy v0.2.3 双主题设计令牌 —— 全项目变量唯一真源
+ * 旧 --bg/--ink/--brand 体系保留命名，值映射到 Finexy 色板
+ */
+:root,
+html[data-theme="dark"] {
+  /* ── 品牌色：珊瑚橙（替换抖音红） ── */
+  --brand:#FF6B4A; --brand-strong:#FF8366; --brand-soft:rgba(255,107,74,.08);
+  --data:#5AC8FA; --data-soft:rgba(90,200,250,.10);
+
+  /* ── 状态色：低饱和度护眼 ── */
+  --danger:#F87171; --danger-bg:rgba(248,113,113,.10);
+  --success:#34D399; --success-bg:rgba(52,211,153,.08);
+  --warning:#FBBF24; --warning-bg:rgba(251,191,36,.10);
+
+  /* ── 底色：哑光吸光黛蓝黑 ── */
+  --bg:#0A0B10; --surface:#141724; --surface-2:#1A1E2E;
+  --border:rgba(255,255,255,.08); --border-soft:rgba(255,255,255,.04);
+
+  /* ── 文字层级 ── */
+  --ink:#E6EAF2; --ink-2:#C5CAD4; --ink-3:#9AA2B5; --ink-4:#4D5366;
+
+  /* ── 图表色板 ── */
+  --chart-1:#FF6B4A; --chart-2:#8B7CF6; --chart-3:#5AC8FA; --chart-4:#9AA2B5;
+
+  /* ── 阴影：空气悬浮深场 ── */
+  --shadow-sm:0 2px 8px rgba(0,0,0,.3);
+  --shadow-md:0 8px 28px rgba(0,0,0,.35);
+  --shadow-card:0 12px 48px rgba(0,0,0,.45);
+
+  --animate-theme-switch:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── 字阶 ── */
+  --text-xs:11px; --text-sm:12px; --text-base:13px; --text-lg:15px;
+  --text-xl:18px; --text-2xl:22px; --text-3xl:28px; --text-4xl:36px;
+
+  /* ── 间距 ── */
   --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px;
   --sp-6:24px; --sp-8:32px; --sp-12:48px; --sp-16:64px;
-  --r-sm:4px; --r-md:6px; --r-lg:8px; --r-xl:12px; --r-full:999px;
+
+  /* ── 圆角：Finexy 大圆角体系 ── */
+  --r-sm:8px; --r-md:12px; --r-lg:16px; --r-xl:24px; --r-full:999px;
+
   --t-fast:150ms ease; --t-normal:300ms ease;
-  --font:'Inter','PingFang SC','Microsoft YaHei',system-ui,sans-serif;
-  --mono:'JetBrains Mono','SF Mono',Consolas,monospace;
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --mono:'JetBrains Mono','SF Mono',Consolas,ui-monospace,monospace;
 }
-html[data-theme="light"]{
-  --brand:#E01844; --brand-strong:#C01039; --brand-soft:rgba(224,24,68,.08);
+
+html[data-theme="light"] {
+  /* ── 品牌色：战略珊瑚橙 ── */
+  --brand:#FF5A36; --brand-strong:#E04827; --brand-soft:#FFF0ED;
   --data:#0891A8; --data-soft:rgba(8,145,168,.08);
-  --danger:#E11D48; --danger-bg:rgba(225,29,72,.08);
-  --success:#10B981; --success-bg:rgba(16,185,129,.08); --warning:#F59E0B; --warning-bg:rgba(245,158,11,.10);
-  --bg:#F5F6F8; --surface:#FFFFFF; --surface-2:#F7F8FA;
-  --border:#E4E6EB; --border-soft:#EEF0F3;
-  --ink:#17181C; --ink-2:#3A3D44; --ink-3:#7A7F89; --ink-4:#A0A5AF;
-  --chart-1:#0891A8; --chart-2:#8B7CF6; --chart-3:#5AC8FA; --chart-4:#A0A5AF;
-  /* P1 §双模 Finexy 极简:浅色模式双层极浅微阴影(几乎不可见,强呼吸感) */
-  --shadow-sm:0 1px 2px rgba(16,18,24,.05);
-  --shadow-md:0 6px 18px rgba(16,18,24,.08);
-  --shadow-card:0 4px 20px rgba(16,18,24,.02), 0 2px 6px rgba(16,18,24,.02);
-  --animate-theme-switch:all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── 状态色 ── */
+  --danger:#EF4444; --danger-bg:#FEE2E2;
+  --success:#10B981; --success-bg:#E6F4EA;
+  --warning:#F59E0B; --warning-bg:#FEF3C7;
+
+  /* ── 底色：科技淡灰 ── */
+  --bg:#F7F9FB; --surface:#FFFFFF; --surface-2:#F1F3F5;
+  --border:rgba(18,19,26,.08); --border-soft:rgba(18,19,26,.04);
+
+  /* ── 文字层级 ── */
+  --ink:#1A1C23; --ink-2:#3A3D44; --ink-3:#687083; --ink-4:#9CA4B6;
+
+  --chart-1:#FF5A36; --chart-2:#8B7CF6; --chart-3:#5AC8FA; --chart-4:#9CA4B6;
+
+  /* ── 阴影：双层微光软阴影 ── */
+  --shadow-sm:0 1px 3px rgba(18,19,26,.04);
+  --shadow-md:0 4px 16px rgba(18,19,26,.06);
+  --shadow-card:0 4px 24px rgba(18,19,26,.015), 0 12px 36px rgba(18,19,26,.03);
+
+  --animate-theme-switch:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
 body{font-family:var(--font);background:var(--bg);color:var(--ink);font-size:var(--text-base);line-height:1.55;-webkit-font-smoothing:antialiased}
@@ -44,6 +80,30 @@ body{font-family:var(--font);background:var(--bg);color:var(--ink);font-size:var
 .num{font-variant-numeric:tabular-nums}
 button{font-family:inherit;cursor:pointer}
 input,select,textarea{font-family:inherit;color:var(--ink)}
-::-webkit-scrollbar{width:10px;height:10px}
-::-webkit-scrollbar-thumb{background:var(--surface-2);border-radius:var(--r-full)}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:var(--r-full)}
 ::-webkit-scrollbar-track{background:transparent}
+
+/* ── 新变量名别名映射（LayoutFrame/AtomComponents 用）── */
+:root, html[data-theme="dark"] {
+  --bg-app: var(--bg);
+  --bg-surface: var(--surface);
+  --bg-sidebar: var(--surface);
+  --bg-muted: var(--surface-2);
+  --border-subtle: var(--border);
+  --text-primary: var(--ink);
+  --text-secondary: var(--ink-3);
+  --text-muted: var(--ink-4);
+  --brand-primary: var(--brand);
+  --brand-hover: var(--brand-strong);
+  --brand-subtle: var(--brand-soft);
+  --status-success: var(--success);
+  --status-success-bg: var(--success-bg);
+  --status-pending: var(--warning);
+  --status-pending-bg: var(--warning-bg);
+  --status-danger: var(--danger);
+  --status-danger-bg: var(--danger-bg);
+  --radius-xl: var(--r-xl);
+  --radius-lg: var(--r-lg);
+  --radius-md: var(--r-md);
+}

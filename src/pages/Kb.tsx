@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { PageActionBar } from "../components/ui/PageActionBar";
 import { db } from "../db/db";
 import type { Note } from "../types";
 import { Btn, Chip, Field, uid, useToast } from "../ui/common";
@@ -127,7 +128,7 @@ async function askAi() {
 
   return (
     <div>
-      <div className="page-head">
+      <div className="page-head" style={{display:"none"}}>
         <div><h1>知识库</h1><div className="date">PARA 归档 · 双链 [[]] · 版本历史 · 标签检索</div></div>
         <div className="actions">
           <Btn kind={mode === "graph" ? "data" : "ghost"} onClick={() => setMode(mode === "graph" ? "list" : "graph")}>{mode === "graph" ? "列表视图" : "知识图谱"}</Btn>

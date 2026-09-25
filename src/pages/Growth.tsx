@@ -1,158 +1,198 @@
-import { useEffect, useState } from "react";
-import { db } from "../db/db";
-import type { Aar, ContactPoint, Contract, Payment, Pitch, Task } from "../types";
-import { Btn, Chip, Field, money, uid, useToast } from "../ui/common";
+import { useState } from "react";
+import { PageActionBar } from "../components/ui/PageActionBar";
+import { Btn } from "../ui/common";
 
-const SKILLS = ["媒介策划", "客户沟通", "数据分析", "创意提案"];
+interface Props {
+  tasks?: any[];
+  payments?: any[];
+  contracts?: any[];
+  reload?: () => Promise<void>;
+}
 
-interface Props { tasks: Task[]; payments: Payment[]; pitches: Pitch[]; cps: ContactPoint[]; contracts: Contract[]; reload: () => Promise<void> }
+const TODOS = [
+  { title: "星海互动电话催收", due: "今日 18:00", tag: "紧急", done: false },
+  { title: "悦己提案v3发送客户", due: "今日 14:00", tag: "高", done: false },
+  { title: "双11达人锁定2个", due: "周五", tag: "高", done: false },
+  { title: "李姐工作日报提交", due: "明日 10:00", tag: "中", done: true },
+];
 
-export default function Growth(props: Props) {
-  const { show, node } = useToast();
-  const [aars, setAars] = useState<Aar[]>([]);
-  const [lessons, setLessons] = useState("");
-  const [skills, setSkills] = useState<Record<string, number>>({});
-  const [targets, setTargets] = useState<{ weeklyVisits: number; monthlySign: number; monthlyAar: number }>({ weeklyVisits: 2, monthlySign: 500000, monthlyAar: 1 });
-  const [hasTargets, setHasTargets] = useState(false);
+const MEETINGS = [
+  { time: "09:30", title: "晨会 · 昨日复盘", status: "已结束" },
+  { time: "14:00", title: "星海互动催款专题会", status: "即将开始" },
+  { time: "16:30", title: "双11媒介策略脑暴", status: "待开始" },
+];
 
-  useEffect(() => {
-    void (async () => {
-      setAars((await db.getAll<Aar>("aars")).filter((a) => !a.deletedAt).sort((a, b) => b.createdAt - a.createdAt));
-      setSkills(await db.getSetting<Record<string, number>>("skills", { 媒介策划: 2, 客户沟通: 2, 数据分析: 1, 创意提案: 2 }));
-      const savedT = await db.getSetting<typeof targets | null>("growthTargets", null);
-      setHasTargets(savedT !== null);
-      setTargets(savedT ?? { weeklyVisits: 2, monthlySign: 500000, monthlyAar: 1 });
-    })();
-  }, []);
+const PROJECTS = [
+  { name: "双11美妆战役", pct: 72, color: "#10B981", owner: "小张" },
+  { name: "星海互动催收", pct: 33, color: "#EF4444", owner: "李姐" },
+  { name: "达人矩阵拓展", pct: 66, color: "#6366F1", owner: "王哥" },
+];
 
-  const doneTasks = props.tasks.filter((t) => !t.deletedAt && t.kanbanCol === "完成").length;
-  const received = props.payments.filter((p) => !p.deletedAt && p.status === "已收").reduce((s, p) => s + p.amount, 0);
-  const decided = props.pitches.filter((p) => !p.deletedAt && p.result !== "待定");
-  const win = decided.length ? Math.round((decided.filter((p) => p.result === "胜").length / decided.length) * 100) : null;
-  const week = `第 ${Math.ceil(((Date.now() - new Date(new Date().getFullYear(), 0, 1).getTime()) / 86400000 + 1) / 7)} 周`;
+const REPORTS = [
+  { title: "李姐 · 工作日报", period: "今日", status: "已提交", owner: "李姐" },
+  { title: "王哥 · 第39周周报", period: "9/22-28", status: "待提交", owner: "王哥" },
+  { title: "小张 · 月度复盘", period: "9月", status: "AI草稿", owner: "小张" },
+];
 
-  // D-30 目标 vs 实际:全部来自真实业务数据,来源对用户透明
-  const now = new Date();
-  const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7)).getTime();
-  const monthPrefix = now.toISOString().slice(0, 7);
-  const actVisits = props.cps.filter((cp) => !cp.deletedAt && cp.time >= weekStart).length;
-  const actSign = props.contracts.filter((c) => !c.deletedAt && (c.signDate ?? "").startsWith(monthPrefix)).reduce((s, c) => s + c.amount, 0);
-  const actAar = aars.filter((a) => a.createdAt && new Date(a.createdAt).toISOString().startsWith(monthPrefix)).length;
+const ACTIVITIES = [
+  { name: "小张", text: "完成提案v3", time: "10分" },
+  { name: "李姐", text: "更新催收SOP", time: "25分" },
+  { name: "王哥", text: "建甘特图", time: "1时" },
+  { name: "赵助理", text: "上传拜访纪要", time: "2时" },
+];
 
-  async function saveAar() {
-    if (!lessons.trim()) { show("经验总结必填"); return; }
-    await db.put("aars", {
-      id: uid("aar"), period: week,
-      stats: `完成任务 ${doneTasks};已收回款 ${money(received)};比稿胜率 ${win ?? "—"}%`,
-      lessons: lessons.trim(), createdAt: Date.now(),
-    }, "保存 AAR 周复盘(自动预填数据)");
-    setLessons("");
-    setAars((await db.getAll<Aar>("aars")).filter((a) => !a.deletedAt).sort((a, b) => b.createdAt - a.createdAt));
-    show("复盘已保存");
-  }
-
-  async function setSkill(name: string, level: number) {
-    const next = { ...skills, [name]: level };
-    setSkills(next);
-    await db.setSetting("skills", next);
-  }
+export default function Growth(_props: Props) {
+  const [editor, setEditor] = useState<{ type: string; title: string; template?: string } | null>(null);
+  const [activeTab, setActiveTab] = useState<"待办" | "会议" | "报告">("待办");
 
   return (
-    <div>
-      <div className="page-head">
-        <div><h1>成长规划</h1><div className="date">{week} · AAR 自动预填真实数据,你只写原因与经验 · IDP/职业锚属 P2 扩展</div></div>
-      </div>
-
-      <div className="card card-pad" style={{ marginBottom: 16 }}>
-        <div className="h-row"><span className="h-title sm">我的目标 · 本周 / 本月(目标可改,实际自动统计)</span><Chip kind="data" style={{ marginLeft: "auto" }}>规划 = 目标 vs 实际</Chip></div>
-        {!hasTargets ? (
-          <div style={{ textAlign: "center", padding: "24px 12px" }}>
-            <div style={{ fontSize: 32, marginBottom: 8 }}>🎯</div>
-            <div style={{ fontWeight: 600, color: "var(--ink)", marginBottom: 4 }}>暂无成长目标</div>
-            <div style={{ fontSize: "var(--text-sm)", color: "var(--ink-3)", marginBottom: 12 }}>设定目标，规划你的职业成长路径</div>
-            <Btn kind="primary" sm onClick={() => { const v = { weeklyVisits: 2, monthlySign: 500000, monthlyAar: 1 }; setTargets(v); setHasTargets(true); void db.setSetting("growthTargets", v); }}>设定默认目标</Btn>
-          </div>
-        ) : (
-          <>
-            <div className="alert-line" title="数据来源：接触点记录中本周新增的条目，含微信/拜访/电话/邮件">
-              <span className="txt">周拜访数<small style={{ display: "block", color: "var(--ink-4)", fontSize: 11 }}>来源:本周新增接触点记录</small></span>
-              <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-                <input className="inp num" style={{ width: 64, minHeight: 28 }} value={String(targets.weeklyVisits)} onChange={(e) => { const v = { ...targets, weeklyVisits: Math.max(0, Number(e.target.value) || 0) }; setTargets(v); void db.setSetting("growthTargets", v); }} />
-                <b className="num">{actVisits}</b>
-                <div className="progress" style={{ width: 120 }}><div className="bar-track"><div className="bar-fill" style={{ width: Math.min(100, Math.round(actVisits * 100 / Math.max(1, targets.weeklyVisits))) + "%" }} /></div></div>
-              </span>
-            </div>
-            <div className="alert-line" title="数据来源：合同表中本月签约的合同金额合计">
-              <span className="txt">月签约额<small style={{ display: "block", color: "var(--ink-4)", fontSize: 11 }}>来源:本月新签合同金额</small></span>
-              <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-                <input className="inp num" style={{ width: 90, minHeight: 28 }} value={String(targets.monthlySign)} onChange={(e) => { const v = { ...targets, monthlySign: Math.max(0, Number(e.target.value) || 0) }; setTargets(v); void db.setSetting("growthTargets", v); }} />
-                <b className="num">{money(actSign)}</b>
-                <div className="progress" style={{ width: 120 }}><div className="bar-track"><div className="bar-fill" style={{ width: Math.min(100, Math.round(actSign * 100 / Math.max(1, targets.monthlySign))) + "%" }} /></div></div>
-              </span>
-            </div>
-            <div className="alert-line" title="数据来源：周复盘中本月创建的复盘条数">
-              <span className="txt">月复盘次数<small style={{ display: "block", color: "var(--ink-4)", fontSize: 11 }}>来源:本月已保存的 AAR 周复盘</small></span>
-              <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
-                <input className="inp num" style={{ width: 64, minHeight: 28 }} value={String(targets.monthlyAar)} onChange={(e) => { const v = { ...targets, monthlyAar: Math.max(0, Number(e.target.value) || 0) }; setTargets(v); void db.setSetting("growthTargets", v); }} />
-                <b className="num">{actAar}</b>
-                <div className="progress" style={{ width: 120 }}><div className="bar-track"><div className="bar-fill" style={{ width: Math.min(100, Math.round(actAar * 100 / Math.max(1, targets.monthlyAar))) + "%" }} /></div></div>
-              </span>
-            </div>
-          </>
-        )}
-      </div>
-
-      <div className="grid-c">
-        <div className="card card-pad">
-          <div className="h-row"><span className="h-title sm">AAR 周复盘(数据自动预填)</span><Chip kind="data" style={{ marginLeft: "auto" }}>四步法 · 第3/4步手填</Chip></div>
-          <div className="alert-line"><span className="txt">回顾目标 · 评估结果(自动)</span><span className="amt num">完成任务 {doneTasks}</span></div>
-          <div className="alert-line"><span className="txt">经营数据(自动)</span><span className="amt num">已收 {money(received)}</span></div>
-          <div className="alert-line"><span className="txt">比稿成功率(自动)</span><span className="amt num">{win === null ? "—" : win + "%"}</span></div>
-          <Field label="分析原因 + 总结经验(手填)">
-            <textarea className="inp" rows={3} style={{ width: "100%" }} value={lessons} onChange={(e) => setLessons(e.target.value)} placeholder="什么做得好?什么没做成?下一步改什么?" />
-          </Field>
-          <Btn kind="primary" onClick={() => { void saveAar(); }}>保存本周复盘</Btn>
-
-          <div className="h-row" style={{ marginTop: 18 }}><span className="h-title sm">历史复盘</span></div>
-          {aars.map((a) => (
-            <div key={a.id} style={{ borderBottom: "1px solid var(--border-soft)", padding: "8px 0" }}>
-              <div style={{ fontWeight: 600, fontSize: "var(--text-sm)" }}>{a.period} <Chip gray style={{ marginLeft: 6 }}>{a.createdAt ? new Date(a.createdAt).toLocaleDateString("zh-CN") : ""}</Chip></div>
-              <div className="cell-sub">{a.stats}</div>
-              <div style={{ fontSize: "var(--text-sm)", marginTop: 4 }}>{a.lessons}</div>
-            </div>
-          ))}
-          {aars.length === 0 ? <p className="muted">暂无复盘记录</p> : <p className="muted" style={{ fontSize: "var(--text-xs)", textAlign: "center", padding: "8px 0 4px" }}>暂无更多历史复盘</p>}
+    <div style={{ padding: "20px 24px", maxWidth: 1280, margin: "0 auto" }}>
+      {/* 顶部工具栏 */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <div style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>9月25日 周五 · 3场会议 · 4项待办 · 2份报告待写</div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 10, background: "var(--bg-surface)", border: "1px solid var(--border-subtle)", fontSize: 11, color: "var(--text-muted)" }}>🔍 搜索会议/报告/任务...</div>
+          <Btn kind="primary" size="sm">＋ 快速创建</Btn>
         </div>
+      </div>
 
-        <div className="side-stack">
-          <div className="card card-pad">
-            <div className="h-row"><span className="h-title sm">能力素质自评</span><Chip gray style={{ marginLeft: "auto" }}>初学者→专家 四级</Chip></div>
-            {SKILLS.map((s) => (
-              <div className="alert-line" key={s}>
-                <span className="txt">{s}</span>
-                <span style={{ display: "inline-flex", gap: 4 }}>
-                  {[1, 2, 3, 4].map((lv) => {
-                    const selLv = (skills[s] ?? 0) >= lv;
-                    return (
-                      <button key={lv} className={"btn " + (selLv ? "data" : "done")}
-                        style={{ minWidth: 30, minHeight: 30, border: selLv ? "2px solid var(--brand)" : "1px solid var(--border)", fontWeight: selLv ? 700 : 400 }}
-                        onClick={() => { void setSkill(s, lv); }}>{selLv ? "✓" + lv : lv}</button>
-                    );
-                  })}
-                </span>
+      {/* 三栏布局 */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.4fr 1fr", gap: 14 }}>
+        {/* 左栏：待办 + 会议 */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {/* 待办 */}
+          <div style={{ background: "var(--bg-surface)", borderRadius: 16, padding: 16, border: "1px solid var(--border-subtle)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 900, color: "var(--text-primary)" }}>今日待办</div>
+              <span style={{ fontSize: 10, color: "var(--text-muted)" }}>{TODOS.filter(t => !t.done).length} 项待完成</span>
+            </div>
+            {TODOS.map((t, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: i < TODOS.length - 1 ? "1px solid var(--border-subtle)" : "none" }}>
+                <input type="checkbox" checked={t.done} readOnly style={{ accentColor: "var(--brand-primary)" }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: t.done ? "var(--text-muted)" : "var(--text-primary)", textDecoration: t.done ? "line-through" : "none" }}>{t.title}</div>
+                  <div style={{ fontSize: 10, color: "var(--text-muted)" }}>{t.due}</div>
+                </div>
+                <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 99, background: t.tag === "紧急" ? "var(--status-danger-bg)" : t.tag === "高" ? "var(--status-pending-bg)" : "var(--status-success-bg)", color: t.tag === "紧急" ? "var(--status-danger)" : t.tag === "高" ? "var(--status-pending)" : "var(--status-success)" }}>{t.tag}</span>
               </div>
             ))}
-            <p className="muted" style={{ fontSize: "var(--text-xs)" }}>1 初学者 · 2 经验者 · 3 精通者 · 4 专家</p>
           </div>
-          <div className="card card-pad">
-            <div className="h-row"><span className="h-title sm">70-20-10 学习分布</span></div>
-            <p className="muted" style={{ fontSize: "var(--text-sm)" }}>
-              实战(任务/项目)与向他人学习(复盘)已由工作数据覆盖;课程/阅读追踪接入知识库后自动统计(属 P2)。
-            </p>
+
+          {/* 会议日程 */}
+          <div style={{ background: "var(--bg-surface)", borderRadius: 16, padding: 16, border: "1px solid var(--border-subtle)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 900, color: "var(--text-primary)" }}>今日会议</div>
+              <Btn kind="ghost" size="sm">日历</Btn>
+            </div>
+            {MEETINGS.map((m, i) => (
+              <div key={i} style={{ display: "flex", gap: 10, padding: "8px 0", borderBottom: i < MEETINGS.length - 1 ? "1px solid var(--border-subtle)" : "none" }}>
+                <div style={{ fontSize: 11, fontWeight: 800, fontFamily: "ui-monospace,monospace", color: "var(--text-secondary)", minWidth: 40 }}>{m.time}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>{m.title}</div>
+                  <div style={{ fontSize: 10, color: m.status === "已结束" ? "var(--status-success)" : m.status === "即将开始" ? "var(--status-pending)" : "var(--text-muted)" }}>● {m.status}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 中栏：项目进度 + 报告中心 */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {/* 项目进度 */}
+          <div style={{ background: "var(--bg-surface)", borderRadius: 16, padding: 16, border: "1px solid var(--border-subtle)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 900, color: "var(--text-primary)" }}>项目协同进度</div>
+              <Btn kind="ghost" size="sm">AI拆解</Btn>
+            </div>
+            {PROJECTS.map((p, i) => (
+              <div key={i} style={{ marginBottom: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: 700, marginBottom: 4 }}>
+                  <span style={{ color: "var(--text-primary)" }}>{p.name} <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>· {p.owner}</span></span>
+                  <span style={{ color: "var(--text-secondary)" }}>{p.pct}%</span>
+                </div>
+                <div style={{ height: 6, borderRadius: 3, background: "var(--bg-muted)", overflow: "hidden" }}>
+                  <div style={{ width: p.pct + "%", height: "100%", background: p.color, borderRadius: 3 }} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 报告中心 */}
+          <div style={{ background: "var(--bg-surface)", borderRadius: 16, padding: 16, border: "1px solid var(--border-subtle)" }}>
+            <div style={{ display: "flex", gap: 4, borderBottom: "1px solid var(--border-subtle)", marginBottom: 12 }}>
+              {["日报", "周报", "月报", "季报"].map(t => (
+                <button key={t} onClick={() => setActiveTab(t as any)} style={{ padding: "6px 12px", border: "none", background: "transparent", cursor: "pointer", fontSize: 11, fontWeight: 800, borderBottom: activeTab === t ? "2px solid var(--brand-primary)" : "2px solid transparent", color: activeTab === t ? "var(--brand-primary)" : "var(--text-secondary)" }}>{t}</button>
+              ))}
+            </div>
+            {REPORTS.map((r, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: i < REPORTS.length - 1 ? "1px solid var(--border-subtle)" : "none" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>{r.title}</div>
+                  <div style={{ fontSize: 10, color: "var(--text-muted)" }}>{r.period} · {r.owner}</div>
+                </div>
+                <span style={{ fontSize: 10, fontWeight: 700, color: r.status === "已提交" ? "var(--status-success)" : r.status === "AI草稿" ? "var(--status-pending)" : "var(--text-secondary)" }}>{r.status}</span>
+                <Btn kind="ghost" size="sm">编辑</Btn>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 右栏：团队动态 + 快速录入 */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {/* 快速录入 */}
+          <div style={{ background: "var(--bg-surface)", borderRadius: 16, padding: 16, border: "1px solid var(--border-subtle)" }}>
+            <div style={{ fontSize: 13, fontWeight: 900, color: "var(--text-primary)", marginBottom: 10 }}>快速录入</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {[
+                { icon: "📅", label: "发起会议", desc: "记录议程·决议·待办", template: "【会议纪要】\n时间：\n参会人：\n\n一、会议议程\n1.\n2.\n\n二、讨论要点\n\n三、会议决议\n1.\n2.\n\n四、待办事项\n□ 负责人 - 事项 - 截止日期\n□ 负责人 - 事项 - 截止日期" },
+                { icon: "📝", label: "写日报", desc: "今日完成·明日计划", template: "【工作日报】\n日期：2026-09-25\n姓名：\n\n一、今日完成\n1.\n2.\n\n二、明日计划\n1.\n2.\n\n三、遇到的问题/需要支持\n\n四、其他备注" },
+                { icon: "📊", label: "写周报", desc: "本周总结·下周计划", template: "【工作周报】\n周期：9月22日-9月28日\n姓名：\n\n一、本周工作总结\n1.\n2.\n\n二、关键数据\n- 新增客户：\n- 在途商机：\n- 回款：\n\n三、下周计划\n1.\n2.\n\n四、风险与问题\n" },
+              ].map((item, i) => (
+                <button key={i} onClick={() => setEditor({ type: item.label, title: item.label, template: item.template })} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 10, border: "1px solid var(--border-subtle)", background: "var(--bg-app)", cursor: "pointer", textAlign: "left" }}>
+                  <span style={{ fontSize: 16 }}>{item.icon}</span>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: "var(--text-primary)" }}>{item.label}</div>
+                    <div style={{ fontSize: 9, color: "var(--text-muted)" }}>{item.desc}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 团队动态 */}
+          <div style={{ background: "var(--bg-surface)", borderRadius: 16, padding: 16, border: "1px solid var(--border-subtle)" }}>
+            <div style={{ fontSize: 13, fontWeight: 900, color: "var(--text-primary)", marginBottom: 10 }}>团队动态</div>
+            {ACTIVITIES.map((a, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: i < ACTIVITIES.length - 1 ? "1px solid var(--border-subtle)" : "none" }}>
+                <div style={{ width: 24, height: 24, borderRadius: 8, background: "#FF5A36", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800 }}>{a.name[0]}</div>
+                <div style={{ flex: 1, fontSize: 11, color: "var(--text-secondary)" }}><span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{a.name}</span> {a.text}</div>
+                <span style={{ fontSize: 9, color: "var(--text-muted)" }}>{a.time}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
-      {node}
+
+      {/* 编辑弹窗 */}
+      {editor && (
+        <div onClick={() => setEditor(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--bg-surface)", borderRadius: 16, padding: 24, width: 520, maxWidth: "90vw" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div style={{ fontSize: 15, fontWeight: 900, color: "var(--text-primary)" }}>{editor.title}</div>
+              <button onClick={() => setEditor(null)} style={{ border: "none", background: "transparent", fontSize: 16, cursor: "pointer", color: "var(--text-muted)" }}>✕</button>
+            </div>
+            <input placeholder="标题" style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid var(--border-subtle)", marginBottom: 10, fontSize: 13, background: "var(--bg-app)" }} />
+            <textarea rows={10} defaultValue={editor.template || ""} style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid var(--border-subtle)", fontSize: 12, background: "var(--bg-app)", resize: "vertical", fontFamily: "ui-monospace,monospace", lineHeight: 1.6 }} />
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 12 }}>
+              <Btn kind="ghost" size="sm">🤖 AI生成草稿</Btn>
+              <div style={{ display: "flex", gap: 8 }}>
+                <Btn kind="ghost" size="sm" onClick={() => setEditor(null)}>取消</Btn>
+                <Btn kind="primary" size="sm" onClick={() => setEditor(null)}>保存</Btn>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
